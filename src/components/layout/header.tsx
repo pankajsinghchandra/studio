@@ -4,40 +4,18 @@ import Link from 'next/link';
 import { BookHeart, User, LogOut, Loader } from 'lucide-react';
 import SearchBar from '../search-bar';
 import { Button } from '../ui/button';
-import { getAuth, onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
+import { getAuth, signOut, type User as FirebaseUser } from 'firebase/auth';
 import { app } from '@/lib/firebase';
-import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { useRouter, usePathname } from 'next/navigation';
 
 export default function Header() {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading } = useAuth();
   const auth = getAuth(app);
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-      
-      const isAuthPage = pathname === '/login' || pathname === '/register';
-      
-      // Redirect logged-in users from auth pages
-      if (currentUser && isAuthPage) {
-        router.replace('/');
-      }
-      
-      // Redirect non-logged-in users from protected pages
-      if (!currentUser && !isAuthPage) {
-        router.replace('/login');
-      }
-    });
-    
-    return () => unsubscribe();
-  }, [auth, router, pathname]);
 
   const handleLogout = () => {
     signOut(auth).then(() => {
@@ -74,6 +52,11 @@ export default function Header() {
       );
     }
 
+    // Don't show login button on auth pages
+    if (pathname === '/login' || pathname === '/register') {
+        return null;
+    }
+
     return (
       <Link href="/login" legacyBehavior>
         <Button variant="ghost" size="icon">
@@ -86,8 +69,32 @@ export default function Header() {
 
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
-  if (!user && !isAuthPage && !loading) {
+  // Don't render header on auth pages if user is not logged in and not loading
+  if (!user && isAuthPage && !loading) {
       return null;
+  }
+  
+  // Also, for protected pages, if we are loading or there's no user,
+  // we can return a minimal header or nothing to avoid flashes of content.
+  // The redirection is handled in the page itself (e.g., `src/app/page.tsx`).
+  if (!isAuthPage && (loading || !user)) {
+     return (
+        <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="container flex h-16 max-w-screen-2xl items-center">
+                 <Link href="/" className="mr-6 flex items-center space-x-2">
+                    <BookHeart className="h-6 w-6 text-primary" />
+                    <span className="hidden font-bold sm:inline-block font-headline">
+                        Vidyalaya Notes
+                    </span>
+                </Link>
+                <div className="flex flex-1 items-center justify-end space-x-2">
+                   <Button variant="ghost" size="icon" disabled>
+                        <Loader className="h-5 w-5 animate-spin" />
+                    </Button>
+                </div>
+            </div>
+        </header>
+     )
   }
 
 

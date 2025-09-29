@@ -1,7 +1,168 @@
 import type { ClassData } from './types';
-import { Book, FlaskConical, Calculator, Languages, History, Globe, Music } from 'lucide-react';
+import { Book, FlaskConical, Calculator, Languages, History, Globe, Music, Leaf, PenSquare, BookCopy } from 'lucide-react';
 
 export const data: ClassData[] = [
+  {
+    id: 'class-4',
+    name: 'Class 4',
+    subjects: [
+      {
+        id: 'evs',
+        name: 'EVS',
+        icon: Leaf,
+        lessons: [
+          { id: 'evs-1', name: 'रंग-बिरंगे खिलते फूल', content: { id: 'c4-evs-1', name: 'रंग-बिरंगे खिलते फूल', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'evs-2', name: 'कोई देता अंडे, कोई देता बच्चे', content: { id: 'c4-evs-2', name: 'कोई देता अंडे, कोई देता बच्चे', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'evs-3', name: 'हड़बड़ में गड़बड़', content: { id: 'c4-evs-3', name: 'हड़बड़ में गड़बड़', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'evs-4', name: 'त्योहार और भोजन', content: { id: 'c4-evs-4', name: 'त्योहार और भोजन', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'evs-5', name: 'स्वाद अलग-अलग', content: { id: 'c4-evs-5', name: 'स्वाद अलग-अलग', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'evs-6', name: 'हरियाली और हम', content: { id: 'c4-evs-6', name: 'हरियाली और हम', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'evs-7', name: 'जड़ों की पकड़', content: { id: 'c4-evs-7', name: 'जड़ों की पकड़', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'evs-8', name: 'देख तमाशा', content: { id: 'c4-evs-8', name: 'देख तमाशा', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'evs-9', name: 'जब जागाजी पर आए', content: { id: 'c4-evs-9', name: 'जब जागाजी पर आए', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'evs-10', name: 'एक पत्ते और बच्चे', content: { id: 'c4-evs-10', name: 'एक पत्ते और बच्चे', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+        ]
+      },
+      {
+        id: 'evs-workbook',
+        name: 'EVS Workbook',
+        icon: PenSquare,
+        lessons: [ { id: 'workbook-placeholder', name: 'Workbook exercises', content: { id: 'c4-evs-wb', name: 'Workbook exercises', type: 'text', source: 'Workbook content will be added here.', description: 'Practice exercises for EVS.' } }]
+      },
+      {
+        id: 'math',
+        name: 'Mathematics',
+        icon: Calculator,
+        lessons: [
+          { id: 'math-1', name: 'संख्याओं का मेला', content: { id: 'c4-math-1', name: 'संख्याओं का मेला', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'math-2', name: 'जोड़', content: { id: 'c4-math-2', name: 'जोड़', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'math-3', name: 'घटाव', content: { id: 'c4-math-3', name: 'घटाव', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'math-4', name: 'गुणा', content: { id: 'c4-math-4', name: 'गुणा', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'math-5', name: 'भाग', content: { id: 'c4-math-5', name: 'भाग', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+        ]
+      },
+       {
+        id: 'math-workbook',
+        name: 'Math Workbook',
+        icon: PenSquare,
+        lessons: [ { id: 'workbook-placeholder', name: 'Workbook exercises', content: { id: 'c4-math-wb', name: 'Workbook exercises', type: 'text', source: 'Workbook content will be added here.', description: 'Practice exercises for Math.' } }]
+      },
+      {
+        id: 'hindi',
+        name: 'Hindi',
+        icon: Book,
+        lessons: [
+          { id: 'hindi-1', name: 'याद तुम्हारी आती है', content: { id: 'c4-hindi-1', name: 'याद तुम्हारी आती है', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-2', name: 'चार मित्र', content: { id: 'c4-hindi-2', name: 'चार मित्र', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-3', name: 'घर प्यारा', content: { id: 'c4-hindi-3', name: 'घर प्यारा', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-4', name: 'बिल्ली का पंजा', content: { id: 'c4-hindi-4', name: 'बिल्ली का पंजा', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-5', name: 'पाप अनुहरी', content: { id: 'c4-hindi-5', name: 'पाप अनुहरी', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+        ]
+      },
+       {
+        id: 'hindi-workbook',
+        name: 'Hindi Workbook',
+        icon: PenSquare,
+        lessons: [ { id: 'workbook-placeholder', name: 'Workbook exercises', content: { id: 'c4-hindi-wb', name: 'Workbook exercises', type: 'text', source: 'Workbook content will be added here.', description: 'Practice exercises for Hindi.' } }]
+      },
+      {
+        id: 'english',
+        name: 'English',
+        icon: Languages,
+        lessons: [
+          { id: 'eng-1', name: 'I LOVE GRANDMA', content: { id: 'c4-eng-1', name: 'I LOVE GRANDMA', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'eng-2', name: 'OUR HOME', content: { id: 'c4-eng-2', name: 'OUR HOME', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'eng-3', name: 'VIKRAM, THE WISE KING', content: { id: 'c4-eng-3', name: 'VIKRAM, THE WISE KING', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'eng-4', name: 'LET ME DIAL', content: { id: 'c4-eng-4', name: 'LET ME DIAL', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'eng-5', name: 'HEERA AND MOTI', content: { id: 'c4-eng-5', name: 'HEERA AND MOTI', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+        ]
+      },
+       {
+        id: 'english-workbook',
+        name: 'English Workbook',
+        icon: PenSquare,
+        lessons: [ { id: 'workbook-placeholder', name: 'Workbook exercises', content: { id: 'c4-eng-wb', name: 'Workbook exercises', type: 'text', source: 'Workbook content will be added here.', description: 'Practice exercises for English.' } }]
+      },
+    ]
+  },
+  {
+    id: 'class-5',
+    name: 'Class 5',
+    subjects: [
+      {
+        id: 'evs',
+        name: 'EVS',
+        icon: Globe,
+        lessons: [
+          { id: 'evs-1', name: 'पटवा से नाथुला की यात्रा', content: { id: 'c5-evs-1', name: 'पटवा से नाथुला की यात्रा', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'evs-2', name: 'खेल', content: { id: 'c5-evs-2', name: 'खेल', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'evs-3', name: 'बीजों का विखरना', content: { id: 'c5-evs-3', name: 'बीजों का विखरना', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'evs-4', name: 'मेरा बगीचा', content: { id: 'c5-evs-4', name: 'मेरा बगीचा', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'evs-5', name: 'ऐतिहासिक स्मारक', content: { id: 'c5-evs-5', name: 'ऐतिहासिक स्मारक', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+        ]
+      },
+      {
+        id: 'evs-workbook',
+        name: 'EVS Workbook',
+        icon: PenSquare,
+        lessons: [ { id: 'workbook-placeholder', name: 'Workbook exercises', content: { id: 'c5-evs-wb', name: 'Workbook exercises', type: 'text', source: 'Workbook content will be added here.', description: 'Practice exercises for EVS.' } }]
+      },
+      {
+        id: 'math',
+        name: 'Mathematics',
+        icon: Calculator,
+        lessons: [
+          { id: 'math-1', name: 'संख्याओं का मेला', content: { id: 'c5-math-1', name: 'संख्याओं का मेला', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'math-2', name: 'जोड़-घटाव', content: { id: 'c5-math-2', name: 'जोड़-घटाव', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'math-3', name: 'गुणा-भाग', content: { id: 'c5-math-3', name: 'गुणा-भाग', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'math-4', name: 'गुणज तथा गुणनखण्ड', content: { id: 'c5-math-4', name: 'गुणज तथा गुणनखण्ड', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'math-5', name: 'भिन्न एवं दशमलव भिन्न', content: { id: 'c5-math-5', name: 'भिन्न एवं दशमलव भिन्न', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+        ]
+      },
+      {
+        id: 'math-workbook',
+        name: 'Math Workbook',
+        icon: PenSquare,
+        lessons: [ { id: 'workbook-placeholder', name: 'Workbook exercises', content: { id: 'c5-math-wb', name: 'Workbook exercises', type: 'text', source: 'Workbook content will be added here.', description: 'Practice exercises for Math.' } }]
+      },
+      {
+        id: 'hindi',
+        name: 'Hindi',
+        icon: BookCopy,
+        lessons: [
+          { id: 'hindi-1', name: 'हिंद देश के विवासी', content: { id: 'c5-hindi-1', name: 'हिंद देश के विवासी', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-2', name: 'टिपटिपवा', content: { id: 'c5-hindi-2', name: 'टिपटिपवा', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-3', name: 'हुआ यूँ कि...', content: { id: 'c5-hindi-3', name: 'हुआ यूँ कि...', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-4', name: 'चाँद का कुर्ता', content: { id: 'c5-hindi-4', name: 'चाँद का कुर्ता', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-5', name: 'म्यांव का रंग', content: { id: 'c5-hindi-5', name: 'म्यांव का रंग', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+        ]
+      },
+       {
+        id: 'hindi-workbook',
+        name: 'Hindi Workbook',
+        icon: PenSquare,
+        lessons: [ { id: 'workbook-placeholder', name: 'Workbook exercises', content: { id: 'c5-hindi-wb', name: 'Workbook exercises', type: 'text', source: 'Workbook content will be added here.', description: 'Practice exercises for Hindi.' } }]
+      },
+      {
+        id: 'english',
+        name: 'English',
+        icon: Languages,
+        lessons: [
+          { id: 'eng-1', name: 'Nobody\'s Friend', content: { id: 'c5-eng-1', name: 'Nobody\'s Friend', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'eng-2', name: 'The Smell of Bread and the Sound of Money', content: { id: 'c5-eng-2', name: 'The Smell of Bread and the Sound of Money', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'eng-3', name: 'The House Sparrow', content: { id: 'c5-eng-3', name: 'The House Sparrow', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'eng-4', name: 'Day by Day I Float My Paper Boats', content: { id: 'c5-eng-4', name: 'Day by Day I Float My Paper Boats', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'eng-5', name: 'An Act of Bravery', content: { id: 'c5-eng-5', name: 'An Act of Bravery', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+        ]
+      },
+      {
+        id: 'english-workbook',
+        name: 'English Workbook',
+        icon: PenSquare,
+        lessons: [ { id: 'workbook-placeholder', name: 'Workbook exercises', content: { id: 'c5-eng-wb', name: 'Workbook exercises', type: 'text', source: 'Workbook content will be added here.', description: 'Practice exercises for English.' } }]
+      },
+    ]
+  },
   {
     id: 'class-6',
     name: 'Class 6',

@@ -20,7 +20,7 @@ export default function Home() {
 
   const classes = data.map(c => ({ id: c.id, name: c.name }));
 
-  if (loading || !userDetails) {
+  if (loading) {
     return (
       <div className="container mx-auto px-4 py-8 md:py-16">
          <header className="text-center mb-12">
@@ -44,11 +44,15 @@ export default function Home() {
     )
   }
 
+  if (!user) {
+    return null; // or a login redirect, though the useEffect handles this.
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 md:py-16">
       <header className="text-center mb-12">
         <h1 className="font-headline text-5xl md:text-7xl font-bold text-primary mb-4 animate-fade-in-up">
-          Welcome, {userDetails.name}!
+          Welcome, {userDetails?.name || user.email}!
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground animate-fade-in-up animation-delay-300">
           Your digital notebook, accessible anywhere.

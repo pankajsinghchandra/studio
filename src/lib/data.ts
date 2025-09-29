@@ -317,7 +317,7 @@ export const data: ClassData[] = [
         name: 'Hindi',
         icon: BookCopy,
         lessons: [
-          { id: 'c5-hindi-1', name: 'हिंद देश के निवासी', content: { id: 'c5-hindi-1-content', name: 'हिंद देश के निवासी', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'c5-hindi-1', name: 'हिंद देश के निवासी', content: { id: 'c5-hindi-1-content', name: 'हिंद देश के निवासी', type: 'pdf', source: 'https://drive.google.com/file/d/1isAWrYlEZKNjoAg23_Mzjlwb26CqTpfL/preview', description: 'Content for this lesson will be added soon.' } },
           { id: 'c5-hindi-2', name: 'टिपटिपवा', content: { id: 'c5-hindi-2-content', name: 'टिपटिपवा', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
           { id: 'c5-hindi-3', name: 'हुआ यूँ कि ...', content: { id: 'c5-hindi-3-content', name: 'हुआ यूँ कि ...', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
           { id: 'c5-hindi-4', name: 'चाँद का कुरता', content: { id: 'c5-hindi-4-content', name: 'चाँद का कुरता', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },

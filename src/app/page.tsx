@@ -50,13 +50,13 @@ export default function Home() {
   }
 
   // Determine the display name: prioritize userDetails.name, fallback to user.email
-  const displayName = userDetails?.name || user.email;
+  const displayName = userDetails?.name;
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-16">
       <header className="text-center mb-12">
         <h1 className="font-headline text-5xl md:text-7xl font-bold text-primary mb-4 animate-fade-in-up">
-          Welcome, {displayName}!
+           {displayName ? `Welcome, ${displayName}!` : <Skeleton className="h-16 w-3/2 mx-auto" />}
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground animate-fade-in-up animation-delay-300">
           Your digital notebook, accessible anywhere.

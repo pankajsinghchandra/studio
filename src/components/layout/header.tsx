@@ -44,7 +44,7 @@ export default function Header() {
     });
   };
 
-  const renderAuthButton = () => {
+  const renderAuthSection = () => {
     if (loading) {
       return (
         <Button variant="ghost" size="icon" disabled>
@@ -53,8 +53,8 @@ export default function Header() {
       );
     }
 
-    if (user && userDetails) {
-      const initial = userDetails.name ? userDetails.name.charAt(0).toUpperCase() : (user.email ? user.email.charAt(0).toUpperCase() : 'U');
+    if (user) {
+       const initial = userDetails?.name ? userDetails.name.charAt(0).toUpperCase() : (user.email ? user.email.charAt(0).toUpperCase() : 'U');
       return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -67,7 +67,7 @@ export default function Header() {
             <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{userDetails.name || 'User'}</p>
+                        <p className="text-sm font-medium leading-none">{userDetails?.name || 'User'}</p>
                         <p className="text-xs leading-none text-muted-foreground">
                             {user.email}
                         </p>
@@ -109,12 +109,12 @@ export default function Header() {
           </span>
         </Link>
         <div className="flex flex-1 items-center justify-end space-x-2">
-          {!isAuthPage && !loading && user && (
+           {!isAuthPage && !loading && user && (
             <div className="w-full flex-1 md:w-auto md:flex-none">
               <SearchBar />
             </div>
           )}
-          {renderAuthButton()}
+          {renderAuthSection()}
         </div>
       </div>
     </header>

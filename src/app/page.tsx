@@ -61,8 +61,7 @@ export default function Home() {
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
           {classes.map((c) => (
-            <Link href={`/${c.id}`} key={c.id} legacyBehavior>
-              <a className="block transition-transform duration-300 hover:-translate-y-2">
+            <Link href={`/${c.id}`} key={c.id} className="block transition-transform duration-300 hover:-translate-y-2">
                 <Card className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full">
                   <CardHeader className="flex flex-col items-center justify-center text-center p-6">
                     <BookOpen className="w-12 h-12 text-primary mb-4" strokeWidth={1.5} />
@@ -71,7 +70,6 @@ export default function Home() {
                     </CardTitle>
                   </CardHeader>
                 </Card>
-              </a>
             </Link>
           ))}
         </div>

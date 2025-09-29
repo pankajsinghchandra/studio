@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { BookHeart, User, LogOut, Loader } from 'lucide-react';
 import SearchBar from '../search-bar';
 import { Button } from '../ui/button';
-import { getAuth, signOut, type User as FirebaseUser } from 'firebase/auth';
+import { getAuth, signOut } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -58,12 +58,12 @@ export default function Header() {
     }
 
     return (
-      <Link href="/login" legacyBehavior>
-        <Button variant="ghost" size="icon">
-          <User className="h-5 w-5" />
-          <span className="sr-only">Profile</span>
-        </Button>
-      </Link>
+      <Button asChild variant="ghost" size="icon">
+          <Link href="/login">
+            <User className="h-5 w-5" />
+            <span className="sr-only">Profile</span>
+          </Link>
+      </Button>
     );
   }
 

@@ -43,8 +43,7 @@ export default function SubjectPage({ params }: { params: { classId: string; sub
       </header>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {subject.lessons.map((lesson) => (
-          <Link href={`/${classData.id}/${subject.id}/${lesson.id}`} key={lesson.id} legacyBehavior>
-            <a className="block transition-transform duration-300 hover:-translate-y-1">
+          <Link href={`/${classData.id}/${subject.id}/${lesson.id}`} key={lesson.id} className="block transition-transform duration-300 hover:-translate-y-1">
                 <Card className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full">
                     <CardHeader>
                         <div className="flex items-start gap-4">
@@ -56,7 +55,6 @@ export default function SubjectPage({ params }: { params: { classId: string; sub
                         </div>
                     </CardHeader>
                 </Card>
-            </a>
           </Link>
         ))}
       </div>

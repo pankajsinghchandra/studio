@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookHeart, User, LogOut, Loader, Settings, Menu } from 'lucide-react';
+import { BookHeart, LogOut, Loader } from 'lucide-react';
 import SearchBar from '../search-bar';
 import { Button } from '../ui/button';
 import { getAuth, signOut } from 'firebase/auth';
@@ -54,7 +54,7 @@ export default function Header() {
     }
 
     if (user && userDetails) {
-      const initial = userDetails.name ? userDetails.name.charAt(0).toUpperCase() : user.email!.charAt(0).toUpperCase();
+      const initial = userDetails.name ? userDetails.name.charAt(0).toUpperCase() : (user.email ? user.email.charAt(0).toUpperCase() : 'U');
       return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -67,7 +67,7 @@ export default function Header() {
             <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{userDetails.name}</p>
+                        <p className="text-sm font-medium leading-none">{userDetails.name || 'User'}</p>
                         <p className="text-xs leading-none text-muted-foreground">
                             {user.email}
                         </p>

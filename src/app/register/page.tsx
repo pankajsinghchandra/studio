@@ -9,7 +9,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
-import { app } from "@/lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
+import { app, db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 
 export default function RegisterPage() {
@@ -25,29 +26,40 @@ export default function RegisterPage() {
     const [role, setRole] = useState('');
 
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        createUserWithEmailAndPassword(auth, email, password)
-            .then((userCredential) => {
-                // Signed in 
-                const user = userCredential.user;
-                console.log("Registration successful for:", user.email);
-                // TODO: Save additional user info (name, class, etc.) to Firestore
-                toast({
-                    title: "Registration Successful!",
-                    description: "You can now log in with your credentials.",
-                });
-                router.push('/login');
-            })
-            .catch((error) => {
-                const errorMessage = error.message;
-                console.error("Registration error:", errorMessage);
-                toast({
-                    variant: "destructive",
-                    title: "Registration Failed",
-                    description: errorMessage,
-                });
+        try {
+            // Create user with email and password
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+            console.log("Registration successful for:", user.email);
+
+            // Save additional user info to Firestore
+            await setDoc(doc(db, "users", user.uid), {
+                uid: user.uid,
+                name,
+                mobile,
+                email,
+                userClass,
+                gender,
+                role,
+                createdAt: new Date(),
             });
+
+            toast({
+                title: "Registration Successful!",
+                description: "You can now log in with your credentials.",
+            });
+            router.push('/login');
+        } catch (error: any) {
+            const errorMessage = error.message;
+            console.error("Registration error:", errorMessage);
+            toast({
+                variant: "destructive",
+                title: "Registration Failed",
+                description: errorMessage,
+            });
+        }
     }
 
   return (
@@ -64,12 +76,12 @@ export default function RegisterPage() {
               <Input id="name" placeholder="John Doe" required value={name} onChange={e => setName(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="mobile">Mobile Number</Label>
-              <Input id="mobile" type="tel" placeholder="9876543210" required value={mobile} onChange={e => setMobile(e.target.value)} />
-            </div>
-             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" placeholder="name@example.com" required value={email} onChange={e => setEmail(e.target.value)} />
+            </div>
+             <div className="space-y-2">
+              <Label htmlFor="mobile">Mobile Number</Label>
+              <Input id="mobile" type="tel" placeholder="9876543210" value={mobile} onChange={e => setMobile(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>

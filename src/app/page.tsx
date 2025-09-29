@@ -1,10 +1,48 @@
+'use client';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { BookOpen } from 'lucide-react';
 import { data } from '@/lib/data';
+import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Home() {
-  const classes = data.map(c => ({ id: c.id, name: c.name}));
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/login');
+    }
+  }, [user, loading, router]);
+
+  const classes = data.map(c => ({ id: c.id, name: c.name }));
+
+  if (loading || !user) {
+    return (
+      <div className="container mx-auto px-4 py-8 md:py-16">
+         <header className="text-center mb-12">
+            <Skeleton className="h-16 w-3/4 mx-auto mb-4" />
+            <Skeleton className="h-8 w-1/2 mx-auto" />
+         </header>
+          <main>
+            <Skeleton className="h-10 w-1/3 mx-auto mb-8" />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                {Array.from({length: 5}).map((_, i) => (
+                    <Card key={i} className="h-48">
+                        <CardHeader className="flex flex-col items-center justify-center text-center p-6">
+                            <Skeleton className="w-16 h-16 rounded-full mb-4" />
+                            <Skeleton className="h-8 w-3/4" />
+                        </CardHeader>
+                    </Card>
+                ))}
+            </div>
+          </main>
+      </div>
+    )
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-16">

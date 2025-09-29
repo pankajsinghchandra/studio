@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { BookHeart } from 'lucide-react';
+import { BookHeart, User } from 'lucide-react';
 import SearchBar from '../search-bar';
+import { Button } from '../ui/button';
 
 export default function Header() {
   return (
@@ -12,10 +13,16 @@ export default function Header() {
             Vidyalaya Notes
           </span>
         </Link>
-        <div className="flex flex-1 items-center justify-end space-x-4">
+        <div className="flex flex-1 items-center justify-end space-x-2">
           <div className="w-full flex-1 md:w-auto md:flex-none">
             <SearchBar />
           </div>
+          <Link href="/login" legacyBehavior>
+            <Button variant="ghost" size="icon">
+              <User className="h-5 w-5" />
+              <span className="sr-only">Profile</span>
+            </Button>
+          </Link>
         </div>
       </div>
     </header>

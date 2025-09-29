@@ -20,7 +20,7 @@ export default function Home() {
 
   const classes = data.map(c => ({ id: c.id, name: c.name }));
 
-  if (loading || !user) {
+  if (loading || !userDetails) {
     return (
       <div className="container mx-auto px-4 py-8 md:py-16">
          <header className="text-center mb-12">
@@ -48,7 +48,7 @@ export default function Home() {
     <div className="container mx-auto px-4 py-8 md:py-16">
       <header className="text-center mb-12">
         <h1 className="font-headline text-5xl md:text-7xl font-bold text-primary mb-4 animate-fade-in-up">
-          Welcome, {userDetails?.name || 'User'}!
+          Welcome, {userDetails.name}!
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground animate-fade-in-up animation-delay-300">
           Your digital notebook, accessible anywhere.

@@ -8,6 +8,30 @@
     ],
     "rewrites": [
       {
+        "source": "/search",
+        "destination": "/search.html"
+      },
+      {
+        "source": "/login",
+        "destination": "/login.html"
+      },
+      {
+        "source": "/register",
+        "destination": "/register.html"
+      },
+      {
+        "source": "/:classId/:subjectId/:lessonId",
+        "destination": "/[classId]/[subjectId]/[lessonId].html"
+      },
+      {
+        "source": "/:classId/:subjectId",
+        "destination": "/[classId]/[subjectId].html"
+      },
+      {
+        "source": "/:classId",
+        "destination": "/[classId].html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

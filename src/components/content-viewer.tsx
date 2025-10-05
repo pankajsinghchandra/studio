@@ -13,8 +13,6 @@ export default function ContentViewer({ content }: { content: Content }) {
         </Card>
       );
     case 'pdf':
-    case 'video':
-    case 'audio':
     case 'doc':
       return (
         <div className="aspect-w-16 aspect-h-9 w-full">
@@ -25,6 +23,26 @@ export default function ContentViewer({ content }: { content: Content }) {
           ></iframe>
         </div>
       );
+    case 'video':
+        return (
+            <div className="aspect-w-16 aspect-h-9 w-full">
+                <video controls autoPlay loop className="w-full rounded-lg border-2 border-border">
+                    <source src={content.source} type="video/mp4" />
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+        );
+    case 'audio':
+        return (
+            <Card>
+                <CardContent className="p-6">
+                    <audio controls className="w-full">
+                        <source src={content.source} type="audio/mpeg" />
+                        Your browser does not support the audio element.
+                    </audio>
+                </CardContent>
+            </Card>
+        );
     default:
       return <p>Unsupported content type.</p>;
   }

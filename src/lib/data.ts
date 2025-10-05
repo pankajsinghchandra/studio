@@ -115,25 +115,25 @@ export const data: ClassData[] = [
         lessons: [
           { id: 'hindi-1', name: 'याद तुम्हारी आती है', content: { id: 'c4-hindi-1', name: 'याद तुम्हारी आती है', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
           { id: 'hindi-2', name: 'चार मित्र', content: { id: 'c4-hindi-2', name: 'चार मित्र', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
-          { id: 'hindi-3', name: 'घर प्यारा', content: { id: 'c4-hindi-3', name: 'घर प्यारा', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
-          { id: 'hindi-4', name: 'बिल्ली का पंजा', content: { id: 'c4-hindi-4', name: 'बिल्ली का पंजा', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
-          { id: 'hindi-5', name: 'घाघ भड्डरी', content: { id: 'c4-hindi-5', name: 'घाघ भड्डरी', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
-          { id: 'hindi-6', name: 'सेर को सवा सेर', content: { id: 'c4-hindi-6', name: 'सेर को सवा सेर', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
-          { id: 'hindi-7', name: 'सीखो', content: { id: 'c4-hindi-7', name: 'सीखो', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
-          { id: 'hindi-8', name: 'सुनीता की पहिया', content: { id: 'c4-hindi-8', name: 'सुनीता की पहिया', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
-          { id: 'hindi-9', name: 'हमारा आहार', content: { id: 'c4-hindi-9', name: 'हमारा आहार', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
-          { id: 'hindi-10', name: 'तीन बुद्धिमान', content: { id: 'c4-hindi-10', name: 'तीन बुद्धिमान', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
-          { id: 'hindi-11', name: 'टेसू राजा', content: { id: 'c4-hindi-11', name: 'टेसू राजा', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
-          { id: 'hindi-12', name: 'ऐसे थे बापू', content: { id: 'c4-hindi-12', name: 'ऐसे थे बापू', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
-          { id: 'hindi-13', name: 'चाचा का पत्र', content: { id: 'c4-hindi-13', name: 'चाचा का पत्र', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
-          { id: 'hindi-14', name: 'शुभमणि', content: { id: 'c4-hindi-14', name: 'शुभमणि', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
-          { id: 'hindi-15', name: 'बिजूका', content: { id: 'c4-hindi-15', name: 'बिजूका', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
-          { id: 'hindi-16', name: 'साहसी ऋचा', content: { id: 'c4-hindi-16', name: 'साहसी ऋचा', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
-          { id: 'hindi-17', name: 'बल्ब', content: { id: 'c4-hindi-17', name: 'बल्ब', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
-          { id: 'hindi-18', name: 'बौना हुआ पहाड़', content: { id: 'c4-hindi-18', name: 'बौना हुआ पहाड़', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
-          { id: 'hindi-19', name: 'सुबह', content: { id: 'c4-hindi-19', name: 'सुबह', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
-          { id: 'hindi-20', name: 'विज्ञान का चिकित्सक', content: { id: 'c4-hindi-20', name: 'विज्ञान का चिकित्सक', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
-          { id: 'hindi-21', name: 'बरगद का पेड़', content: { id: 'c4-hindi-21', name: 'बरगद का पेड़', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-3', name: 'घर प्यारा', content: { id: 'c4-hindi-3-content', name: 'घर प्यारा', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-4', name: 'बिल्ली का पंजा', content: { id: 'c4-hindi-4-content', name: 'बिल्ली का पंजा', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-5', name: 'घाघ भड्डरी', content: { id: 'c4-hindi-5-content', name: 'घाघ भड्डरी', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-6', name: 'सेर को सवा सेर', content: { id: 'c4-hindi-6-content', name: 'सेर को सवा सेर', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-7', name: 'सीखो', content: { id: 'c4-hindi-7-content', name: 'सीखो', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-8', name: 'सुनीता की पहिया', content: { id: 'c4-hindi-8-content', name: 'सुनीता की पहिया', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-9', name: 'हमारा आहार', content: { id: 'c4-hindi-9-content', name: 'हमारा आहार', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-10', name: 'तीन बुद्धिमान', content: { id: 'c4-hindi-10-content', name: 'तीन बुद्धिमान', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-11', name: 'टेसू राजा', content: { id: 'c4-hindi-11-content', name: 'टेसू राजा', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-12', name: 'ऐसे थे बापू', content: { id: 'c4-hindi-12-content', name: 'ऐसे थे बापू', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-13', name: 'चाचा का पत्र', content: { id: 'c4-hindi-13-content', name: 'चाचा का पत्र', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-14', name: 'शुभमणि', content: { id: 'c4-hindi-14-content', name: 'शुभमणि', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-15', name: 'बिजूका', content: { id: 'c4-hindi-15-content', name: 'बिजूका', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-16', name: 'साहसी ऋचा', content: { id: 'c4-hindi-16-content', name: 'साहसी ऋचा', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-17', name: 'बल्ब', content: { id: 'c4-hindi-17-content', name: 'बल्ब', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-18', name: 'बौना हुआ पहाड़', content: { id: 'c4-hindi-18-content', name: 'बौना हुआ पहाड़', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-19', name: 'सुबह', content: { id: 'c4-hindi-19-content', name: 'सुबह', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-20', name: 'विज्ञान का चिकित्सक', content: { id: 'c4-hindi-20-content', name: 'विज्ञान का चिकित्सक', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+          { id: 'hindi-21', name: 'बरगद का पेड़', content: { id: 'c4-hindi-21-content', name: 'बरगद का पेड़', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
         ]
       },
        {
@@ -189,7 +189,7 @@ export const data: ClassData[] = [
           { id: 'c4-eng-18', name: 'OPEN HOUSE', content: { id: 'c4-eng-18-content', name: 'OPEN HOUSE', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
         ]
       },
-       {
+      {
         id: 'english-workbook',
         name: 'English Workbook',
         icon: PenSquare,
@@ -455,7 +455,7 @@ export const data: ClassData[] = [
               id: 'geo-basics-video',
               name: 'Understanding Shapes Video',
               type: 'video',
-              source: 'https://drive.google.com/file-d/1D2V82jNSSoJ5yo_nE_2j9A_mB4t-V5mP/preview',
+              source: 'https://drive.google.com/uc?export=view&id=1D2V82jNSSoJ5yo_nE_2j9A_mB4t-V5mP',
               description: 'A video explaining basic geometric shapes and their properties.'
             },
           },
@@ -521,7 +521,7 @@ All living organisms share several key characteristics:
                 id: 'classical-audio',
                 name: 'Mozart Sample',
                 type: 'audio',
-                source: 'https://drive.google.com/file/d/1bJGUMu53dqT33u1bW89S5Jd3Q_7nO4f_/preview',
+                source: 'https://drive.google.com/uc?export=view&id=1bJGUMu53dqT33u1bW89S5Jd3Q_7nO4f_',
                 description: 'An audio sample of classical music by Mozart.'
             }
           }
@@ -530,4 +530,4 @@ All living organisms share several key characteristics:
     ],
   },
   // Add more classes if needed for demonstration
-];
+]

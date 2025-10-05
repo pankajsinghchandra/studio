@@ -489,6 +489,17 @@ All living organisms share several key characteristics:
               description: 'A text document outlining the key characteristics of all living things.'
             },
           },
+          {
+            id: 'cells-video',
+            name: 'Introduction to Cells (Video)',
+            content: {
+              id: 'cells-video-content',
+              name: 'A Visual Guide to the Cell',
+              type: 'video',
+              source: 'https://drive.google.com/uc?export=view&id=1_9-bZ2Jc1m7G3vGrM_4W2gJ-ZQl0pW-m',
+              description: 'A sample video lesson about plant and animal cells.'
+            },
+          },
         ],
       },
       {

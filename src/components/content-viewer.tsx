@@ -14,24 +14,17 @@ export default function ContentViewer({ content }: { content: Content }) {
       );
     case 'pdf':
     case 'doc':
+    case 'video':
       return (
         <div className="aspect-w-16 aspect-h-9 w-full">
           <iframe
             src={content.source}
             className="w-full h-[80vh] rounded-lg border-2 border-border"
-            allow="autoplay"
+            allow="autoplay; fullscreen"
+            allowFullScreen
           ></iframe>
         </div>
       );
-    case 'video':
-        return (
-            <div className="aspect-w-16 aspect-h-9 w-full">
-                <video controls autoPlay loop className="w-full rounded-lg border-2 border-border">
-                    <source src={content.source} type="video/mp4" />
-                    Your browser does not support the video tag.
-                </video>
-            </div>
-        );
     case 'audio':
         return (
             <Card>

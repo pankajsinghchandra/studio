@@ -14,7 +14,7 @@ export const data: ClassData[] = [
         lessons: [
             { id: 'c4-evs-1', name: 'रंग-बिरंगे खिलते फूल', content: { id: 'c4-evs-1-content', name: 'रंग-बिरंगे खिलते फूल', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
             { id: 'c4-evs-2', name: 'कोई देता अंडे, कोई देता बच्चे', content: { id: 'c4-evs-2-content', name: 'कोई देता अंडे, कोई देता बच्चे', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
-            { id: 'c4-evs-3', name: 'हड़बड़ में गड़बड़', content: { id: 'c4-evs-3-content', name: 'हड़बड़ में गड़बड़', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
+            { id: 'c4-evs-3', name: 'हड़बड़ में गड़बड़', content: { id: 'c4-evs-3-content', name: 'हड़बड़ में गड़बड़', type: 'video', source: 'https://drive.google.com/file/d/1yVAQ4CZyCBn8Y8BImQuWPbPysMGdzJUi/preview', description: 'Content for this lesson will be added soon.' } },
             { id: 'c4-evs-4', name: 'त्योहार और भोजन', content: { id: 'c4-evs-4-content', name: 'त्योहार और भोजन', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
             { id: 'c4-evs-5', name: 'स्वाद अलग-अलग', content: { id: 'c4-evs-5-content', name: 'स्वाद अलग-अलग', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },
             { id: 'c4-evs-6', name: 'हरियाली और हम', content: { id: 'c4-evs-6-content', name: 'हरियाली और हम', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' } },

@@ -50,7 +50,7 @@ export default function SubjectPage({ params }: { params: { classId: string; sub
                             <FileText className="w-8 h-8 text-primary/80 mt-1" />
                             <div>
                                 <CardTitle className="font-headline text-xl text-foreground">{lesson.name}</CardTitle>
-                                <CardDescription className="mt-1 line-clamp-2">{lesson.content.description}</CardDescription>
+                                <CardDescription className="mt-1 line-clamp-2">{lesson.content[0]?.description || 'Multiple content types for this lesson.'}</CardDescription>
                             </div>
                         </div>
                     </CardHeader>

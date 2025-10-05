@@ -16,7 +16,7 @@ interface SearchResult {
   class: ClassData;
   subject: Subject;
   lesson: Lesson;
-  content: Content;
+  content: Content[];
 }
 
 function SearchPageComponent() {
@@ -50,18 +50,19 @@ function SearchPageComponent() {
       setIsLoading(true);
       setSummary('');
 
-      const filteredResults = allNotes.filter(note =>
-        note.lesson.name.toLowerCase().includes(query.toLowerCase()) ||
-        note.content.description.toLowerCase().includes(query.toLowerCase()) ||
-        note.subject.name.toLowerCase().includes(query.toLowerCase())
-      );
+      const filteredResults = allNotes.filter(note => {
+        const contentDescription = note.content.map(c => c.description).join(' ').toLowerCase();
+        return note.lesson.name.toLowerCase().includes(query.toLowerCase()) ||
+               contentDescription.includes(query.toLowerCase()) ||
+               note.subject.name.toLowerCase().includes(query.toLowerCase());
+      });
       setResults(filteredResults);
       setIsLoading(false);
 
       if (filteredResults.length > 3) {
         setIsSummarizing(true);
         const searchContentForAI = filteredResults.map(
-          r => `[${r.class.name} > ${r.subject.name}] ${r.lesson.name}: ${r.content.description}`
+          r => `[${r.class.name} > ${r.subject.name}] ${r.lesson.name}: ${r.content.map(c => c.description).join(' ')}`
         );
 
         summarizeSearchResults({ query, results: searchContentForAI })
@@ -128,7 +129,7 @@ function SearchPageComponent() {
                   </p>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-foreground/80 line-clamp-2">{result.content.description}</p>
+                  <p className="text-sm text-foreground/80 line-clamp-2">{result.content.map(c => c.description).join(' ')}</p>
                 </CardContent>
               </Card>
             </Link>

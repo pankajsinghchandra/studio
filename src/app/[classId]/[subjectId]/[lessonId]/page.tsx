@@ -38,9 +38,9 @@ export default function LessonPage({ params }: { params: { classId: string; subj
         <h1 className="font-headline text-4xl font-bold text-foreground">
           {lesson.name}
         </h1>
-        <p className="text-lg text-muted-foreground">{lesson.content.description}</p>
+        <p className="text-lg text-muted-foreground">{lesson.content[0]?.description || 'Multiple content types available.'}</p>
       </header>
-      <ContentViewer content={lesson.content} />
+      <ContentViewer contents={lesson.content} />
     </div>
   );
 }

@@ -1,8 +1,10 @@
 'use client';
 import type { Content } from '@/lib/types';
 import { Card, CardContent } from './ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { FileText, Video, Mic } from 'lucide-react';
 
-export default function ContentViewer({ content }: { content: Content }) {
+const renderContent = (content: Content) => {
   switch (content.type) {
     case 'text':
       return (
@@ -51,4 +53,43 @@ export default function ContentViewer({ content }: { content: Content }) {
     default:
       return <p>Unsupported content type.</p>;
   }
+}
+
+const getIcon = (type: Content['type']) => {
+    switch (type) {
+        case 'video':
+            return <Video className="mr-2 h-4 w-4" />;
+        case 'audio':
+            return <Mic className="mr-2 h-4 w-4" />;
+        case 'pdf':
+        case 'doc':
+        case 'text':
+        default:
+            return <FileText className="mr-2 h-4 w-4" />;
+    }
+}
+
+
+export default function ContentViewer({ contents }: { contents: Content[] }) {
+  if (contents.length === 1) {
+    return renderContent(contents[0]);
+  }
+
+  return (
+    <Tabs defaultValue={contents[0].id} className="w-full">
+      <TabsList>
+        {contents.map(content => (
+          <TabsTrigger key={content.id} value={content.id}>
+            {getIcon(content.type)}
+            {content.name}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+      {contents.map(content => (
+        <TabsContent key={content.id} value={content.id}>
+          {renderContent(content)}
+        </TabsContent>
+      ))}
+    </Tabs>
+  );
 }

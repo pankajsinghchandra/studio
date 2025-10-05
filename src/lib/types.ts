@@ -11,7 +11,7 @@ export interface Content {
 export interface Lesson {
   id: string;
   name:string;
-  content: Content;
+  content: Content[];
 }
 
 export interface Subject {

@@ -12,7 +12,10 @@ export const data: ClassData[] = [
         name: 'EVS',
         icon: Leaf,
         lessons: [
-            { id: 'c4-evs-1', name: 'रंग-बिरंगे खिलते फूल', content: [{ id: 'c4-evs-1-content', name: 'रंग-बिरंगे खिलते फूल', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' }] },
+            { id: 'c4-evs-1', name: 'रंग-बिरंगे खिलते फूल', content: [
+              { id: 'c4-evs-1-content-audio', name: 'Audio Lesson', type: 'audio', source: 'https://drive.google.com/file/d/1clohZz5aWYgUKNxDTSlfK2Z27LHvXiOl/preview', description: 'Audio lesson for the chapter.' },
+              { id: 'c4-evs-1-content-pdf', name: 'PDF Notes', type: 'pdf', source:'https://drive.google.com/file/d/1isAWrYlEZKNjoAg23_Mzjlwb26CqTpfL/preview', description: 'PDF notes for the chapter.' }
+            ] },
             { id: 'c4-evs-2', name: 'कोई देता अंडे, कोई देता बच्चे', content: [{ id: 'c4-evs-2-content', name: 'कोई देता अंडे, कोई देता बच्चे', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' }] },
             { id: 'c4-evs-3', name: 'हड़बड़ में गड़बड़', content: [
                 { id: 'c4-evs-3-content-video', name: 'Video', type: 'video', source: 'https://drive.google.com/file/d/1yVAQ4CZyCBn8Y8BImQuWPbPysMGdzJUi/preview', description: 'Video lesson.' },

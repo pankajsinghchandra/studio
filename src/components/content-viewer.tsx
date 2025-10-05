@@ -14,11 +14,23 @@ export default function ContentViewer({ content }: { content: Content }) {
       );
     case 'pdf':
     case 'doc':
-    case 'video':
       return (
         <div className="aspect-w-16 aspect-h-9 w-full">
           <iframe
             src={content.source}
+            className="w-full h-[80vh] rounded-lg border-2 border-border"
+            allow="autoplay; fullscreen"
+            allowFullScreen
+          ></iframe>
+        </div>
+      );
+    case 'video':
+      // Appending &rm=minimal hides the download and other buttons in the Google Drive embed.
+      const videoSrc = content.source.includes('?') ? `${content.source}&rm=minimal` : `${content.source}?rm=minimal`;
+       return (
+        <div className="aspect-w-16 aspect-h-9 w-full">
+          <iframe
+            src={videoSrc}
             className="w-full h-[80vh] rounded-lg border-2 border-border"
             allow="autoplay; fullscreen"
             allowFullScreen

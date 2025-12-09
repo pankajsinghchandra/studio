@@ -16,7 +16,11 @@ export const data: ClassData[] = [
               { id: 'c4-evs-1-content-audio', name: 'Audio Lesson', type: 'audio', source: 'https://drive.google.com/file/d/1clohZz5aWYgUKNxDTSlfK2Z27LHvXiOl/preview', description: 'Audio lesson for the chapter.' },
               { id: 'c4-evs-1-content-pdf', name: 'PDF Notes', type: 'pdf', source:'https://drive.google.com/file/d/1isAWrYlEZKNjoAg23_Mzjlwb26CqTpfL/preview', description: 'PDF notes for the chapter.' }
             ] },
-            { id: 'c4-evs-2', name: 'कोई देता अंडे, कोई देता बच्चे', content: [{ id: 'c4-evs-2-content', name: 'कोई देता अंडे, कोई देता बच्चे', type: 'text', source: 'Content not available yet.', description: 'Content for this lesson will be added soon.' }] },
+            { id: 'c4-evs-2', name: 'कोई देता अंडे, कोई देता बच्चे', content: [
+                { id: 'c4-evs-2-content', name: 'video', type: 'video', source: 'https://drive.google.com/file/d/1Ix6W-Asat9yHP-YbhikaXyPNwKDYicNw/preview', description: 'Content for this lesson will be added soon.' },
+                {id: 'c4-evs-2-content', name: 'pdf', type: 'pdf', source: 'https://drive.google.com/file/d/1isAWrYlEZKNjoAg23_Mzjlwb26CqTpfL/preview', description: 'pdf lession .'}
+
+            ] },
             { id: 'c4-evs-3', name: 'हड़बड़ में गड़बड़', content: [
                 { id: 'c4-evs-3-content-video', name: 'Video', type: 'video', source: 'https://drive.google.com/file/d/1yVAQ4CZyCBn8Y8BImQuWPbPysMGdzJUi/preview', description: 'Video lesson.' },
                 { id: 'c4-evs-3-content-pdf', name: 'Notes (PDF)', type: 'pdf', source: 'https://drive.google.com/file/d/1isAWrYlEZKNjoAg23_Mzjlwb26CqTpfL/preview', description: 'PDF notes for the lesson.' }

@@ -22,14 +22,10 @@ const storage = getStorage(app);
 const auth = getAuth(app);
 
 // Check if we are in a development environment and not in production
-if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined' && window.location.hostname === "localhost") {
-    try {
-        // Point to the Auth emulator
-        connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
-        console.log("Auth emulator connected");
-    } catch (e) {
-        console.error("Error connecting to auth emulator: ", e);
-    }
+if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined' && !auth.emulatorConfig) {
+    // Point to the Auth emulator
+    connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+    console.log("Auth emulator connected for development.");
 }
 
 

@@ -12,6 +12,7 @@ import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { app, db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -28,6 +29,14 @@ export default function RegisterPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!role) {
+            toast({
+                variant: "destructive",
+                title: "Validation Error",
+                description: "Please select a role (Teacher or Student).",
+            });
+            return;
+        }
         try {
             // Create user with email and password
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -116,17 +125,17 @@ export default function RegisterPage() {
                 </div>
             </div>
             <div className="space-y-2">
-                <Label htmlFor="role">You are a...</Label>
-                <Select name="role" onValueChange={setRole}>
-                    <SelectTrigger id="role">
-                        <SelectValue placeholder="Select Role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="student">Student</SelectItem>
-                        <SelectItem value="teacher">Teacher</SelectItem>
-                        <SelectItem value="parent">Parent</SelectItem>
-                    </SelectContent>
-                </Select>
+                <Label>You are a...</Label>
+                <RadioGroup onValueChange={setRole} className="flex space-x-4">
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="student" id="student" />
+                        <Label htmlFor="student">Student</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="teacher" id="teacher" />
+                        <Label htmlFor="teacher">Teacher</Label>
+                    </div>
+                </RadioGroup>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">

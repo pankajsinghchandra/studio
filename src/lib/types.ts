@@ -26,3 +26,14 @@ export interface ClassData {
   name: string;
   subjects: Subject[];
 }
+
+export interface Resource {
+  id: string;
+  type: 'lesson-plan-pdf' | 'lesson-plan-word' | 'video' | 'infographic' | 'mind-map' | 'pdf-note';
+  title: string;
+  url: string;
+  class: string;
+  subject: string;
+  chapter: string;
+  authorId: string;
+}

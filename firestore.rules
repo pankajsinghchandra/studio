@@ -1,0 +1,30 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return request.auth.token.email == 'quizpankaj@gmail.com';
+    }
+
+    // Matches any document in the 'users' collection
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId);
+    }
+    
+    match /resources/{resourceId} {
+      allow read: if isSignedIn();
+      allow write, update, delete: if isAdmin();
+    }
+  }
+}

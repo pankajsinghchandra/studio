@@ -70,7 +70,7 @@ export default function RegisterPage() {
             setShowRoleDialog(true);
           }
         } catch (error: any) {
-           if (error.code !== 'auth/popup-closed-by-user') {
+           if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/unauthorized-domain') {
                 toast({
                     variant: "destructive",
                     title: "Google Sign-In Failed",

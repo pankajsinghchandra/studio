@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
@@ -30,9 +30,15 @@ export default function ManageContentPage() {
   const [videoLink, setVideoLink] = useState('');
   const [isUploading, setIsUploading] = useState(false);
 
-  if (!loading && (!user || user.email !== 'quizpankaj@gmail.com')) {
-    router.replace('/');
-    return null;
+  useEffect(() => {
+      if (!loading && (!user || user.email !== 'quizpankaj@gmail.com')) {
+        router.replace('/');
+      }
+  }, [user, loading, router]);
+
+
+  if (loading || !user) {
+    return <LoadingOverlay isLoading={true} />;
   }
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,7 +95,7 @@ export default function ManageContentPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <LoadingOverlay isLoading={loading || isUploading} />
+      <LoadingOverlay isLoading={isUploading} />
       <Card className="w-full max-w-2xl mx-auto">
         <form onSubmit={handleSubmit}>
           <CardHeader>

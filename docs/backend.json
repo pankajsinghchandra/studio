@@ -1,84 +1,192 @@
 {
   "entities": {
-    "User": {
-      "title": "User",
-      "description": "Represents a user of the application.",
+    "Class": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Class",
       "type": "object",
+      "description": "Represents a class (e.g., 1st grade, 2nd grade, up to 10th grade).",
       "properties": {
-        "uid": {
+        "id": {
           "type": "string",
-          "description": "The user's unique ID."
+          "description": "Unique identifier for the class."
+        },
+        "gradeLevel": {
+          "type": "number",
+          "description": "The grade level of the class (1-10).",
+          "format": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "gradeLevel"
+      ]
+    },
+    "Subject": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Subject",
+      "type": "object",
+      "description": "Represents a subject within a class (e.g., Math, Science, History).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the subject."
+        },
+        "classId": {
+          "type": "string",
+          "description": "Reference to Class. (Relationship: Class 1:N Subject)"
         },
         "name": {
           "type": "string",
-          "description": "The user's full name."
-        },
-        "email": {
-          "type": "string",
-          "format": "email",
-          "description": "The user's email address."
-        },
-        "role": {
-          "type": "string",
-          "description": "The user's role.",
-          "enum": ["student", "teacher"]
+          "description": "The name of the subject."
         }
       },
-      "required": ["uid", "name", "email", "role"]
+      "required": [
+        "id",
+        "classId",
+        "name"
+      ]
     },
-    "Resource": {
-      "title": "Resource",
-      "description": "Represents an educational resource.",
+    "Lesson": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Lesson",
       "type": "object",
+      "description": "Represents a lesson or topic within a subject.",
       "properties": {
-        "type": {
+        "id": {
           "type": "string",
-          "description": "Type of the resource",
-          "enum": ["lesson-plan-pdf", "lesson-plan-word", "video", "infographic", "mind-map", "pdf-note"]
+          "description": "Unique identifier for the lesson."
         },
-        "title": {
+        "subjectId": {
           "type": "string",
-          "description": "Title of the resource."
+          "description": "Reference to Subject. (Relationship: Subject 1:N Lesson)"
         },
-        "url": {
+        "name": {
           "type": "string",
-          "description": "Download URL from Firebase Storage or video link."
-        },
-        "class": {
-          "type": "string",
-          "description": "Class the resource is for."
-        },
-        "subject": {
-          "type": "string",
-          "description": "Subject the resource is for."
-        },
-        "chapter": {
-          "type": "string",
-          "description": "Chapter the resource is for."
-        },
-        "authorId": {
-          "type": "string",
-          "description": "ID of the admin who uploaded it."
+          "description": "The name or title of the lesson."
         }
       },
-      "required": ["type", "title", "url", "class", "subject", "chapter", "authorId"]
+      "required": [
+        "id",
+        "subjectId",
+        "name"
+      ]
+    },
+    "Content": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Content",
+      "type": "object",
+      "description": "Represents a piece of content (e.g., a PDF, Word document, video) associated with a lesson.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the content."
+        },
+        "lessonId": {
+          "type": "string",
+          "description": "Reference to Lesson. (Relationship: Lesson 1:N Content)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name or title of the content."
+        },
+        "fileType": {
+          "type": "string",
+          "description": "The type of the file (e.g., PDF, DOC, MP3, MP4)."
+        },
+        "googleDriveFileId": {
+          "type": "string",
+          "description": "The file ID of the content in Google Drive."
+        }
+      },
+      "required": [
+        "id",
+        "lessonId",
+        "name",
+        "fileType",
+        "googleDriveFileId"
+      ]
     }
   },
   "auth": {
-    "providers": ["Email/Password", "Google"]
+    "providers": [
+      "password",
+      "anonymous"
+    ]
   },
   "firestore": {
-    "/users/{userId}": {
-      "schema": {
-        "$ref": "#/entities/User"
+    "structure": [
+      {
+        "path": "/classes",
+        "definition": {
+          "entityName": "Class",
+          "schema": {
+            "$ref": "#/backend/entities/Class"
+          },
+          "description": "Represents classes (e.g., 1st grade, 2nd grade).",
+          "params": []
+        }
       },
-      "description": "Stores user profile information."
-    },
-    "/resources/{resourceId}": {
-      "schema": {
-        "$ref": "#/entities/Resource"
+      {
+        "path": "/classes/{classId}/subjects",
+        "definition": {
+          "entityName": "Subject",
+          "schema": {
+            "$ref": "#/backend/entities/Subject"
+          },
+          "description": "Represents subjects within a class. Includes denormalized 'classId' for authorization independence.",
+          "params": [
+            {
+              "name": "classId",
+              "description": "The ID of the class."
+            }
+          ]
+        }
       },
-      "description": "Stores educational resources."
-    }
+      {
+        "path": "/classes/{classId}/subjects/{subjectId}/lessons",
+        "definition": {
+          "entityName": "Lesson",
+          "schema": {
+            "$ref": "#/backend/entities/Lesson"
+          },
+          "description": "Represents lessons within a subject. Includes denormalized 'classId' and 'subjectId' for authorization independence.",
+          "params": [
+            {
+              "name": "classId",
+              "description": "The ID of the class."
+            },
+            {
+              "name": "subjectId",
+              "description": "The ID of the subject."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/classes/{classId}/subjects/{subjectId}/lessons/{lessonId}/contents",
+        "definition": {
+          "entityName": "Content",
+          "schema": {
+            "$ref": "#/backend/entities/Content"
+          },
+          "description": "Represents content within a lesson. Includes denormalized 'classId', 'subjectId', and 'lessonId' for authorization independence.",
+          "params": [
+            {
+              "name": "classId",
+              "description": "The ID of the class."
+            },
+            {
+              "name": "subjectId",
+              "description": "The ID of the subject."
+            },
+            {
+              "name": "lessonId",
+              "description": "The ID of the lesson."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to mirror the application's hierarchical data model (Class > Subject > Lesson > Content) while prioritizing security and scalability. Path-based ownership is used to secure user-specific data.\n\n*   **/classes**: Contains documents representing classes (grades). No specific access controls beyond Firestore's default security rules are necessary since this data can be considered public. Data validation ensures `gradeLevel` is within the allowed range (1-10).\n*   **/classes/{classId}/subjects**:  Subcollection under each class, containing subject documents. Subjects are owned by the Class. The `classId` is denormalized into the Subject document to support Authorization Independence, enabling simpler security rules without requiring `get()` calls to parent documents. This allows listing all subjects in a particular class without needing to read any Class document.\n*   **/classes/{classId}/subjects/{subjectId}/lessons**: Subcollection under each subject, containing lesson documents. Lessons are owned by the Subject. The `classId` and `subjectId` are denormalized into the Lesson document to maintain Authorization Independence. This allows listing all lessons for a particular class and subject combination without needing to read Class or Subject documents. This denormalization also makes it possible to query all lessons for a particular class in all the subjects.\n*   **/classes/{classId}/subjects/{subjectId}/lessons/{lessonId}/contents**: Subcollection under each lesson, containing content documents (notes, files). The `classId`, `subjectId`, and `lessonId` are denormalized into the Content document to ensure Authorization Independence. This enables secure listing of content associated with a specific lesson without requiring reads to parent documents. The denormalization supports efficient queries such as listing all contents within a class, subject, and lesson.\n\nThis structure promotes clear, secure rules and efficient queries while adhering to the principle of Authorization Independence, crucial for robust and scalable access control."
   }
 }

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { data as staticData } from '@/lib/data';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '@/hooks/use-auth';
@@ -30,6 +29,13 @@ const getIcon = (type: Resource['type']) => {
     }
 };
 
+interface CardData {
+    id: string;
+    name: string;
+    description: string;
+    path: string;
+}
+
 export default function DynamicPage() {
     const pathname = usePathname();
     const router = useRouter();
@@ -40,7 +46,7 @@ export default function DynamicPage() {
     const [breadcrumbItems, setBreadcrumbItems] = useState<{ href: string; label: string }[]>([]);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
-    const [cards, setCards] = useState<{ id: string, name: string, description: string, path: string }[]>([]);
+    const [cards, setCards] = useState<CardData[]>([]);
 
     const [resources, setResources] = useState<Resource[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -50,7 +56,7 @@ export default function DynamicPage() {
     const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
     useEffect(() => {
-        const segments = pathname.split('/').filter(Boolean).slice(2); // remove 'student', 'dashboard'
+        const segments = pathname.split('/').filter(Boolean).slice(2);
         setPathSegments(segments);
         
         if (segments.length === 1) setPageType('class');
@@ -61,75 +67,93 @@ export default function DynamicPage() {
     }, [pathname]);
 
     useEffect(() => {
-        if (pageType === 'unknown' || authLoading) return;
+        if (pageType === 'unknown' || authLoading || !user) return;
         setIsLoading(true);
 
         const [classId, subjectId, chapterId] = pathSegments;
-        
-        const classData = staticData.find(c => c.id === classId);
-        if (!classData) { router.push('/'); return; }
 
-        const baseBreadcrumbs = [
-            { href: '/', label: 'Home' },
-            { href: `/student/dashboard/${classId}`, label: classData.name },
-        ];
+        const fetchFirestoreData = async () => {
+            const className = classId;
+            const subjectName = subjectId;
+            const chapterName = chapterId;
 
-        if (pageType === 'class') {
-            setTitle(classData.name);
-            setDescription('Select a subject to explore.');
-            setCards(classData.subjects.map(s => ({
-                id: s.id,
-                name: s.name,
-                description: `${s.lessons.length} chapters`,
-                path: `/student/dashboard/${classId}/${s.id}`
-            })));
-            setBreadcrumbItems(baseBreadcrumbs);
-            setIsLoading(false);
-        }
+            const baseBreadcrumbs = [
+                { href: '/', label: 'Home' },
+                { href: `/student/dashboard/${className}`, label: `Class ${className}` },
+            ];
 
-        if (pageType === 'subject') {
-            const subjectData = classData.subjects.find(s => s.id === subjectId);
-            if (!subjectData) { router.push('/'); return; }
-            setTitle(subjectData.name);
-            setDescription('Select a chapter to start learning.');
-            setCards(subjectData.lessons.map(l => ({
-                id: l.id,
-                name: l.name,
-                description: l.content[0]?.description || 'View resources for this chapter.',
-                path: `/student/dashboard/${classId}/${subjectId}/${l.id}`
-            })));
-            setBreadcrumbItems([...baseBreadcrumbs, { href: `/student/dashboard/${classId}/${subjectId}`, label: subjectData.name }]);
-            setIsLoading(false);
-        }
+            try {
+                if (pageType === 'class') {
+                    const q = query(collection(db, "resources"), where("class", "==", className));
+                    const querySnapshot = await getDocs(q);
+                    const subjectMap = new Map<string, Set<string>>();
+                    querySnapshot.forEach(doc => {
+                        const resource = doc.data();
+                        if (!subjectMap.has(resource.subject)) {
+                            subjectMap.set(resource.subject, new Set());
+                        }
+                        subjectMap.get(resource.subject)!.add(resource.chapter);
+                    });
 
-        if (pageType === 'chapter') {
-            const subjectData = classData.subjects.find(s => s.id === subjectId);
-            const lessonData = subjectData?.lessons.find(l => l.id === chapterId);
-            if (!subjectData || !lessonData) { router.push('/'); return; }
+                    setTitle(`Class ${className}`);
+                    setDescription('Select a subject to explore.');
+                    setCards(Array.from(subjectMap.entries()).map(([subject, chapters]) => ({
+                        id: subject.toLowerCase().replace(/ /g, '-'),
+                        name: subject,
+                        description: `${chapters.size} chapters`,
+                        path: `/student/dashboard/${className}/${subject}`
+                    })));
+                    setBreadcrumbItems(baseBreadcrumbs);
+                }
 
-            setTitle(lessonData.name);
-            setDescription('Available resources for this chapter.');
-            setBreadcrumbItems([
-                ...baseBreadcrumbs,
-                { href: `/student/dashboard/${classId}/${subjectId}`, label: subjectData.name },
-                { href: `/student/dashboard/${classId}/${subjectId}/${chapterId}`, label: lessonData.name }
-            ]);
+                if (pageType === 'subject') {
+                    const q = query(collection(db, "resources"), 
+                        where("class", "==", className), 
+                        where("subject", "==", subjectName)
+                    );
+                    const querySnapshot = await getDocs(q);
+                    const chapters = new Set<string>();
+                    querySnapshot.forEach(doc => chapters.add(doc.data().chapter));
 
-            const fetchResources = async () => {
-                const q = query(collection(db, "resources"),
-                    where("class", "==", classData.name.replace('Class ', '')),
-                    where("subject", "==", subjectData.name),
-                    where("chapter", "==", lessonData.name)
-                );
-                const querySnapshot = await getDocs(q);
-                const fetchedResources = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Resource[];
-                setResources(fetchedResources);
+                    setTitle(subjectName);
+                    setDescription('Select a chapter to start learning.');
+                    setCards(Array.from(chapters).map(chapter => ({
+                        id: chapter.toLowerCase().replace(/ /g, '-'),
+                        name: chapter,
+                        description: 'View resources for this chapter.',
+                        path: `/student/dashboard/${className}/${subjectName}/${chapter}`
+                    })));
+                    setBreadcrumbItems([...baseBreadcrumbs, { href: `/student/dashboard/${className}/${subjectName}`, label: subjectName }]);
+                }
+
+                if (pageType === 'chapter') {
+                    const q = query(collection(db, "resources"),
+                        where("class", "==", className),
+                        where("subject", "==", subjectName),
+                        where("chapter", "==", chapterName)
+                    );
+                    const querySnapshot = await getDocs(q);
+                    const fetchedResources = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Resource[];
+                    
+                    setTitle(chapterName);
+                    setDescription('Available resources for this chapter.');
+                    setResources(fetchedResources);
+                    setBreadcrumbItems([
+                        ...baseBreadcrumbs,
+                        { href: `/student/dashboard/${className}/${subjectName}`, label: subjectName },
+                        { href: `/student/dashboard/${className}/${subjectName}/${chapterName}`, label: chapterName }
+                    ]);
+                }
+            } catch (error) {
+                console.error("Error fetching data from Firestore: ", error);
+            } finally {
                 setIsLoading(false);
-            };
-            fetchResources();
-        }
+            }
+        };
 
-    }, [pageType, pathSegments, authLoading, router]);
+        fetchFirestoreData();
+
+    }, [pageType, pathSegments, authLoading, user, router]);
 
     const handleCardClick = (path: string) => {
         setIsNavigating(true);
@@ -166,20 +190,22 @@ export default function DynamicPage() {
                 </header>
 
                 {pageType !== 'chapter' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {cards.map(card => (
-                            <Card 
-                                key={card.id} 
-                                className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95"
-                                onClick={() => handleCardClick(card.path)}
-                            >
-                                <CardHeader>
-                                    <CardTitle className="font-headline text-xl text-foreground">{card.name}</CardTitle>
-                                    <CardDescription>{card.description}</CardDescription>
-                                </CardHeader>
-                            </Card>
-                        ))}
-                    </div>
+                     cards.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {cards.map(card => (
+                                <Card 
+                                    key={card.id} 
+                                    className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95"
+                                    onClick={() => handleCardClick(card.path)}
+                                >
+                                    <CardHeader>
+                                        <CardTitle className="font-headline text-xl text-foreground">{card.name}</CardTitle>
+                                        <CardDescription>{card.description}</CardDescription>
+                                    </CardHeader>
+                                </Card>
+                            ))}
+                        </div>
+                    ) : <p>No items found.</p>
                 )}
                 
                 {pageType === 'chapter' && (

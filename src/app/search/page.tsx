@@ -1,88 +1,82 @@
 'use client';
 
-import { Suspense, useEffect, useState, useMemo } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { data } from '@/lib/data';
-import type { Content, Lesson, Subject, ClassData } from '@/lib/types';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { Resource } from '@/lib/types';
 import { summarizeSearchResults } from '@/ai/flows/summarize-search-results';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Bot } from 'lucide-react';
 
-interface SearchResult {
+interface SearchResult extends Resource {
   path: string;
-  class: ClassData;
-  subject: Subject;
-  lesson: Lesson;
-  content: Content[];
 }
 
 function SearchPageComponent() {
   const searchParams = useSearchParams();
-  const query = searchParams.get('q') || '';
+  const queryParam = searchParams.get('q') || '';
   const [results, setResults] = useState<SearchResult[]>([]);
   const [summary, setSummary] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSummarizing, setIsSummarizing] = useState(false);
 
-  const allNotes = useMemo(() => {
-    const notes: SearchResult[] = [];
-    data.forEach(classData => {
-      classData.subjects.forEach(subject => {
-        subject.lessons.forEach(lesson => {
-          notes.push({
-            path: `/${classData.id}/${subject.id}/${lesson.id}`,
-            class: classData,
-            subject: subject,
-            lesson: lesson,
-            content: lesson.content,
-          });
-        });
-      });
-    });
-    return notes;
-  }, []);
-
   useEffect(() => {
-    if (query) {
+    if (queryParam) {
       setIsLoading(true);
       setSummary('');
 
-      const filteredResults = allNotes.filter(note => {
-        const contentDescription = note.content.map(c => c.description).join(' ').toLowerCase();
-        return note.lesson.name.toLowerCase().includes(query.toLowerCase()) ||
-               contentDescription.includes(query.toLowerCase()) ||
-               note.subject.name.toLowerCase().includes(query.toLowerCase());
-      });
-      setResults(filteredResults);
-      setIsLoading(false);
-
-      if (filteredResults.length > 3) {
-        setIsSummarizing(true);
-        const searchContentForAI = filteredResults.map(
-          r => `[${r.class.name} > ${r.subject.name}] ${r.lesson.name}: ${r.content.map(c => c.description).join(' ')}`
-        );
-
-        summarizeSearchResults({ query, results: searchContentForAI })
-          .then(output => {
-            setSummary(output.summary);
-          })
-          .catch(console.error)
-          .finally(() => setIsSummarizing(false));
-      }
-    } else {
-        setResults([]);
+      const fetchResults = async () => {
+        const resourcesRef = collection(db, 'resources');
+        const q = query(resourcesRef);
+        const querySnapshot = await getDocs(q);
+        
+        const allResources = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Resource));
+        
+        const lowerCaseQuery = queryParam.toLowerCase();
+        
+        const filtered = allResources.filter(resource => 
+            resource.title.toLowerCase().includes(lowerCaseQuery) ||
+            resource.subject.toLowerCase().includes(lowerCaseQuery) ||
+            resource.chapter.toLowerCase().includes(lowerCaseQuery)
+        ).map(resource => ({
+            ...resource,
+            path: `/student/dashboard/${resource.class}/${resource.subject}/${resource.chapter}`
+        }));
+        
+        setResults(filtered);
         setIsLoading(false);
+
+        if (filtered.length > 3) {
+          setIsSummarizing(true);
+          const searchContentForAI = filtered.map(
+            r => `[Class ${r.class} > ${r.subject}] ${r.chapter}: ${r.title}`
+          );
+
+          summarizeSearchResults({ query: queryParam, results: searchContentForAI })
+            .then(output => {
+              setSummary(output.summary);
+            })
+            .catch(console.error)
+            .finally(() => setIsSummarizing(false));
+        }
+      };
+
+      fetchResults();
+    } else {
+      setResults([]);
+      setIsLoading(false);
     }
-  }, [query, allNotes]);
+  }, [queryParam]);
 
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="font-headline text-4xl font-bold mb-2">Search Results</h1>
       <p className="text-muted-foreground mb-8">
-        {isLoading ? 'Searching...' : `Found ${results.length} results for "${query}"`}
+        {isLoading ? 'Searching...' : `Found ${results.length} results for "${queryParam}"`}
       </p>
 
       {(isSummarizing || summary) && (
@@ -112,7 +106,6 @@ function SearchPageComponent() {
                     </CardHeader>
                     <CardContent>
                         <Skeleton className="h-4 w-full"/>
-                        <Skeleton className="h-4 w-full mt-2"/>
                     </CardContent>
                 </Card>
             ))}
@@ -120,24 +113,24 @@ function SearchPageComponent() {
       ) : results.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2">
           {results.map(result => (
-            <Link href={result.path} key={result.path}>
+            <Link href={result.path} key={result.id}>
               <Card className="hover:border-primary/80 hover:bg-card/80 transition-colors h-full">
                 <CardHeader>
-                  <CardTitle className="font-headline">{result.lesson.name}</CardTitle>
+                  <CardTitle className="font-headline">{result.title}</CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    {result.class.name} &gt; {result.subject.name}
+                    Class {result.class} &gt; {result.subject} &gt; {result.chapter}
                   </p>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-foreground/80 line-clamp-2">{result.content.map(c => c.description).join(' ')}</p>
+                   <p className="text-sm text-foreground/80 line-clamp-2">Type: {result.type.replace(/-/g, ' ')}</p>
                 </CardContent>
               </Card>
             </Link>
           ))}
         </div>
       ) : (
-        <div className="text-center py-16">
-            <p className="text-lg text-muted-foreground">No notes found matching your search.</p>
+        !isLoading && <div className="text-center py-16">
+            <p className="text-lg text-muted-foreground">No resources found matching your search.</p>
         </div>
       )}
     </div>
@@ -150,4 +143,4 @@ export default function SearchPage() {
         <SearchPageComponent />
       </Suspense>
     );
-  }
+}

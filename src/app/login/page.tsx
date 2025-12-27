@@ -5,16 +5,18 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/componentsui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { app, db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
+import { FirestorePermissionError } from "@/firebase/errors";
+import { errorEmitter } from "@/firebase/error-emitter";
 
 const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48">
@@ -100,21 +102,31 @@ export default function LoginPage() {
     }
     
     setIsLoading(true);
-    try {
-      await setDoc(doc(db, "users", pendingUser.uid), {
-        uid: pendingUser.uid,
-        name: pendingUser.displayName,
-        email: pendingUser.email,
-        role: selectedRole,
-        createdAt: new Date(),
+    const userDocRef = doc(db, "users", pendingUser.uid);
+    const userData = {
+      uid: pendingUser.uid,
+      name: pendingUser.displayName,
+      email: pendingUser.email,
+      role: selectedRole,
+      createdAt: new Date(),
+    };
+
+    setDoc(userDocRef, userData)
+      .then(() => {
+        setShowRoleDialog(false);
+        handleLoginSuccess(pendingUser);
+      })
+      .catch((serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: userDocRef.path,
+          operation: 'create',
+          requestResourceData: userData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-      setShowRoleDialog(false);
-      handleLoginSuccess(pendingUser);
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Failed to save role.", description: error.message });
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   return (
@@ -201,3 +213,5 @@ export default function LoginPage() {
     </>
   );
 }
+
+    

@@ -15,6 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader } from "lucide-react";
+import { FirestorePermissionError } from "@/firebase/errors";
+import { errorEmitter } from "@/firebase/error-emitter";
 
 const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48">
@@ -89,21 +91,31 @@ export default function RegisterPage() {
         }
         
         setIsLoading(true);
-        try {
-          await setDoc(doc(db, "users", pendingUser.uid), {
+        const userDocRef = doc(db, "users", pendingUser.uid);
+        const userData = {
             uid: pendingUser.uid,
             name: pendingUser.displayName,
             email: pendingUser.email,
             role: selectedRole,
             createdAt: new Date(),
+        };
+
+        setDoc(userDocRef, userData)
+          .then(() => {
+            setShowRoleDialog(false);
+            handleLoginSuccess(pendingUser);
+          })
+          .catch((serverError) => {
+            const permissionError = new FirestorePermissionError({
+              path: userDocRef.path,
+              operation: 'create',
+              requestResourceData: userData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+          })
+          .finally(() => {
+            setIsLoading(false);
           });
-          setShowRoleDialog(false);
-          handleLoginSuccess(pendingUser);
-        } catch (error: any) {
-          toast({ variant: "destructive", title: "Failed to save role.", description: error.message });
-        } finally {
-          setIsLoading(false);
-        }
     };
 
 
@@ -119,11 +131,13 @@ export default function RegisterPage() {
             setIsLoading(false);
             return;
         }
+
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
-
-            await setDoc(doc(db, "users", user.uid), {
+            
+            const userDocRef = doc(db, "users", user.uid);
+            const userData = {
                 uid: user.uid,
                 name,
                 mobile,
@@ -132,13 +146,25 @@ export default function RegisterPage() {
                 gender,
                 role,
                 createdAt: new Date(),
-            });
+            };
 
-            toast({
-                title: "Registration Successful!",
-                description: "You can now log in with your credentials.",
-            });
-            router.push('/login');
+            setDoc(userDocRef, userData)
+                .then(() => {
+                    toast({
+                        title: "Registration Successful!",
+                        description: "You can now log in with your credentials.",
+                    });
+                    router.push('/login');
+                })
+                .catch((serverError) => {
+                    const permissionError = new FirestorePermissionError({
+                        path: userDocRef.path,
+                        operation: 'create',
+                        requestResourceData: userData,
+                    });
+                    errorEmitter.emit('permission-error', permissionError);
+                });
+
         } catch (error: any) {
             const errorMessage = error.message;
             toast({
@@ -283,3 +309,5 @@ export default function RegisterPage() {
     </>
   );
 }
+
+    

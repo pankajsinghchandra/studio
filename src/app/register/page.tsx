@@ -191,7 +191,6 @@ export default function RegisterPage() {
                 <Label htmlFor="password">Password</Label>
                 <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
               </div>
-
               <div className="space-y-2">
                   <Label>You are a...</Label>
                   <RadioGroup onValueChange={setRole} value={role} className="flex space-x-4">
@@ -226,7 +225,7 @@ export default function RegisterPage() {
                           <Select name="gender" onValueChange={setGender} value={gender}>
                               <SelectTrigger id="gender">
                                   <SelectValue placeholder="Select Gender" />
-                              </Trigger>
+                              </SelectTrigger>
                               <SelectContent>
                                   <SelectItem value="male">Male</SelectItem>
                                   <SelectItem value="female">Female</SelectItem>
@@ -281,6 +280,6 @@ export default function RegisterPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </>
-    );
+    </>
+  );
 }

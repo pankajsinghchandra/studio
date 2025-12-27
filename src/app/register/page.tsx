@@ -148,30 +148,33 @@ export default function RegisterPage() {
                 createdAt: new Date(),
             };
 
-            setDoc(userDocRef, userData)
-                .then(() => {
-                    toast({
-                        title: "Registration Successful!",
-                        description: "You can now log in with your credentials.",
-                    });
-                    router.push('/login');
-                })
-                .catch((serverError) => {
-                    const permissionError = new FirestorePermissionError({
-                        path: userDocRef.path,
-                        operation: 'create',
-                        requestResourceData: userData,
-                    });
-                    errorEmitter.emit('permission-error', permissionError);
-                });
+            await setDoc(userDocRef, userData);
+            // Sign out the user immediately after registration
+            await auth.signOut();
+            
+            toast({
+                title: "Registration Successful!",
+                description: "You can now log in with your new credentials.",
+            });
+            router.push('/login');
 
         } catch (error: any) {
-            const errorMessage = error.message;
-            toast({
-                variant: "destructive",
-                title: "Registration Failed",
-                description: errorMessage,
-            });
+            // Handle specific Firebase auth errors or generic errors
+            if (error.code && error.code.startsWith('auth/')) {
+                 toast({
+                    variant: "destructive",
+                    title: "Registration Failed",
+                    description: error.message,
+                });
+            } else { // This will now catch the Firestore permission error
+                const userDocRef = doc(db, "users", error.uid || 'unknown'); // Fallback
+                 const permissionError = new FirestorePermissionError({
+                    path: userDocRef.path,
+                    operation: 'create',
+                    requestResourceData: { name, mobile, email, role /*...other data*/ },
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -309,3 +312,5 @@ export default function RegisterPage() {
     </>
   );
 }
+
+    

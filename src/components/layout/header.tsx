@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookHeart, LogOut, Loader, User as UserIcon, Shield } from 'lucide-react';
+import { BookHeart, LogOut, Loader, User as UserIcon, Shield, LayoutDashboard } from 'lucide-react';
 import SearchBar from '../search-bar';
 import { Button } from '../ui/button';
 import { getAuth, signOut } from 'firebase/auth';
@@ -78,11 +78,18 @@ export default function Header() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {isAdmin && (
-                  <DropdownMenuItem onClick={() => router.push('/admin/dashboard')}>
-                    <Shield className="mr-2 h-4 w-4" />
-                    <span>Admin Dashboard</span>
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem onClick={() => router.push('/admin/dashboard')}>
+                      <Shield className="mr-2 h-4 w-4" />
+                      <span>Admin Dashboard</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push('/')}>
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      <span>User Dashboard</span>
+                    </DropdownMenuItem>
+                  </>
                 )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
@@ -129,3 +136,5 @@ export default function Header() {
     </header>
   );
 }
+
+    

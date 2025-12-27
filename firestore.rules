@@ -5,19 +5,7 @@
  * @section Core Philosophy
  * This ruleset establishes a "Public Read, User-Specific Write" security model.
  * Educational content is public, while user profiles can only be created by their respective owners.
- *
- * @section Data Structure
- * - /users/{userId}
- * - /classes/{classId}
- *   - /subjects/{subjectId}
- *     - /lessons/{lessonId}
- *       - /contents/{contentId}
- *
- * @section Key Security Decisions
- * 1.  Public Read Access: All educational content is publicly readable.
- * 2.  User Profile Creation: Any user can create their own profile document in the '/users' collection.
- *     This is essential for the registration process. Subsequent updates or reads would require specific rules.
- * 3.  Default Write Denial: All other write operations are denied by default for security.
+ * Admin users have full access to content management.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -25,14 +13,25 @@ service cloud.firestore {
 
     /**
      * @description Controls access to user profile documents.
-     * @path /users/{userId}
-     * @allow Any user (newly registering) can create their own user document.
-     * @deny Reading, updating, or deleting user documents is disallowed by default.
+     * @allow Any user can create their own user document.
+     * @allow A logged-in user can read or update their own document.
      */
     match /users/{userId} {
       allow create: if true;
-      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false; // Generally, users shouldn't delete their own accounts from the client.
     }
+
+    /**
+     * @description Controls access to the 'resources' collection.
+     * @allow Any user can read resources.
+     * @allow Admin users can create, update, and delete resources.
+     */
+    match /resources/{resourceId} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.token.email == 'quizpankaj@gmail.com';
+    }
+
 
     /**
      * @description Controls access to the top-level 'classes' collection.
@@ -75,3 +74,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

@@ -69,7 +69,6 @@ body {
   body {
     @apply bg-background text-foreground;
     position: relative;
-    overflow-x: hidden;
   }
    body::before {
     content: '';

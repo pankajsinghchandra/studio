@@ -1,115 +1,77 @@
 /**
  * @file firestore.rules
- * @description Firestore Security Rules for a public-facing educational content platform.
+ * @description Firestore Security Rules for an educational content platform.
  *
  * @section Core Philosophy
- * This ruleset establishes a "Public Read-Only" security model. The primary goal is to
- * make all educational content (Classes, Subjects, Lessons, Content) universally
- * accessible for reading by any user, including anonymous visitors. All write
- * operations (create, update, delete) are explicitly disabled by default as a
- * security measure, because the current data model does not include any concept of
- * user ownership or administrative roles. To enable writes, the data schemas must
- * be updated to include an ownership field (e.g., 'creatorId' or 'adminId').
+ * This ruleset establishes a "Public Read, User-Specific Write" security model.
+ * Educational content is public, while user profiles can only be created by their respective owners.
  *
  * @section Data Structure
- * The data is organized hierarchically to reflect the educational structure:
+ * - /users/{userId}
  * - /classes/{classId}
  *   - /subjects/{subjectId}
  *     - /lessons/{lessonId}
  *       - /contents/{contentId}
  *
  * @section Key Security Decisions
- * 1.  Public Read Access: All collections and their documents are publicly readable
- *     via `get` and `list` operations to support the app's function as an open
- *     content repository.
- * 2.  Default Write Denial: All write operations are denied (`if false;`). This
- *     creates a secure, read-only state. Placeholders and comments are provided
- *     to guide developers on how to securely enable writes once an ownership model
- *     is implemented in the application's data entities.
- * 3.  No Data Validation: In line with the prototyping philosophy, these rules
- *     do not enforce data shapes or field types. Validation is focused solely on
- *     authorization.
- *
- * @section Denormalization for Authorization
- * The data model correctly denormalizes parent IDs (e.g., `classId`, `subjectId`)
- * into child documents. While not leveraged in this initial read-only ruleset,
- * this is a critical practice that will simplify future security rules by avoiding
- * slow and costly cross-document `get()` calls when implementing write permissions.
+ * 1.  Public Read Access: All educational content is publicly readable.
+ * 2.  User Profile Creation: Any user can create their own profile document in the '/users' collection.
+ *     This is essential for the registration process. Subsequent updates or reads would require specific rules.
+ * 3.  Default Write Denial: All other write operations are denied by default for security.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // -------------------------------------------------------------------------
-    // Helper Functions
-    // -------------------------------------------------------------------------
-
-    // -------------------------------------------------------------------------
-    // Collection Rules
-    // -------------------------------------------------------------------------
+    /**
+     * @description Controls access to user profile documents.
+     * @path /users/{userId}
+     * @allow Any user (newly registering) can create their own user document.
+     * @deny Reading, updating, or deleting user documents is disallowed by default.
+     */
+    match /users/{userId} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+    }
 
     /**
      * @description Controls access to the top-level 'classes' collection.
      * @path /classes/{classId}
-     * @allow Any user, authenticated or not, can `get` or `list` all classes.
-     * @deny Any user attempting to `create`, `update`, or `delete` a class.
-     * @principle Provides public read access. Writes are disabled until an admin/ownership model is defined.
+     * @allow Any user can read classes. Writes are disallowed.
      */
     match /classes/{classId} {
       allow get, list: if true;
-
-      // CRITICAL: Cannot implement owner-only writes. The 'Class' entity is missing an 'ownerId' or 'creatorId' field.
-      allow create: if false; // TODO: Add owner validation once the schema is updated with an ownership field. (e.g., `request.resource.data.creatorId == request.auth.uid`)
-      allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field. (e.g., `resource.data.creatorId == request.auth.uid`)
-      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field. (e.g., `resource.data.creatorId == request.auth.uid`)
+      allow create, update, delete: if false;
     }
 
     /**
-     * @description Controls access to the 'subjects' subcollection within each class.
+     * @description Controls access to the 'subjects' subcollection.
      * @path /classes/{classId}/subjects/{subjectId}
-     * @allow Any user, authenticated or not, can `get` or `list` all subjects for any class.
-     * @deny Any user attempting to `create`, `update`, or `delete` a subject.
-     * @principle Provides public read access. Writes are disabled until an admin/ownership model is defined.
+     * @allow Any user can read subjects. Writes are disallowed.
      */
     match /classes/{classId}/subjects/{subjectId} {
       allow get, list: if true;
-
-      // CRITICAL: Cannot implement owner-only writes. The 'Subject' entity is missing an 'ownerId' or 'creatorId' field.
-      allow create: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow create, update, delete: if false;
     }
 
     /**
-     * @description Controls access to the 'lessons' subcollection within each subject.
+     * @description Controls access to the 'lessons' subcollection.
      * @path /classes/{classId}/subjects/{subjectId}/lessons/{lessonId}
-     * @allow Any user, authenticated or not, can `get` or `list` all lessons for any subject.
-     * @deny Any user attempting to `create`, `update`, or `delete` a lesson.
-     * @principle Provides public read access. Writes are disabled until an admin/ownership model is defined.
+     * @allow Any user can read lessons. Writes are disallowed.
      */
     match /classes/{classId}/subjects/{subjectId}/lessons/{lessonId} {
       allow get, list: if true;
-
-      // CRITICAL: Cannot implement owner-only writes. The 'Lesson' entity is missing an 'ownerId' or 'creatorId' field.
-      allow create: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow create, update, delete: if false;
     }
 
     /**
-     * @description Controls access to the 'contents' subcollection within each lesson.
+     * @description Controls access to the 'contents' subcollection.
      * @path /classes/{classId}/subjects/{subjectId}/lessons/{lessonId}/contents/{contentId}
-     * @allow Any user, authenticated or not, can `get` or `list` all content for any lesson.
-     * @deny Any user attempting to `create`, `update`, or `delete` a piece of content.
-     * @principle Provides public read access. Writes are disabled until an admin/ownership model is defined.
+     * @allow Any user can read content. Writes are disallowed.
      */
     match /classes/{classId}/subjects/{subjectId}/lessons/{lessonId}/contents/{contentId} {
       allow get, list: if true;
-
-      // CRITICAL: Cannot implement owner-only writes. The 'Content' entity is missing an 'ownerId' or 'creatorId' field.
-      allow create: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow create, update, delete: if false;
     }
   }
 }

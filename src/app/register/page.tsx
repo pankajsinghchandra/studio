@@ -227,7 +227,7 @@ export default function RegisterPage() {
                         <Select name="gender" onValueChange={setGender} value={gender}>
                             <SelectTrigger id="gender">
                                 <SelectValue placeholder="Select Gender" />
-                            </SelectTrigger>
+                            </Trigger>
                             <SelectContent>
                                 <SelectItem value="male">Male</SelectItem>
                                 <SelectItem value="female">Female</SelectItem>

@@ -25,9 +25,13 @@ const auth = getAuth(app);
 if (process.env.NODE_ENV === 'development') {
     // Point to the emulators running on localhost.
     // NOTE: Make sure you have the Firebase emulators running locally.
-    // connectAuthEmulator(auth, "http://127.0.0.1:9099");
-    // connectFirestoreEmulator(db, "127.0.0.1", 8080);
-    // connectStorageEmulator(storage, "127.0.0.1", 9199);
+    try {
+        connectAuthEmulator(auth, "http://127.0.0.1:9099");
+        connectFirestoreEmulator(db, "127.0.0.1", 8080);
+        connectStorageEmulator(storage, "127.0.0.1", 9199);
+    } catch (e) {
+        console.error('Error connecting to Firebase emulators. This is normal if the emulators are not running.');
+    }
 }
 
 

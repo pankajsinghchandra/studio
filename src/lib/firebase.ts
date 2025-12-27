@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeApp, getApp, getApps } from 'firebase/app';
+import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
@@ -16,9 +16,21 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 const storage = getStorage(app);
 const auth = getAuth(app);
+
+// Check if we are in a development environment and not in production
+if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined' && window.location.hostname === "localhost") {
+    try {
+        // Point to the Auth emulator
+        connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+        console.log("Auth emulator connected");
+    } catch (e) {
+        console.error("Error connecting to auth emulator: ", e);
+    }
+}
+
 
 export { app, db, storage, auth };

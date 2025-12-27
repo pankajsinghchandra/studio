@@ -8,11 +8,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { getAuth, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { app, db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Loader } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+
+const GoogleIcon = () => (
+    <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48">
+        <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path>
+        <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path>
+        <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path>
+        <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C42.022,35.244,44,30.036,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path>
+    </svg>
+);
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -25,31 +37,99 @@ export default function RegisterPage() {
     const [userClass, setUserClass] = useState('');
     const [gender, setGender] = useState('');
     const [role, setRole] = useState('');
+    
+    const [isLoading, setIsLoading] = useState(false);
+    const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+    
+    const [showRoleDialog, setShowRoleDialog] = useState(false);
+    const [pendingUser, setPendingUser] = useState<User | null>(null);
+    const [selectedRole, setSelectedRole] = useState('');
+
+
+    const handleLoginSuccess = (user: User) => {
+        toast({
+            title: "Registration Successful!",
+            description: "Welcome! You can now access your dashboard.",
+        });
+        router.push('/');
+    }
+
+    const handleGoogleSignIn = async () => {
+        setIsGoogleLoading(true);
+        const provider = new GoogleAuthProvider();
+        try {
+          const result = await signInWithPopup(auth, provider);
+          const user = result.user;
+    
+          const userDocRef = doc(db, "users", user.uid);
+          const userDoc = await getDoc(userDocRef);
+    
+          if (userDoc.exists()) {
+            handleLoginSuccess(user);
+          } else {
+            setPendingUser(user);
+            setShowRoleDialog(true);
+          }
+        } catch (error: any) {
+           if (error.code !== 'auth/popup-closed-by-user') {
+                toast({
+                    variant: "destructive",
+                    title: "Google Sign-In Failed",
+                    description: error.message,
+                });
+            }
+        } finally {
+          setIsGoogleLoading(false);
+        }
+    };
+    
+    const handleRoleSubmit = async () => {
+        if (!pendingUser || !selectedRole) {
+          toast({ variant: "destructive", title: "Please select a role." });
+          return;
+        }
+        
+        setIsLoading(true);
+        try {
+          await setDoc(doc(db, "users", pendingUser.uid), {
+            uid: pendingUser.uid,
+            name: pendingUser.displayName,
+            email: pendingUser.email,
+            role: selectedRole,
+            createdAt: new Date(),
+          });
+          setShowRoleDialog(false);
+          handleLoginSuccess(pendingUser);
+        } catch (error: any) {
+          toast({ variant: "destructive", title: "Failed to save role.", description: error.message });
+        } finally {
+          setIsLoading(false);
+        }
+    };
 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsLoading(true);
         if (!role) {
             toast({
                 variant: "destructive",
                 title: "Validation Error",
                 description: "Please select a role (Teacher or Student).",
             });
+            setIsLoading(false);
             return;
         }
         try {
-            // Create user with email and password
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
-            console.log("Registration successful for:", user.email);
 
-            // Save additional user info to Firestore
             await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,
                 name,
                 mobile,
                 email,
-                userClass,
+                userClass: role === 'student' ? userClass : '',
                 gender,
                 role,
                 createdAt: new Date(),
@@ -62,16 +142,18 @@ export default function RegisterPage() {
             router.push('/login');
         } catch (error: any) {
             const errorMessage = error.message;
-            console.error("Registration error:", errorMessage);
             toast({
                 variant: "destructive",
                 title: "Registration Failed",
                 description: errorMessage,
             });
+        } finally {
+            setIsLoading(false);
         }
     }
 
   return (
+    <>
     <div className="flex items-center justify-center min-h-[calc(100vh-10rem)] py-8">
       <Card className="w-full max-w-md">
         <form onSubmit={handleSubmit}>
@@ -80,6 +162,20 @@ export default function RegisterPage() {
             <CardDescription>Fill in the details below to get started.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+             <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isGoogleLoading}>
+                {isGoogleLoading ? <Loader className="animate-spin mr-2"/> : <GoogleIcon />} 
+                Continue with Google
+            </Button>
+            <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">
+                        Or create an account with email
+                    </span>
+                </div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
               <Input id="name" placeholder="John Doe" required value={name} onChange={e => setName(e.target.value)} />
@@ -96,37 +192,10 @@ export default function RegisterPage() {
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <Label htmlFor="class">Class</Label>
-                    <Select name="class" onValueChange={setUserClass}>
-                        <SelectTrigger id="class">
-                            <SelectValue placeholder="Select Class" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {Array.from({ length: 7 }, (_, i) => i + 6).map(c => (
-                                <SelectItem key={c} value={c.toString()}>Class {c}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="gender">Gender</Label>
-                    <Select name="gender" onValueChange={setGender}>
-                        <SelectTrigger id="gender">
-                            <SelectValue placeholder="Select Gender" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="male">Male</SelectItem>
-                            <SelectItem value="female">Female</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
+
             <div className="space-y-2">
                 <Label>You are a...</Label>
-                <RadioGroup onValueChange={setRole} className="flex space-x-4">
+                <RadioGroup onValueChange={setRole} value={role} className="flex space-x-4">
                     <div className="flex items-center space-x-2">
                         <RadioGroupItem value="student" id="student" />
                         <Label htmlFor="student">Student</Label>
@@ -137,10 +206,42 @@ export default function RegisterPage() {
                     </div>
                 </RadioGroup>
             </div>
+            
+            {role === 'student' && (
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="class">Class</Label>
+                        <Select name="class" onValueChange={setUserClass} value={userClass}>
+                            <SelectTrigger id="class">
+                                <SelectValue placeholder="Select Class" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Array.from({ length: 7 }, (_, i) => i + 6).map(c => (
+                                    <SelectItem key={c} value={c.toString()}>Class {c}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="gender">Gender</Label>
+                        <Select name="gender" onValueChange={setGender} value={gender}>
+                            <SelectTrigger id="gender">
+                                <SelectValue placeholder="Select Gender" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="male">Male</SelectItem>
+                                <SelectItem value="female">Female</SelectItem>
+                                <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+            )}
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button className="w-full" type="submit">
-              Register
+            <Button className="w-full" type="submit" disabled={isLoading}>
+                {isLoading && <Loader className="animate-spin mr-2"/>}
+                Register
             </Button>
             <p className="text-sm text-muted-foreground">
                 Already have an account?{' '}
@@ -152,5 +253,35 @@ export default function RegisterPage() {
         </form>
       </Card>
     </div>
+
+    <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>One Last Step</DialogTitle>
+            <DialogDescription>
+              Please select your role to complete your registration.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Label htmlFor="role-select">You are a...</Label>
+            <Select onValueChange={setSelectedRole} required>
+              <SelectTrigger id="role-select">
+                <SelectValue placeholder="Select Role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="student">Student</SelectItem>
+                <SelectItem value="teacher">Teacher</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleRoleSubmit} disabled={!selectedRole || isLoading}>
+              {isLoading && <Loader className="animate-spin mr-2"/>}
+              Complete Sign-In
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

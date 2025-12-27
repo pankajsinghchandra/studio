@@ -14,6 +14,7 @@ import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopu
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { app, db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import { Loader } from "lucide-react";
 
 const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48">
@@ -34,9 +35,10 @@ export default function LoginPage() {
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [pendingUser, setPendingUser] = useState<User | null>(null);
   const [selectedRole, setSelectedRole] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const handleLoginSuccess = (user: User) => {
-    console.log("Login successful for:", user.email);
     toast({
         title: "Login Successful!",
         description: "Welcome back!",
@@ -46,45 +48,48 @@ export default function LoginPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
         handleLoginSuccess(userCredential.user);
       })
       .catch((error) => {
         const errorMessage = error.message;
-        console.error("Login error:", errorMessage);
         toast({
             variant: "destructive",
             title: "Login Failed",
             description: errorMessage,
         });
-      });
+      })
+      .finally(() => setIsLoading(false));
   }
 
   const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // Check if user exists in Firestore
       const userDocRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists()) {
         handleLoginSuccess(user);
       } else {
-        // First time Google sign-in, ask for role
         setPendingUser(user);
         setShowRoleDialog(true);
       }
     } catch (error: any) {
-      console.error("Google Sign-In error:", error.message);
-      toast({
-          variant: "destructive",
-          title: "Google Sign-In Failed",
-          description: error.message,
-      });
+      if (error.code !== 'auth/popup-closed-by-user') {
+        toast({
+            variant: "destructive",
+            title: "Google Sign-In Failed",
+            description: error.message,
+        });
+      }
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -94,6 +99,7 @@ export default function LoginPage() {
       return;
     }
     
+    setIsLoading(true);
     try {
       await setDoc(doc(db, "users", pendingUser.uid), {
         uid: pendingUser.uid,
@@ -105,8 +111,9 @@ export default function LoginPage() {
       setShowRoleDialog(false);
       handleLoginSuccess(pendingUser);
     } catch (error: any) {
-      console.error("Error saving user role:", error.message);
       toast({ variant: "destructive", title: "Failed to save role.", description: error.message });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -121,8 +128,9 @@ export default function LoginPage() {
             </CardHeader>
             <CardContent className="space-y-4">
                <div className="space-y-4">
-                  <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn}>
-                    <GoogleIcon /> Continue with Google
+                  <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isGoogleLoading}>
+                    {isGoogleLoading ? <Loader className="animate-spin mr-2"/> : <GoogleIcon />} 
+                    Continue with Google
                   </Button>
                 </div>
 
@@ -147,7 +155,8 @@ export default function LoginPage() {
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
-              <Button className="w-full" type="submit">
+              <Button className="w-full" type="submit" disabled={isLoading}>
+                {isLoading && <Loader className="animate-spin mr-2"/>}
                 Login
               </Button>
               <p className="text-sm text-muted-foreground">
@@ -182,7 +191,8 @@ export default function LoginPage() {
             </Select>
           </div>
           <DialogFooter>
-            <Button onClick={handleRoleSubmit} disabled={!selectedRole}>
+            <Button onClick={handleRoleSubmit} disabled={!selectedRole || isLoading}>
+              {isLoading && <Loader className="animate-spin mr-2"/>}
               Complete Sign-In
             </Button>
           </DialogFooter>

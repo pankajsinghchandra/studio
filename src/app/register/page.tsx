@@ -15,7 +15,6 @@ import { useToast } from "@/hooks/use-toast";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 
 const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48">
@@ -154,134 +153,134 @@ export default function RegisterPage() {
 
   return (
     <>
-    <div className="flex items-center justify-center min-h-[calc(100vh-10rem)] py-8">
-      <Card className="w-full max-w-md">
-        <form onSubmit={handleSubmit}>
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-headline">Create an Account</CardTitle>
-            <CardDescription>Fill in the details below to get started.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-             <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isGoogleLoading}>
-                {isGoogleLoading ? <Loader className="animate-spin mr-2"/> : <GoogleIcon />} 
-                Continue with Google
-            </Button>
-            <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">
-                        Or create an account with email
-                    </span>
-                </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input id="name" placeholder="John Doe" required value={name} onChange={e => setName(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="name@example.com" required value={email} onChange={e => setEmail(e.target.value)} />
-            </div>
-             <div className="space-y-2">
-              <Label htmlFor="mobile">Mobile Number</Label>
-              <Input id="mobile" type="tel" placeholder="9876543210" value={mobile} onChange={e => setMobile(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
-            </div>
+      <div className="flex items-center justify-center min-h-[calc(100vh-10rem)] py-8">
+        <Card className="w-full max-w-md">
+          <form onSubmit={handleSubmit}>
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl font-headline">Create an Account</CardTitle>
+              <CardDescription>Fill in the details below to get started.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isGoogleLoading}>
+                  {isGoogleLoading ? <Loader className="animate-spin mr-2"/> : <GoogleIcon />} 
+                  Continue with Google
+              </Button>
+              <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">
+                          Or create an account with email
+                      </span>
+                  </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input id="name" placeholder="John Doe" required value={name} onChange={e => setName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" placeholder="name@example.com" required value={email} onChange={e => setEmail(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mobile">Mobile Number</Label>
+                <Input id="mobile" type="tel" placeholder="9876543210" value={mobile} onChange={e => setMobile(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
+              </div>
 
-            <div className="space-y-2">
-                <Label>You are a...</Label>
-                <RadioGroup onValueChange={setRole} value={role} className="flex space-x-4">
-                    <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="student" id="student" />
-                        <Label htmlFor="student">Student</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="teacher" id="teacher" />
-                        <Label htmlFor="teacher">Teacher</Label>
-                    </div>
-                </RadioGroup>
+              <div className="space-y-2">
+                  <Label>You are a...</Label>
+                  <RadioGroup onValueChange={setRole} value={role} className="flex space-x-4">
+                      <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="student" id="student" />
+                          <Label htmlFor="student">Student</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="teacher" id="teacher" />
+                          <Label htmlFor="teacher">Teacher</Label>
+                      </div>
+                  </RadioGroup>
+              </div>
+              
+              {role === 'student' && (
+                  <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                          <Label htmlFor="class">Class</Label>
+                          <Select name="class" onValueChange={setUserClass} value={userClass}>
+                              <SelectTrigger id="class">
+                                  <SelectValue placeholder="Select Class" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  {Array.from({ length: 7 }, (_, i) => i + 6).map(c => (
+                                      <SelectItem key={c} value={c.toString()}>Class {c}</SelectItem>
+                                  ))}
+                              </SelectContent>
+                          </Select>
+                      </div>
+                      <div className="space-y-2">
+                          <Label htmlFor="gender">Gender</Label>
+                          <Select name="gender" onValueChange={setGender} value={gender}>
+                              <SelectTrigger id="gender">
+                                  <SelectValue placeholder="Select Gender" />
+                              </Trigger>
+                              <SelectContent>
+                                  <SelectItem value="male">Male</SelectItem>
+                                  <SelectItem value="female">Female</SelectItem>
+                                  <SelectItem value="other">Other</SelectItem>
+                              </SelectContent>
+                          </Select>
+                      </div>
+                  </div>
+              )}
+            </CardContent>
+            <CardFooter className="flex flex-col gap-4">
+              <Button className="w-full" type="submit" disabled={isLoading}>
+                  {isLoading && <Loader className="animate-spin mr-2"/>}
+                  Register
+              </Button>
+              <p className="text-sm text-muted-foreground">
+                  Already have an account?{' '}
+                <Link href="/login" className="text-primary hover:underline">
+                  Login
+                </Link>
+              </p>
+            </CardFooter>
+          </form>
+        </Card>
+      </div>
+
+      <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>One Last Step</DialogTitle>
+              <DialogDescription>
+                Please select your role to complete your registration.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <Label htmlFor="role-select">You are a...</Label>
+              <Select onValueChange={setSelectedRole} required>
+                <SelectTrigger id="role-select">
+                  <SelectValue placeholder="Select Role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="student">Student</SelectItem>
+                  <SelectItem value="teacher">Teacher</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            
-            {role === 'student' && (
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="class">Class</Label>
-                        <Select name="class" onValueChange={setUserClass} value={userClass}>
-                            <SelectTrigger id="class">
-                                <SelectValue placeholder="Select Class" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {Array.from({ length: 7 }, (_, i) => i + 6).map(c => (
-                                    <SelectItem key={c} value={c.toString()}>Class {c}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="gender">Gender</Label>
-                        <Select name="gender" onValueChange={setGender} value={gender}>
-                            <SelectTrigger id="gender">
-                                <SelectValue placeholder="Select Gender" />
-                            </Trigger>
-                            <SelectContent>
-                                <SelectItem value="male">Male</SelectItem>
-                                <SelectItem value="female">Female</SelectItem>
-                                <SelectItem value="other">Other</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-            )}
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button className="w-full" type="submit" disabled={isLoading}>
+            <DialogFooter>
+              <Button onClick={handleRoleSubmit} disabled={!selectedRole || isLoading}>
                 {isLoading && <Loader className="animate-spin mr-2"/>}
-                Register
-            </Button>
-            <p className="text-sm text-muted-foreground">
-                Already have an account?{' '}
-              <Link href="/login" className="text-primary hover:underline">
-                Login
-              </Link>
-            </p>
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
-
-    <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>One Last Step</DialogTitle>
-            <DialogDescription>
-              Please select your role to complete your registration.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <Label htmlFor="role-select">You are a...</Label>
-            <Select onValueChange={setSelectedRole} required>
-              <SelectTrigger id="role-select">
-                <SelectValue placeholder="Select Role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="student">Student</SelectItem>
-                <SelectItem value="teacher">Teacher</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button onClick={handleRoleSubmit} disabled={!selectedRole || isLoading}>
-              {isLoading && <Loader className="animate-spin mr-2"/>}
-              Complete Sign-In
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
+                Complete Sign-In
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
 }

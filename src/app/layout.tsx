@@ -31,7 +31,7 @@ export default function RootLayout({
     <html lang="en" className={cn('dark', inter.variable, spaceGrotesk.variable)}>
       <body
         className={cn(
-          'min-h-screen bg-background font-body antialiased'
+          'min-h-screen bg-background font-body antialiased animate-shine'
         )}
       >
         <Header />

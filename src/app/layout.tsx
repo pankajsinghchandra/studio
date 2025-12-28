@@ -29,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn('dark', inter.variable, spaceGrotesk.variable)}>
+    <html lang="en" className={cn(inter.variable, spaceGrotesk.variable)}>
       <body>
         <AuthProvider>
           <Header />

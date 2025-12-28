@@ -4,7 +4,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Class",
       "type": "object",
-      "description": "Represents a class (e.g., 1st grade, 2nd grade, up to 10th grade).",
+      "description": "Represents a class (e.g., 3rd grade, 4th grade, up to 8th grade).",
       "properties": {
         "id": {
           "type": "string",
@@ -12,7 +12,7 @@
         },
         "gradeLevel": {
           "type": "number",
-          "description": "The grade level of the class (1-10).",
+          "description": "The grade level of the class (3-8).",
           "format": "integer"
         }
       },
@@ -33,7 +33,7 @@
         },
         "classId": {
           "type": "string",
-          "description": "Reference to Class. (Relationship: Class 1:N Subject)"
+          "description": "Reference to Class."
         },
         "name": {
           "type": "string",
@@ -46,23 +46,23 @@
         "name"
       ]
     },
-    "Lesson": {
+    "Chapter": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Lesson",
+      "title": "Chapter",
       "type": "object",
-      "description": "Represents a lesson or topic within a subject.",
+      "description": "Represents a chapter or topic within a subject.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the lesson."
+          "description": "Unique identifier for the chapter."
         },
         "subjectId": {
           "type": "string",
-          "description": "Reference to Subject. (Relationship: Subject 1:N Lesson)"
+          "description": "Reference to Subject."
         },
         "name": {
           "type": "string",
-          "description": "The name or title of the lesson."
+          "description": "The name or title of the chapter."
         }
       },
       "required": [
@@ -71,46 +71,47 @@
         "name"
       ]
     },
-    "Content": {
+    "Resource": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Content",
+      "title": "Resource",
       "type": "object",
-      "description": "Represents a piece of content (e.g., a PDF, Word document, video) associated with a lesson.",
+      "description": "Represents a piece of content (e.g., a PDF, Word document, video) associated with a chapter.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the content."
+          "description": "Unique identifier for the resource."
         },
-        "lessonId": {
+        "chapterId": {
           "type": "string",
-          "description": "Reference to Lesson. (Relationship: Lesson 1:N Content)"
+          "description": "Reference to Chapter."
         },
-        "name": {
+        "title": {
           "type": "string",
-          "description": "The name or title of the content."
+          "description": "The name or title of the resource."
         },
-        "fileType": {
+        "type": {
           "type": "string",
-          "description": "The type of the file (e.g., PDF, DOC, MP3, MP4)."
+          "description": "The type of the file (e.g., PDF, DOC, MP4)."
         },
-        "googleDriveFileId": {
+        "url": {
           "type": "string",
-          "description": "The file ID of the content in Google Drive."
+          "description": "The URL of the resource."
         }
       },
       "required": [
         "id",
-        "lessonId",
-        "name",
-        "fileType",
-        "googleDriveFileId"
+        "chapterId",
+        "title",
+        "type",
+        "url"
       ]
     }
   },
   "auth": {
     "providers": [
       "password",
-      "anonymous"
+      "anonymous",
+      "google.com"
     ]
   },
   "firestore": {
@@ -122,7 +123,7 @@
           "schema": {
             "$ref": "#/backend/entities/Class"
           },
-          "description": "Represents classes (e.g., 1st grade, 2nd grade).",
+          "description": "Represents classes (e.g., 3rd grade, 4th grade).",
           "params": []
         }
       },
@@ -133,7 +134,7 @@
           "schema": {
             "$ref": "#/backend/entities/Subject"
           },
-          "description": "Represents subjects within a class. Includes denormalized 'classId' for authorization independence.",
+          "description": "Represents subjects within a class.",
           "params": [
             {
               "name": "classId",
@@ -143,13 +144,13 @@
         }
       },
       {
-        "path": "/classes/{classId}/subjects/{subjectId}/lessons",
+        "path": "/classes/{classId}/subjects/{subjectId}/chapters",
         "definition": {
-          "entityName": "Lesson",
+          "entityName": "Chapter",
           "schema": {
-            "$ref": "#/backend/entities/Lesson"
+            "$ref": "#/backend/entities/Chapter"
           },
-          "description": "Represents lessons within a subject. Includes denormalized 'classId' and 'subjectId' for authorization independence.",
+          "description": "Represents chapters within a subject.",
           "params": [
             {
               "name": "classId",
@@ -163,13 +164,13 @@
         }
       },
       {
-        "path": "/classes/{classId}/subjects/{subjectId}/lessons/{lessonId}/contents",
+        "path": "/classes/{classId}/subjects/{subjectId}/chapters/{chapterId}/resources",
         "definition": {
-          "entityName": "Content",
+          "entityName": "Resource",
           "schema": {
-            "$ref": "#/backend/entities/Content"
+            "$ref": "#/backend/entities/Resource"
           },
-          "description": "Represents content within a lesson. Includes denormalized 'classId', 'subjectId', and 'lessonId' for authorization independence.",
+          "description": "Represents resources within a chapter.",
           "params": [
             {
               "name": "classId",
@@ -180,13 +181,23 @@
               "description": "The ID of the subject."
             },
             {
-              "name": "lessonId",
-              "description": "The ID of the lesson."
+              "name": "chapterId",
+              "description": "The ID of the chapter."
             }
           ]
         }
+      },
+      {
+          "path": "/resources",
+          "definition": {
+              "entityName": "Resource",
+              "schema": {
+                  "$ref": "#/backend/entities/Resource"
+              },
+              "description": "Flat collection of all resources for easier querying by admin."
+          }
       }
     ],
-    "reasoning": "The Firestore structure is designed to mirror the application's hierarchical data model (Class > Subject > Lesson > Content) while prioritizing security and scalability. Path-based ownership is used to secure user-specific data.\n\n*   **/classes**: Contains documents representing classes (grades). No specific access controls beyond Firestore's default security rules are necessary since this data can be considered public. Data validation ensures `gradeLevel` is within the allowed range (1-10).\n*   **/classes/{classId}/subjects**:  Subcollection under each class, containing subject documents. Subjects are owned by the Class. The `classId` is denormalized into the Subject document to support Authorization Independence, enabling simpler security rules without requiring `get()` calls to parent documents. This allows listing all subjects in a particular class without needing to read any Class document.\n*   **/classes/{classId}/subjects/{subjectId}/lessons**: Subcollection under each subject, containing lesson documents. Lessons are owned by the Subject. The `classId` and `subjectId` are denormalized into the Lesson document to maintain Authorization Independence. This allows listing all lessons for a particular class and subject combination without needing to read Class or Subject documents. This denormalization also makes it possible to query all lessons for a particular class in all the subjects.\n*   **/classes/{classId}/subjects/{subjectId}/lessons/{lessonId}/contents**: Subcollection under each lesson, containing content documents (notes, files). The `classId`, `subjectId`, and `lessonId` are denormalized into the Content document to ensure Authorization Independence. This enables secure listing of content associated with a specific lesson without requiring reads to parent documents. The denormalization supports efficient queries such as listing all contents within a class, subject, and lesson.\n\nThis structure promotes clear, secure rules and efficient queries while adhering to the principle of Authorization Independence, crucial for robust and scalable access control."
+    "reasoning": "The structure is mostly hierarchical to represent the educational content. A flat '/resources' collection is added for administrative purposes, allowing easy querying and management of all content without traversing the nested structure."
   }
 }

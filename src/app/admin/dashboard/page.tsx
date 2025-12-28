@@ -3,7 +3,7 @@
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -12,6 +12,8 @@ import { PlusCircle, Trash2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import LoadingOverlay from '@/components/loading-overlay';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 export default function AdminDashboard() {
   const { user, loading } = useAuth();
@@ -19,6 +21,17 @@ export default function AdminDashboard() {
   const [resources, setResources] = useState<any[]>([]);
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  
+  const [allResources, setAllResources] = useState<any[]>([]);
+  const [classes, setClasses] = useState<string[]>([]);
+  const [subjects, setSubjects] = useState<string[]>([]);
+  const [chapters, setChapters] = useState<string[]>([]);
+
+  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState('');
+  const [selectedChapter, setSelectedChapter] = useState('');
+
 
   useEffect(() => {
     if (!loading) {
@@ -29,18 +42,25 @@ export default function AdminDashboard() {
       }
     }
   }, [user, loading, router]);
-
+  
   const fetchResources = async () => {
+    setIsLoadingData(true);
     const querySnapshot = await getDocs(collection(db, 'resources'));
     const resourcesList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    setAllResources(resourcesList);
     setResources(resourcesList);
+
+    const uniqueClasses = [...new Set(resourcesList.map(r => r.class))].sort();
+    setClasses(uniqueClasses);
+    
+    setIsLoadingData(false);
   };
 
   const handleDelete = async (resourceId: string) => {
     setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'resources', resourceId));
-      setResources(resources.filter(r => r.id !== resourceId));
+      await fetchResources(); // Refetch all resources
       toast({
         title: 'Success',
         description: 'Resource deleted successfully.',
@@ -57,13 +77,36 @@ export default function AdminDashboard() {
     }
   };
 
+  useEffect(() => {
+    let filtered = allResources;
+    if (selectedClass) {
+        filtered = filtered.filter(r => r.class === selectedClass);
+        const uniqueSubjects = [...new Set(filtered.map(r => r.subject))].sort();
+        setSubjects(uniqueSubjects);
+    } else {
+        setSubjects([]);
+        setChapters([]);
+    }
+    if (selectedSubject) {
+        filtered = filtered.filter(r => r.subject === selectedSubject);
+        const uniqueChapters = [...new Set(filtered.map(r => r.chapter))].sort();
+        setChapters(uniqueChapters);
+    } else {
+        setChapters([]);
+    }
+    if (selectedChapter) {
+        filtered = filtered.filter(r => r.chapter === selectedChapter);
+    }
+    setResources(filtered);
+  }, [selectedClass, selectedSubject, selectedChapter, allResources]);
+
   if (loading || !user) {
     return <LoadingOverlay isLoading={true} />;
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {isDeleting && <LoadingOverlay isLoading={true} />}
+      {(isDeleting || isLoadingData) && <LoadingOverlay isLoading={true} />}
       <header className="flex justify-between items-center mb-8">
         <h1 className="font-headline text-4xl font-bold text-foreground">
           Admin Dashboard
@@ -76,16 +119,53 @@ export default function AdminDashboard() {
         </Button>
       </header>
 
+      <section className="mb-8">
+        <h2 className="font-headline text-3xl font-semibold mb-4">Manage Notes</h2>
+        <Card className="bg-card p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <Label htmlFor="class-filter">Class</Label>
+                    <Select value={selectedClass} onValueChange={value => { setSelectedClass(value); setSelectedSubject(''); setSelectedChapter(''); }}>
+                        <SelectTrigger id="class-filter"><SelectValue placeholder="Filter by Class" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="">All Classes</SelectItem>
+                            {classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div>
+                    <Label htmlFor="subject-filter">Subject</Label>
+                    <Select value={selectedSubject} onValueChange={value => { setSelectedSubject(value); setSelectedChapter(''); }} disabled={!selectedClass}>
+                        <SelectTrigger id="subject-filter"><SelectValue placeholder="Filter by Subject" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="">All Subjects</SelectItem>
+                            {subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div>
+                    <Label htmlFor="chapter-filter">Chapter</Label>
+                    <Select value={selectedChapter} onValueChange={setSelectedChapter} disabled={!selectedSubject}>
+                        <SelectTrigger id="chapter-filter"><SelectValue placeholder="Filter by Chapter" /></SelectTrigger>
+                        <SelectContent>
+                             <SelectItem value="">All Chapters</SelectItem>
+                             {chapters.map(ch => <SelectItem key={ch} value={ch}>{ch}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+        </Card>
+      </section>
+
       <section>
-        <h2 className="font-headline text-3xl font-semibold mb-6">Manage Content</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {resources.map(resource => (
-            <Card key={resource.id} className="bg-card">
+            <Card key={resource.id} className="bg-card flex flex-col">
               <CardHeader>
                 <CardTitle>{resource.title}</CardTitle>
                 <CardDescription>{resource.type} - Class {resource.class}, {resource.subject}, Chapter {resource.chapter}</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-grow">
                 <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
                   View Resource
                 </a>
@@ -116,6 +196,11 @@ export default function AdminDashboard() {
             </Card>
           ))}
         </div>
+        {!isLoadingData && resources.length === 0 && (
+            <div className="text-center py-16 col-span-full">
+                <p className="text-lg text-muted-foreground">No resources found for the selected filters.</p>
+            </div>
+        )}
       </section>
     </div>
   );

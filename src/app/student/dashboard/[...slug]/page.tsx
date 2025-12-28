@@ -10,9 +10,12 @@ import Breadcrumb from '@/components/breadcrumb';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import LoadingOverlay from '@/components/loading-overlay';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { FileText, Video, ImageIcon, BrainCircuit, BookOpen, Folder, File, ChevronRight } from 'lucide-react';
+import { FileText, Video, ImageIcon, BrainCircuit, BookOpen, Folder, File, ChevronRight, School } from 'lucide-react';
 
 const getIcon = (type: string, itemType: 'class' | 'subject' | 'chapter' | 'resource' ) => {
+    if(itemType === 'class') {
+        return <School className="w-8 h-8 text-primary" />;
+    }
     if(itemType === 'subject' || itemType === 'chapter') {
         return <Folder className="w-8 h-8 text-primary" />;
     }

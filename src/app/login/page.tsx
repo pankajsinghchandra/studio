@@ -114,7 +114,11 @@ export default function LoginPage() {
     setDoc(userDocRef, userData)
       .then(() => {
         setShowRoleDialog(false);
-        handleLoginSuccess(pendingUser);
+        toast({
+            title: "Registration Successful!",
+            description: "Welcome! You can now access your dashboard.",
+        });
+        router.push('/');
       })
       .catch((serverError) => {
         const permissionError = new FirestorePermissionError({

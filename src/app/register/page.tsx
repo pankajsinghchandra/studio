@@ -46,15 +46,6 @@ export default function RegisterPage() {
     const [pendingUser, setPendingUser] = useState<User | null>(null);
     const [selectedRole, setSelectedRole] = useState('');
 
-
-    const handleLoginSuccess = (user: User) => {
-        toast({
-            title: "Registration Successful!",
-            description: "Welcome! You can now access your dashboard.",
-        });
-        router.push('/');
-    }
-
     const handleGoogleSignIn = async () => {
         setIsGoogleLoading(true);
         const provider = new GoogleAuthProvider();
@@ -66,7 +57,11 @@ export default function RegisterPage() {
           const userDoc = await getDoc(userDocRef);
     
           if (userDoc.exists()) {
-            handleLoginSuccess(user);
+             toast({
+                title: "Login Successful!",
+                description: "Welcome back!",
+            });
+            router.push('/');
           } else {
             setPendingUser(user);
             setShowRoleDialog(true);
@@ -100,22 +95,26 @@ export default function RegisterPage() {
             createdAt: new Date(),
         };
 
-        setDoc(userDocRef, userData)
-          .then(() => {
+        try {
+            await setDoc(userDocRef, userData);
             setShowRoleDialog(false);
-            handleLoginSuccess(pendingUser);
-          })
-          .catch((serverError) => {
-            const permissionError = new FirestorePermissionError({
+            // Sign out the user immediately after registration
+            await auth.signOut();
+            toast({
+                title: "Registration Successful!",
+                description: "You can now log in with your new credentials.",
+            });
+            router.push('/login');
+        } catch (serverError) {
+             const permissionError = new FirestorePermissionError({
               path: userDocRef.path,
               operation: 'create',
               requestResourceData: userData,
             });
             errorEmitter.emit('permission-error', permissionError);
-          })
-          .finally(() => {
+        } finally {
             setIsLoading(false);
-          });
+        }
     };
 
 
@@ -149,7 +148,6 @@ export default function RegisterPage() {
             };
 
             await setDoc(userDocRef, userData);
-            // Sign out the user immediately after registration
             await auth.signOut();
             
             toast({
@@ -159,19 +157,18 @@ export default function RegisterPage() {
             router.push('/login');
 
         } catch (error: any) {
-            // Handle specific Firebase auth errors or generic errors
             if (error.code && error.code.startsWith('auth/')) {
                  toast({
                     variant: "destructive",
                     title: "Registration Failed",
                     description: error.message,
                 });
-            } else { // This will now catch the Firestore permission error
-                const userDocRef = doc(db, "users", error.uid || 'unknown'); // Fallback
+            } else {
+                const userDocRef = doc(db, "users", error.uid || 'unknown');
                  const permissionError = new FirestorePermissionError({
                     path: userDocRef.path,
                     operation: 'create',
-                    requestResourceData: { name, mobile, email, role /*...other data*/ },
+                    requestResourceData: { name, mobile, email, role },
                 });
                 errorEmitter.emit('permission-error', permissionError);
             }
@@ -192,7 +189,7 @@ export default function RegisterPage() {
             <CardContent className="space-y-4">
               <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isGoogleLoading}>
                   {isGoogleLoading ? <Loader className="animate-spin mr-2"/> : <GoogleIcon />} 
-                  Continue with Google
+                  Sign up with Google
               </Button>
               <div className="relative">
                   <div className="absolute inset-0 flex items-center">
@@ -294,7 +291,7 @@ export default function RegisterPage() {
               <Select onValueChange={setSelectedRole} required>
                 <SelectTrigger id="role-select">
                   <SelectValue placeholder="Select Role" />
-                </SelectTrigger>
+                </Trigger>
                 <SelectContent>
                   <SelectItem value="student">Student</SelectItem>
                   <SelectItem value="teacher">Teacher</SelectItem>
@@ -304,7 +301,7 @@ export default function RegisterPage() {
             <DialogFooter>
               <Button onClick={handleRoleSubmit} disabled={!selectedRole || isLoading}>
                 {isLoading && <Loader className="animate-spin mr-2"/>}
-                Complete Sign-In
+                Complete Sign-Up
               </Button>
             </DialogFooter>
           </DialogContent>

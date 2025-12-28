@@ -98,7 +98,6 @@ export default function RegisterPage() {
         try {
             await setDoc(userDocRef, userData);
             setShowRoleDialog(false);
-            // Sign out the user immediately after registration
             await auth.signOut();
             toast({
                 title: "Registration Successful!",
@@ -164,7 +163,7 @@ export default function RegisterPage() {
                     description: error.message,
                 });
             } else {
-                const userDocRef = doc(db, "users", error.uid || 'unknown');
+                const userDocRef = doc(db, "users", (error as any).uid || 'unknown');
                  const permissionError = new FirestorePermissionError({
                     path: userDocRef.path,
                     operation: 'create',
@@ -291,7 +290,7 @@ export default function RegisterPage() {
               <Select onValueChange={setSelectedRole} required>
                 <SelectTrigger id="role-select">
                   <SelectValue placeholder="Select Role" />
-                </Trigger>
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="student">Student</SelectItem>
                   <SelectItem value="teacher">Teacher</SelectItem>
@@ -309,5 +308,3 @@ export default function RegisterPage() {
     </>
   );
 }
-
-    

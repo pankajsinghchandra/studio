@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -10,9 +10,13 @@ import Breadcrumb from '@/components/breadcrumb';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import LoadingOverlay from '@/components/loading-overlay';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { FileText, Video, ImageIcon, BrainCircuit, BookOpen } from 'lucide-react';
+import { FileText, Video, ImageIcon, BrainCircuit, BookOpen, Folder, File, ChevronRight } from 'lucide-react';
 
-const getIcon = (type: Resource['type']) => {
+const getIcon = (type: string, itemType: 'class' | 'subject' | 'chapter' | 'resource' ) => {
+    if(itemType === 'subject' || itemType === 'chapter') {
+        return <Folder className="w-8 h-8 text-primary" />;
+    }
+
     switch (type) {
         case 'lesson-plan-pdf':
         case 'lesson-plan-word':
@@ -25,7 +29,7 @@ const getIcon = (type: Resource['type']) => {
         case 'mind-map':
             return <BrainCircuit className="w-8 h-8 text-primary/80 mt-1" />;
         default:
-            return <BookOpen className="w-8 h-8 text-primary/80 mt-1" />;
+            return <File className="w-8 h-8 text-primary/80 mt-1" />;
     }
 };
 
@@ -41,8 +45,14 @@ export default function DynamicPage() {
     const router = useRouter();
     const { user, userDetails, loading: authLoading } = useAuth();
     
-    const [pathSegments, setPathSegments] = useState<string[]>([]);
-    const [pageType, setPageType] = useState<'class' | 'subject' | 'chapter' | 'unknown'>('unknown');
+    const pathSegments = useMemo(() => pathname.split('/').filter(Boolean).slice(2), [pathname]);
+    const pageType = useMemo(() => {
+        if (pathSegments.length === 1) return 'class';
+        if (pathSegments.length === 2) return 'subject';
+        if (pathSegments.length === 3) return 'chapter';
+        return 'unknown';
+    }, [pathSegments]);
+
     const [breadcrumbItems, setBreadcrumbItems] = useState<{ href: string; label: string }[]>([]);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -56,17 +66,6 @@ export default function DynamicPage() {
     const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
     useEffect(() => {
-        const segments = pathname.split('/').filter(Boolean).slice(2);
-        setPathSegments(segments);
-        
-        if (segments.length === 1) setPageType('class');
-        else if (segments.length === 2) setPageType('subject');
-        else if (segments.length === 3) setPageType('chapter');
-        else setPageType('unknown');
-
-    }, [pathname]);
-
-    useEffect(() => {
         if (pageType === 'unknown' || authLoading || !user) return;
         setIsLoading(true);
 
@@ -74,8 +73,8 @@ export default function DynamicPage() {
 
         const fetchFirestoreData = async () => {
             const className = classId;
-            const subjectName = subjectId;
-            const chapterName = chapterId;
+            const subjectName = subjectId?.replace(/%20/g, ' ');
+            const chapterName = chapterId?.replace(/%20/g, ' ');
 
             const baseBreadcrumbs = [
                 { href: '/', label: 'Home' },
@@ -120,7 +119,7 @@ export default function DynamicPage() {
                     setCards(Array.from(chapters).map(chapter => ({
                         id: chapter.toLowerCase().replace(/ /g, '-'),
                         name: chapter,
-                        description: 'View resources for this chapter.',
+                        description: 'View resources',
                         path: `/student/dashboard/${className}/${subjectName}/${chapter}`
                     })));
                     setBreadcrumbItems([...baseBreadcrumbs, { href: `/student/dashboard/${className}/${subjectName}`, label: subjectName }]);
@@ -153,7 +152,7 @@ export default function DynamicPage() {
 
         fetchFirestoreData();
 
-    }, [pageType, pathSegments, authLoading, user, router]);
+    }, [pageType, pathSegments, authLoading, user]);
 
     const handleCardClick = (path: string) => {
         setIsNavigating(true);
@@ -189,55 +188,59 @@ export default function DynamicPage() {
                     <p className="text-lg text-muted-foreground">{description}</p>
                 </header>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {pageType !== 'chapter' && (
                      cards.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {cards.map(card => (
+                            cards.map(card => (
                                 <Card 
                                     key={card.id} 
-                                    className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95"
+                                    className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95 group"
                                     onClick={() => handleCardClick(card.path)}
                                 >
-                                    <CardHeader>
-                                        <CardTitle className="font-headline text-xl text-foreground">{card.name}</CardTitle>
-                                        <CardDescription>{card.description}</CardDescription>
+                                    <CardHeader className="flex flex-row items-center justify-between p-4">
+                                        <div className='flex items-center gap-4'>
+                                          <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                                            {getIcon(card.name, pageType === 'class' ? 'subject' : 'chapter')}
+                                          </div>
+                                          <div>
+                                            <CardTitle className="font-headline text-xl text-foreground">{card.name}</CardTitle>
+                                            <CardDescription>{card.description}</CardDescription>
+                                          </div>
+                                        </div>
+                                        <ChevronRight className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
                                     </CardHeader>
                                 </Card>
-                            ))}
-                        </div>
-                    ) : <p>No items found.</p>
+                            ))
+                    ) : <p className="col-span-full text-center text-muted-foreground">No items found.</p>
                 )}
                 
                 {pageType === 'chapter' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <>
                         {resources
-                         .filter(resource => {
-                             if ((resource.type === 'lesson-plan-pdf' || resource.type === 'lesson-plan-word') && userDetails?.role !== 'teacher') {
-                                 return false;
-                             }
-                             return true;
-                         })
+                         .filter(resource => !(userDetails?.role !== 'teacher' && (resource.type === 'lesson-plan-pdf' || resource.type === 'lesson-plan-word')))
                          .map(resource => (
-                            <Card key={resource.id} className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95" onClick={() => handleResourceClick(resource)}>
-                                <CardHeader>
+                            <Card key={resource.id} className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95 group" onClick={() => handleResourceClick(resource)}>
+                                <CardHeader className="p-4">
                                     <div className="flex items-start gap-4">
-                                        {getIcon(resource.type)}
+                                        <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                                            {getIcon(resource.type, 'resource')}
+                                        </div>
                                         <div>
-                                            <CardTitle className="font-headline text-xl text-foreground">{resource.title}</CardTitle>
+                                            <CardTitle className="font-headline text-xl text-foreground leading-tight">{resource.title}</CardTitle>
                                             <CardDescription className="mt-1 capitalize">{resource.type.replace(/-/g, ' ')}</CardDescription>
                                         </div>
                                     </div>
                                 </CardHeader>
                             </Card>
                         ))}
-                         {resources.length === 0 && <p>No resources found for this chapter.</p>}
-                    </div>
+                         {resources.length === 0 && <p className="col-span-full text-center text-muted-foreground">No resources found for this chapter.</p>}
+                    </>
                 )}
+                </div>
             </div>
             
-            {/* Video Dialog */}
             <Dialog open={!!selectedVideoUrl} onOpenChange={() => setSelectedVideoUrl(null)}>
-                <DialogContent className="max-w-4xl w-full h-auto p-0">
+                <DialogContent className="max-w-4xl w-full h-auto p-0 bg-card">
                     <div className="aspect-video">
                         <iframe
                             src={selectedVideoUrl || ''}
@@ -251,13 +254,14 @@ export default function DynamicPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Image Dialog */}
             <Dialog open={!!selectedImageUrl} onOpenChange={() => setSelectedImageUrl(null)}>
-                <DialogContent className="max-w-4xl w-full p-0">
+                <DialogContent className="max-w-4xl w-full p-0 bg-card">
                      <DialogHeader className="p-4">
                         <DialogTitle>Image Preview</DialogTitle>
                     </DialogHeader>
-                    <img src={selectedImageUrl || ''} alt="Resource" className="w-full h-auto max-h-[80vh] object-contain" />
+                    <div className="p-4">
+                      <img src={selectedImageUrl || ''} alt="Resource" className="w-full h-auto max-h-[80vh] object-contain rounded-md" />
+                    </div>
                 </DialogContent>
             </Dialog>
         </>

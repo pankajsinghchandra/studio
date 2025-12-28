@@ -1,19 +1,23 @@
 'use client';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import LoadingOverlay from '@/components/loading-overlay';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Award, Book, Briefcase, GraduationCap, PenTool, School, Dna, Atom, History, Microscope, Languages, Globe } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
 
 interface ClassInfo {
   id: string;
   name: string;
   subjects: number;
+  icon: React.ElementType;
 }
+
+const classIcons = [School, GraduationCap, Award, Book, Briefcase, PenTool, Dna, Atom, History, Microscope, Languages, Globe];
 
 export default function Home() {
   const { user, userDetails, loading } = useAuth();
@@ -27,7 +31,8 @@ export default function Home() {
       router.replace('/login');
     }
     if (!loading && userDetails?.email === 'quizpankaj@gmail.com') {
-      router.replace('/admin/dashboard');
+      // Admin is already on the user dashboard if they are on this page.
+      // The redirect to admin dashboard is in useAuth hook for initial login.
     }
   }, [user, userDetails, loading, router]);
 
@@ -49,10 +54,11 @@ export default function Home() {
           }
         });
         
-        const fetchedClasses: ClassInfo[] = Array.from(classMap.entries()).map(([className, subjectsSet]) => ({
+        const fetchedClasses: ClassInfo[] = Array.from(classMap.entries()).map(([className, subjectsSet], index) => ({
           id: `class-${className.toLowerCase().replace(' ', '-')}`,
           name: `Class ${className}`,
           subjects: subjectsSet.size,
+          icon: classIcons[index % classIcons.length],
         })).sort((a, b) => parseInt(a.id.split('-')[1]) - parseInt(b.id.split('-')[1]));
 
         setClasses(fetchedClasses);
@@ -88,17 +94,20 @@ export default function Home() {
 
         <main>
             <h2 className="font-headline text-3xl font-semibold mb-8 text-center">
-            Select Your Class
+            Apni class select karo.
             </h2>
             {classes.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {classes.map((c) => (
+              {classes.map((c, index) => (
                   <Card 
                       key={c.id} 
-                      className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95"
+                      className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95 group"
                       onClick={() => handleCardClick(`/student/dashboard/${c.id.split('-')[1]}`)}
                   >
                       <CardHeader className="flex flex-col items-center justify-center text-center p-6">
+                           <div className="p-4 bg-primary/10 rounded-full mb-4 border-2 border-primary/30 group-hover:bg-primary/20 transition-colors">
+                              <c.icon className="w-8 h-8 text-primary" />
+                           </div>
                           <CardTitle className="font-headline text-2xl text-foreground">
                           {c.name}
                           </CardTitle>

@@ -4,6 +4,7 @@ import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/layout/header';
+import { AuthProvider } from '@/hooks/use-auth';
 
 export const metadata: Metadata = {
   title: 'Vidyalaya Notes',
@@ -29,14 +30,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={cn('dark', inter.variable, spaceGrotesk.variable)}>
-      <body
-        className={cn(
-          'min-h-screen bg-background font-body antialiased animate-shine'
-        )}
-      >
-        <Header />
-        <div className="flex-grow">{children}</div>
-        <Toaster />
+      <body>
+        <AuthProvider>
+          <Header />
+          <div className="flex-grow">{children}</div>
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

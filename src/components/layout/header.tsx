@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookHeart, LogOut, Loader, User as UserIcon, Shield, LayoutDashboard } from 'lucide-react';
+import { BookHeart, LogOut, Loader, Shield, LayoutDashboard } from 'lucide-react';
 import SearchBar from '../search-bar';
 import { Button } from '../ui/button';
 import { getAuth, signOut } from 'firebase/auth';
@@ -136,5 +136,3 @@ export default function Header() {
     </header>
   );
 }
-
-    

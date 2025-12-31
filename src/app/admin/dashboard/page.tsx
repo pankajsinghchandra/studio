@@ -125,30 +125,30 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <Label htmlFor="class-filter">Class</Label>
-                    <Select value={selectedClass} onValueChange={value => { setSelectedClass(value); setSelectedSubject(''); setSelectedChapter(''); }}>
+                    <Select value={selectedClass || 'all'} onValueChange={value => { setSelectedClass(value === 'all' ? '' : value); setSelectedSubject(''); setSelectedChapter(''); }}>
                         <SelectTrigger id="class-filter"><SelectValue placeholder="Filter by Class" /></SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="">All Classes</SelectItem>
+                            <SelectItem value="all">All Classes</SelectItem>
                             {classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
                 <div>
                     <Label htmlFor="subject-filter">Subject</Label>
-                    <Select value={selectedSubject} onValueChange={value => { setSelectedSubject(value); setSelectedChapter(''); }} disabled={!selectedClass}>
+                    <Select value={selectedSubject || 'all'} onValueChange={value => { setSelectedSubject(value === 'all' ? '' : value); setSelectedChapter(''); }} disabled={!selectedClass}>
                         <SelectTrigger id="subject-filter"><SelectValue placeholder="Filter by Subject" /></SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="">All Subjects</SelectItem>
+                            <SelectItem value="all">All Subjects</SelectItem>
                             {subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
                 <div>
                     <Label htmlFor="chapter-filter">Chapter</Label>
-                    <Select value={selectedChapter} onValueChange={setSelectedChapter} disabled={!selectedSubject}>
+                    <Select value={selectedChapter || 'all'} onValueChange={(value) => setSelectedChapter(value === 'all' ? '' : value)} disabled={!selectedSubject}>
                         <SelectTrigger id="chapter-filter"><SelectValue placeholder="Filter by Chapter" /></SelectTrigger>
                         <SelectContent>
-                             <SelectItem value="">All Chapters</SelectItem>
+                             <SelectItem value="all">All Chapters</SelectItem>
                              {chapters.map(ch => <SelectItem key={ch} value={ch}>{ch}</SelectItem>)}
                         </SelectContent>
                     </Select>

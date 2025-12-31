@@ -4,10 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc, getDocs } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { v4 as uuidv4 } from 'uuid';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -69,9 +67,8 @@ export default function ManageContentPage() {
   const [subject, setSubject] = useState('');
   const [chapter, setChapter] = useState('');
   const [type, setType] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [videoLink, setVideoLink] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
+  const [resourceUrl, setResourceUrl] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const subjects = useMemo(() => {
     return resourceClass ? Object.keys(syllabus[resourceClass as keyof typeof syllabus] || {}) : [];
@@ -97,16 +94,10 @@ export default function ManageContentPage() {
     return <LoadingOverlay isLoading={true} />;
   }
   
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setFile(e.target.files[0]);
-    }
-  };
-  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    if (!title || !resourceClass || !subject || !chapter || !type) {
+    if (!title || !resourceClass || !subject || !chapter || !type || !resourceUrl) {
         toast({
             variant: 'destructive',
             title: 'Missing Fields',
@@ -114,21 +105,9 @@ export default function ManageContentPage() {
         });
         return;
     }
-    setIsUploading(true);
+    setIsSubmitting(true);
 
     try {
-      let resourceUrl = '';
-
-      if (type === 'video') {
-        resourceUrl = videoLink;
-      } else if (file) {
-        const storage = getStorage();
-        const fileId = uuidv4();
-        const storageRef = ref(storage, `resources/${fileId}_${file.name}`);
-        const snapshot = await uploadBytes(storageRef, file);
-        resourceUrl = await getDownloadURL(snapshot.ref);
-      }
-
       await addDoc(collection(db, 'resources'), {
         title,
         class: resourceClass,
@@ -153,13 +132,13 @@ export default function ManageContentPage() {
         description: (error as Error).message || 'There was a problem with your request.',
       });
     } finally {
-      setIsUploading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <LoadingOverlay isLoading={isUploading} />
+      <LoadingOverlay isLoading={isSubmitting} />
       <Card className="w-full max-w-2xl mx-auto">
         <form onSubmit={handleSubmit}>
           <CardHeader>
@@ -218,21 +197,14 @@ export default function ManageContentPage() {
                 </SelectContent>
               </Select>
             </div>
-            {type === 'video' ? (
-              <div className="space-y-2">
-                <Label htmlFor="videoLink">Video Link</Label>
-                <Input id="videoLink" type="url" placeholder="https://www.youtube.com/watch?v=..." required value={videoLink} onChange={(e) => setVideoLink(e.target.value)} />
-              </div>
-            ) : (
-              type && (
-                <div className="space-y-2">
-                  <Label htmlFor="file">Upload File</Label>
-                  <Input id="file" type="file" required onChange={handleFileChange} />
-                </div>
-              )
-            )}
-            <Button className="w-full" type="submit" disabled={isUploading}>
-              {isUploading ? 'Uploading...' : 'Add Resource'}
+            
+            <div className="space-y-2">
+              <Label htmlFor="resourceUrl">Resource Link</Label>
+              <Input id="resourceUrl" type="url" placeholder="https://example.com/resource" required value={resourceUrl} onChange={(e) => setResourceUrl(e.target.value)} />
+            </div>
+
+            <Button className="w-full" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Submitting...' : 'Add Resource'}
             </Button>
           </CardContent>
         </form>

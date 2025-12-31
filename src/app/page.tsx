@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import LoadingOverlay from '@/components/loading-overlay';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Award, Book, Briefcase, GraduationCap, PenTool, School, Dna, Atom, History, Microscope, Languages, Globe } from 'lucide-react';
+import { Award, Book, Briefcase, GraduationCap, PenTool, School, Dna, Atom, History, Microscope, Languages, Globe, Calculator, FlaskConical, Palette } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 
@@ -17,7 +17,7 @@ interface ClassInfo {
   icon: React.ElementType;
 }
 
-const classIcons = [School, GraduationCap, Award, Book, Briefcase, PenTool, Dna, Atom, History, Microscope, Languages, Globe];
+const classIcons = [School, GraduationCap, Award, Book, Briefcase, PenTool, Dna, Atom, History, Microscope, Languages, Globe, Calculator, FlaskConical, Palette ];
 
 export default function Home() {
   const { user, userDetails, loading } = useAuth();
@@ -55,11 +55,11 @@ export default function Home() {
         });
         
         const fetchedClasses: ClassInfo[] = Array.from(classMap.entries()).map(([className, subjectsSet], index) => ({
-          id: `class-${className.toLowerCase().replace(' ', '-')}`,
+          id: className,
           name: `Class ${className}`,
           subjects: subjectsSet.size,
           icon: classIcons[index % classIcons.length],
-        })).sort((a, b) => parseInt(a.id.split('-')[1]) - parseInt(b.id.split('-')[1]));
+        })).sort((a, b) => parseInt(a.id) - parseInt(b.id));
 
         setClasses(fetchedClasses);
         setDataLoading(false);
@@ -102,7 +102,7 @@ export default function Home() {
                   <Card 
                       key={c.id} 
                       className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95 group"
-                      onClick={() => handleCardClick(`/student/dashboard/${c.id.split('-')[1]}`)}
+                      onClick={() => handleCardClick(`/student/dashboard/${c.id}`)}
                   >
                       <CardHeader className="flex flex-col items-center justify-center text-center p-6">
                            <div className="p-4 bg-primary/10 rounded-full mb-4 border-2 border-primary/30 group-hover:bg-primary/20 transition-colors">

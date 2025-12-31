@@ -10,17 +10,24 @@ import Breadcrumb from '@/components/breadcrumb';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import LoadingOverlay from '@/components/loading-overlay';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { FileText, Video, ImageIcon, BrainCircuit, BookOpen, Folder, File, ChevronRight, School } from 'lucide-react';
+import { FileText, Video, ImageIcon, BrainCircuit, BookOpen, Folder, File, ChevronRight, School, Book, FlaskConical, Languages, Landmark, Calculator, Palette } from 'lucide-react';
 
-const getIcon = (type: string, itemType: 'class' | 'subject' | 'chapter' | 'resource' ) => {
-    if(itemType === 'class') {
-        return <School className="w-8 h-8 text-primary" />;
-    }
-    if(itemType === 'subject' || itemType === 'chapter') {
+const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: string, resourceType?: string) => {
+    const nameLower = name?.toLowerCase() || '';
+    if (itemType === 'class') return <School className="w-8 h-8 text-primary" />;
+    if (itemType === 'subject') {
+        if (nameLower.includes('math')) return <Calculator className="w-8 h-8 text-primary" />;
+        if (nameLower.includes('science')) return <FlaskConical className="w-8 h-8 text-primary" />;
+        if (nameLower.includes('social')) return <Landmark className="w-8 h-8 text-primary" />;
+        if (nameLower.includes('hindi')) return <Languages className="w-8 h-8 text-primary" />;
+        if (nameLower.includes('english')) return <Book className="w-8 h-8 text-primary" />;
+        if (nameLower.includes('computer')) return <Palette className="w-8 h-8 text-primary" />;
         return <Folder className="w-8 h-8 text-primary" />;
     }
+    if (itemType === 'chapter') return <BookOpen className="w-8 h-8 text-primary" />;
 
-    switch (type) {
+    // Resource icons
+    switch (resourceType) {
         case 'lesson-plan-pdf':
         case 'lesson-plan-word':
         case 'pdf-note':
@@ -72,12 +79,12 @@ export default function DynamicPage() {
         if (pageType === 'unknown' || authLoading || !user) return;
         setIsLoading(true);
 
-        const [classId, subjectId, chapterId] = pathSegments;
+        const [classId, subjectId, chapterId] = pathSegments.map(decodeURIComponent);
 
         const fetchFirestoreData = async () => {
             const className = classId;
-            const subjectName = subjectId?.replace(/%20/g, ' ');
-            const chapterName = chapterId?.replace(/%20/g, ' ');
+            const subjectName = subjectId;
+            const chapterName = chapterId;
 
             const baseBreadcrumbs = [
                 { href: '/', label: 'Home' },
@@ -100,10 +107,10 @@ export default function DynamicPage() {
                     setTitle(`Class ${className}`);
                     setDescription('Select a subject to explore.');
                     setCards(Array.from(subjectMap.entries()).map(([subject, chapters]) => ({
-                        id: subject.toLowerCase().replace(/ /g, '-'),
+                        id: subject,
                         name: subject,
                         description: `${chapters.size} chapters`,
-                        path: `/student/dashboard/${className}/${subject}`
+                        path: `/student/dashboard/${className}/${encodeURIComponent(subject)}`
                     })));
                     setBreadcrumbItems(baseBreadcrumbs);
                 }
@@ -120,12 +127,12 @@ export default function DynamicPage() {
                     setTitle(subjectName);
                     setDescription('Select a chapter to start learning.');
                     setCards(Array.from(chapters).map(chapter => ({
-                        id: chapter.toLowerCase().replace(/ /g, '-'),
+                        id: chapter,
                         name: chapter,
                         description: 'View resources',
-                        path: `/student/dashboard/${className}/${subjectName}/${chapter}`
+                        path: `/student/dashboard/${className}/${encodeURIComponent(subjectName)}/${encodeURIComponent(chapter)}`
                     })));
-                    setBreadcrumbItems([...baseBreadcrumbs, { href: `/student/dashboard/${className}/${subjectName}`, label: subjectName }]);
+                    setBreadcrumbItems([...baseBreadcrumbs, { href: `/student/dashboard/${className}/${encodeURIComponent(subjectName)}`, label: subjectName }]);
                 }
 
                 if (pageType === 'chapter') {
@@ -142,8 +149,8 @@ export default function DynamicPage() {
                     setResources(fetchedResources);
                     setBreadcrumbItems([
                         ...baseBreadcrumbs,
-                        { href: `/student/dashboard/${className}/${subjectName}`, label: subjectName },
-                        { href: `/student/dashboard/${className}/${subjectName}/${chapterName}`, label: chapterName }
+                        { href: `/student/dashboard/${className}/${encodeURIComponent(subjectName)}`, label: subjectName },
+                        { href: `/student/dashboard/${className}/${encodeURIComponent(subjectName)}/${encodeURIComponent(chapterName)}`, label: chapterName }
                     ]);
                 }
             } catch (error) {
@@ -203,7 +210,7 @@ export default function DynamicPage() {
                                     <CardHeader className="flex flex-row items-center justify-between p-4">
                                         <div className='flex items-center gap-4'>
                                           <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
-                                            {getIcon(card.name, pageType === 'class' ? 'subject' : 'chapter')}
+                                            {getIcon(pageType === 'class' ? 'subject' : 'chapter', card.name)}
                                           </div>
                                           <div>
                                             <CardTitle className="font-headline text-xl text-foreground">{card.name}</CardTitle>
@@ -226,7 +233,7 @@ export default function DynamicPage() {
                                 <CardHeader className="p-4">
                                     <div className="flex items-start gap-4">
                                         <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
-                                            {getIcon(resource.type, 'resource')}
+                                            {getIcon('resource', undefined, resource.type)}
                                         </div>
                                         <div>
                                             <CardTitle className="font-headline text-xl text-foreground leading-tight">{resource.title}</CardTitle>

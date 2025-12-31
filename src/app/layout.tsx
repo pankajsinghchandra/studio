@@ -4,7 +4,7 @@ import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/layout/header';
-import { AuthProvider } from '@/hooks/use-auth';
+import Providers from './providers';
 
 export const metadata: Metadata = {
   title: 'Vidyalaya Notes',
@@ -31,11 +31,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn(inter.variable, spaceGrotesk.variable)}>
       <body>
-        <AuthProvider>
+        <Providers>
           <Header />
           <div className="flex-grow">{children}</div>
           <Toaster />
-        </AuthProvider>
+        </Providers>
       </body>
     </html>
   );

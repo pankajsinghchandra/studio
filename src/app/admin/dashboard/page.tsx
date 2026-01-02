@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import Link from 'next/link';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, LayoutGrid, List } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import LoadingOverlay from '@/components/loading-overlay';
@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { syllabus } from '@/lib/syllabus';
 import type { Resource } from '@/lib/types';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 
 
 export default function AdminDashboard() {
@@ -34,6 +36,7 @@ export default function AdminDashboard() {
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedChapter, setSelectedChapter] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
 
   useEffect(() => {
@@ -53,9 +56,8 @@ export default function AdminDashboard() {
     setAllResources(resourcesList);
     setResources(resourcesList);
     
-    // Use syllabus to populate filters
     const classKeys = Object.keys(syllabus);
-    setClasses(classKeys.sort());
+    setClasses(classKeys.sort((a, b) => parseInt(a) - parseInt(b)));
     
     setIsLoadingData(false);
   };
@@ -64,16 +66,18 @@ export default function AdminDashboard() {
     setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'resources', resourceId));
-      await fetchResources(); // Refetch all resources
+      await fetchResources();
       toast({
         title: 'Success',
         description: 'Resource deleted successfully.',
+        duration: 1500,
       });
     } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: 'Failed to delete resource.',
+        duration: 3000,
       });
       console.error("Error deleting document: ", error);
     } finally {
@@ -95,7 +99,9 @@ export default function AdminDashboard() {
 
     if (selectedSubject) {
         filtered = filtered.filter(r => r.subject === selectedSubject);
-        const chapterKeys = syllabus[selectedClass as keyof typeof syllabus]?.[selectedSubject as keyof any] || [];
+        const classSyllabus = syllabus[selectedClass as keyof typeof syllabus];
+        const subjectSyllabus = classSyllabus ? (classSyllabus as any)[selectedSubject] : [];
+        const chapterKeys = Array.isArray(subjectSyllabus) ? subjectSyllabus : Object.keys(subjectSyllabus || {});
         setChapters(chapterKeys.sort());
     } else {
         setChapters([]);
@@ -119,17 +125,25 @@ export default function AdminDashboard() {
         <h1 className="font-headline text-4xl font-bold text-foreground">
           Admin Dashboard
         </h1>
-        <Button asChild>
-          <Link href="/admin/manage-content">
-            <PlusCircle className="mr-2" />
-            Add New Content
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+            <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('grid')}>
+                <LayoutGrid className="h-5 w-5" />
+            </Button>
+            <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')}>
+                <List className="h-5 w-5" />
+            </Button>
+            <Button asChild>
+              <Link href="/admin/manage-content">
+                <PlusCircle className="mr-2" />
+                Add New Content
+              </Link>
+            </Button>
+        </div>
       </header>
 
       <section className="mb-8">
         <h2 className="font-headline text-3xl font-semibold mb-4">Manage Notes</h2>
-        <Card className="bg-card p-6">
+        <Card className="bg-card p-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <Label htmlFor="class-filter">Class</Label>
@@ -137,7 +151,7 @@ export default function AdminDashboard() {
                         <SelectTrigger id="class-filter"><SelectValue placeholder="Filter by Class" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Classes</SelectItem>
-                            {classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                            {classes.map(c => <SelectItem key={c} value={c}>Class {c}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
@@ -166,44 +180,98 @@ export default function AdminDashboard() {
       </section>
 
       <section>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {resources.map((resource: Resource & { id: string }) => (
-            <Card key={resource.id} className="bg-card flex flex-col">
-              <CardHeader>
-                <CardTitle>{resource.title}</CardTitle>
-                <CardDescription>{resource.type} - Class {resource.class}, {resource.subject}, Chapter {resource.chapter}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
-                  View Resource
-                </a>
-              </CardContent>
-              <CardFooter>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm">
-                      <Trash2 className="mr-2 h-4 w-4" /> Delete
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the resource.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleDelete(resource.id)}>
-                        Continue
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+        {viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {resources.map((resource: Resource & { id: string }) => (
+                <Card key={resource.id} className="bg-card flex flex-col">
+                  <CardHeader>
+                    <CardTitle>{resource.title}</CardTitle>
+                    <CardDescription>{resource.type} - Class {resource.class}, {resource.subject}, Chapter {resource.chapter}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex-grow">
+                    <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                      View Resource
+                    </a>
+                  </CardContent>
+                  <CardFooter>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm">
+                          <Trash2 className="mr-2 h-4 w-4" /> Delete
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the resource.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDelete(resource.id)}>
+                            Continue
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+        ) : (
+          <Card>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Subject</TableHead>
+                        <TableHead>Chapter</TableHead>
+                        <TableHead>Class</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {resources.map((resource: Resource & { id: string }) => (
+                         <TableRow key={resource.id}>
+                            <TableCell className="font-medium">{resource.title}</TableCell>
+                            <TableCell><Badge variant="secondary">{resource.subject}</Badge></TableCell>
+                            <TableCell>{resource.chapter}</TableCell>
+                            <TableCell><Badge>{resource.class}</Badge></TableCell>
+                            <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                     <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                        <Button variant="ghost" size="sm">View</Button>
+                                    </a>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            This action cannot be undone. This will permanently delete the resource.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDelete(resource.id)}>
+                                            Continue
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+          </Card>
+        )}
         {!isLoadingData && resources.length === 0 && (
             <div className="text-center py-16 col-span-full">
                 <p className="text-lg text-muted-foreground">No resources found for the selected filters.</p>

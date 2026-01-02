@@ -11,12 +11,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { app, db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
-import { FirestorePermissionError } from "@/firebase/errors";
-import { errorEmitter } from "@/firebase/error-emitter";
 import { useAuth } from "@/app/providers";
 
 const GoogleIcon = () => (
@@ -52,21 +50,16 @@ export default function LoginPage() {
     }
   }, [user, authLoading, userDetails, router]);
 
-  const handleLoginSuccess = (user: User) => {
-    toast({
-        title: "Login Successful!",
-        description: "Welcome back!",
-    });
-    // The useEffect above will handle redirection.
-  }
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
-        // handleLoginSuccess(userCredential.user);
-        // Let the onAuthStateChanged listener and useEffect handle the redirection logic
+        // Let the useEffect handle the redirection logic
+        toast({
+            title: "Login Successful!",
+            description: "Welcome back!",
+        });
       })
       .catch((error) => {
         const errorMessage = error.message;
@@ -89,9 +82,14 @@ export default function LoginPage() {
       const userDocRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userDocRef);
 
-      if (userDoc.exists()) {
-        // User exists, let the useEffect handle redirection
+      if (userDoc.exists() && userDoc.data()?.role) {
+        // User exists and has a role, let the useEffect handle redirection
+         toast({
+            title: "Login Successful!",
+            description: "Welcome back!",
+        });
       } else {
+        // New user or existing user without a role
         setPendingUser(user);
         setShowRoleDialog(true);
       }
@@ -116,34 +114,39 @@ export default function LoginPage() {
     
     setIsLoading(true);
     const userDocRef = doc(db, "users", pendingUser.uid);
+    const userDoc = await getDoc(userDocRef);
+
     const userData = {
-      uid: pendingUser.uid,
-      name: pendingUser.displayName,
-      email: pendingUser.email,
-      role: selectedRole,
-      createdAt: new Date(),
+        uid: pendingUser.uid,
+        name: pendingUser.displayName,
+        email: pendingUser.email,
+        role: selectedRole,
     };
 
-    setDoc(userDocRef, userData)
-      .then(() => {
-        setShowRoleDialog(false);
-        toast({
-            title: "Registration Successful!",
-            description: "Welcome! You can now access your dashboard.",
+    try {
+      if (userDoc.exists()) {
+        // User document exists, just update the role
+        await updateDoc(userDocRef, { role: selectedRole });
+      } else {
+        // New user, create the document
+        await setDoc(userDocRef, { ...userData, createdAt: new Date() });
+      }
+       setShowRoleDialog(false);
+       toast({
+            title: "Registration Complete!",
+            description: "Welcome! You're all set up.",
         });
         // The onAuthStateChanged listener will handle the new user state and redirect.
-      })
-      .catch((serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: userDocRef.path,
-          operation: 'create',
-          requestResourceData: userData,
+    } catch (error: any) {
+        console.error("Error setting role: ", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not save your role. Please try again.",
         });
-        errorEmitter.emit('permission-error', permissionError);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (authLoading || user) {

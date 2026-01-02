@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode, useCa
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 interface UserDetails {
   name: string;
@@ -19,12 +19,14 @@ interface AuthContextType {
   user: User | null;
   userDetails: UserDetails | null;
   loading: boolean;
+  fetchUserDetails: (uid: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   userDetails: null,
   loading: true,
+  fetchUserDetails: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -32,8 +34,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const auth = getAuth(app);
-  const router = useRouter();
-  const pathname = usePathname();
 
   const fetchUserDetails = useCallback(async (uid: string) => {
     try {
@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, [auth, fetchUserDetails]);
 
-  const value = { user, userDetails, loading };
+  const value = { user, userDetails, loading, fetchUserDetails };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

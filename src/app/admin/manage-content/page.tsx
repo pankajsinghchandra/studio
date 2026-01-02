@@ -46,7 +46,7 @@ export default function ManageContentPage() {
   const chapters = useMemo(() => {
     if (resourceClass && subject) {
       const classSyllabus = syllabus[resourceClass as keyof typeof syllabus];
-      return classSyllabus ? classSyllabus[subject as keyof typeof classSyllabus] || [] : [];
+      return classSyllabus ? (classSyllabus as any)[subject] || [] : [];
     }
     return [];
   }, [resourceClass, subject]);
@@ -79,7 +79,7 @@ export default function ManageContentPage() {
         toast({
             variant: 'destructive',
             title: 'Invalid Link',
-            description: 'Please enter a valid URL.',
+            description: 'Please enter a valid URL. It must start with http:// or https://',
         });
         return;
     }
@@ -168,7 +168,7 @@ export default function ManageContentPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="lesson-plan-pdf">Lesson Plan (PDF)</SelectItem>
-                  <SelectItem value="lesson-plan-word">Lesson Plan (Word)</SelectItem>
+                  <SelectItem value="lesson-plan-image">Lesson Plan (Image)</SelectItem>
                   <SelectItem value="video">Video</SelectItem>
                   <SelectItem value="infographic">Infographic (Image)</SelectItem>
                   <SelectItem value="mind-map">Mind Map (Image)</SelectItem>

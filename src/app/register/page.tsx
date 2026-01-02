@@ -9,14 +9,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getAuth, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { app, db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader } from "lucide-react";
-import { FirestorePermissionError } from "@/firebase/errors";
-import { errorEmitter } from "@/firebase/error-emitter";
 import { useAuth } from "@/app/providers";
 
 const GoogleIcon = () => (
@@ -57,7 +55,7 @@ export default function RegisterPage() {
           const userDocRef = doc(db, "users", user.uid);
           const userDoc = await getDoc(userDocRef);
     
-          if (userDoc.exists()) {
+          if (userDoc.exists() && userDoc.data()?.role) {
              toast({
                 title: "Login Successful!",
                 description: "Welcome back!",
@@ -88,30 +86,36 @@ export default function RegisterPage() {
         
         setIsLoading(true);
         const userDocRef = doc(db, "users", pendingUser.uid);
+        const userDoc = await getDoc(userDocRef);
+
         const userData = {
             uid: pendingUser.uid,
             name: pendingUser.displayName,
             email: pendingUser.email,
             role: selectedRole,
-            createdAt: new Date(),
         };
 
         try {
-            await setDoc(userDocRef, userData);
+            if (userDoc.exists()) {
+                await updateDoc(userDocRef, { role: selectedRole });
+            } else {
+                await setDoc(userDocRef, { ...userData, createdAt: new Date() });
+            }
             setShowRoleDialog(false);
-            await auth.signOut();
+            // Sign out to force a re-login, which will trigger the auth listener correctly
+            await auth.signOut(); 
             toast({
                 title: "Registration Successful!",
-                description: "You can now log in with your new credentials.",
+                description: "Please log in to continue.",
             });
             router.push('/login');
-        } catch (serverError) {
-             const permissionError = new FirestorePermissionError({
-              path: userDocRef.path,
-              operation: 'create',
-              requestResourceData: userData,
-            });
-            errorEmitter.emit('permission-error', permissionError);
+        } catch (error: any) {
+             console.error("Error setting role: ", error);
+             toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Could not save your role. Please try again.",
+             });
         } finally {
             setIsLoading(false);
         }
@@ -130,6 +134,15 @@ export default function RegisterPage() {
             setIsLoading(false);
             return;
         }
+        if (role === 'student' && (!userClass || !gender)) {
+            toast({
+                variant: "destructive",
+                title: "Validation Error",
+                description: "Please select your class and gender.",
+            });
+            setIsLoading(false);
+            return;
+        }
 
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -142,7 +155,7 @@ export default function RegisterPage() {
                 mobile,
                 email,
                 userClass: role === 'student' ? userClass : '',
-                gender,
+                gender: role === 'student' ? gender : '',
                 role,
                 createdAt: new Date(),
             };
@@ -157,21 +170,11 @@ export default function RegisterPage() {
             router.push('/login');
 
         } catch (error: any) {
-            if (error.code && error.code.startsWith('auth/')) {
-                 toast({
-                    variant: "destructive",
-                    title: "Registration Failed",
-                    description: error.message,
-                });
-            } else {
-                const userDocRef = doc(db, "users", (error as any).uid || 'unknown');
-                 const permissionError = new FirestorePermissionError({
-                    path: userDocRef.path,
-                    operation: 'create',
-                    requestResourceData: { name, mobile, email, role },
-                });
-                errorEmitter.emit('permission-error', permissionError);
-            }
+            toast({
+                variant: "destructive",
+                title: "Registration Failed",
+                description: error.message,
+            });
         } finally {
             setIsLoading(false);
         }
@@ -235,20 +238,22 @@ export default function RegisterPage() {
                   <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                           <Label htmlFor="class">Class</Label>
-                          <Select name="class" onValueChange={setUserClass} value={userClass}>
+                          <Select name="class" onValueChange={setUserClass} value={userClass} required>
                               <SelectTrigger id="class">
                                   <SelectValue placeholder="Select Class" />
                               </SelectTrigger>
                               <SelectContent>
-                                  {Array.from({ length: 7 }, (_, i) => i + 6).map(c => (
+                                  {Array.from({ length: 6 }, (_, i) => i + 3).map(c => (
                                       <SelectItem key={c} value={c.toString()}>Class {c}</SelectItem>
                                   ))}
+                                   <SelectItem value="7">Class 7</SelectItem>
+                                   <SelectItem value="8">Class 8</SelectItem>
                               </SelectContent>
                           </Select>
                       </div>
                       <div className="space-y-2">
                           <Label htmlFor="gender">Gender</Label>
-                          <Select name="gender" onValueChange={setGender} value={gender}>
+                          <Select name="gender" onValueChange={setGender} value={gender} required>
                               <SelectTrigger id="gender">
                                   <SelectValue placeholder="Select Gender" />
                               </SelectTrigger>

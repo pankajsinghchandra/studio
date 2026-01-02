@@ -72,7 +72,7 @@ const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: 
     // Resource icons
     switch (resourceType) {
         case 'lesson-plan-pdf':
-        case 'lesson-plan-word':
+        case 'lesson-plan-image':
         case 'pdf-note':
             return <FileText {...resourceIconProps} />;
         case 'video':
@@ -153,7 +153,7 @@ export default function DynamicPage() {
                     const subjectChapters = syllabus[className as keyof typeof syllabus]?.[subjectName as keyof any] || [];
 
                     setTitle(subjectName);
-setDescription('Select a chapter to start learning.');
+                    setDescription('Select a chapter to start learning.');
                     setCards(subjectChapters.map((chapter: string) => ({
                         id: chapter,
                         name: chapter,
@@ -192,22 +192,30 @@ setDescription('Select a chapter to start learning.');
     };
     
     const getGoogleDriveEmbedUrl = (url: string) => {
-      const fileIdRegex = /drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/;
-      const match = url.match(fileIdRegex);
-      if (match && match[1]) {
-        return `https://drive.google.com/thumbnail?id=${match[1]}`;
+      // Regex for file ID from standard sharing links
+      let fileIdMatch = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/);
+      if (fileIdMatch && fileIdMatch[1]) {
+        return `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}`;
       }
-      // For viewer links
-      const viewerFileIdRegex = /drive\.google\.com\/file\/d\/(.*?)\/view/;
-      const viewerMatch = url.match(viewerFileIdRegex);
-       if (viewerMatch && viewerMatch[1]) {
-        return `https://drive.google.com/thumbnail?id=${viewerMatch[1]}`;
+      
+      // Regex for file ID from viewer links (e.g., /view)
+      fileIdMatch = url.match(/drive\.google\.com\/file\/d\/(.*?)\/view/);
+      if (fileIdMatch && fileIdMatch[1]) {
+        return `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}`;
       }
-      return url; 
+
+      // Regex for file ID from preview links
+      fileIdMatch = url.match(/drive\.google\.com\/file\/d\/(.*?)\/preview/);
+      if (fileIdMatch && fileIdMatch[1]) {
+        return `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}`;
+      }
+
+      // If it's already a direct image link or another type of URL, return as is
+      return url;
     };
     
     const getYoutubeEmbedUrl = (url: string) => {
-        const videoIdMatch = url.match(/(?:v=|vi\/|embed\/|youtu.be\/)([a-zA-Z0-9_-]{11})/);
+        const videoIdMatch = url.match(/(?:v=|vi\/|embed\/|youtu.be\/|watch\?v=)([a-zA-Z0-9_-]{11})/);
         if (videoIdMatch && videoIdMatch[1]) {
             return `https://www.youtube.com/embed/${videoIdMatch[1]}`;
         }
@@ -246,7 +254,7 @@ setDescription('Select a chapter to start learning.');
             }
         }
         
-        if (type === 'infographic' || type === 'mind-map') {
+        if (type === 'infographic' || type === 'mind-map' || type === 'lesson-plan-image') {
             const embedUrl = getGoogleDriveEmbedUrl(url);
              if (embedUrl) {
                 return (
@@ -261,7 +269,7 @@ setDescription('Select a chapter to start learning.');
             }
         }
 
-        if (type === 'pdf-note' || type === 'lesson-plan-pdf' || type === 'lesson-plan-word') {
+        if (type === 'pdf-note' || type === 'lesson-plan-pdf') {
              if(url.includes('drive.google.com')) {
                 const embedUrl = getGoogleDriveEmbedUrl(url).replace("https://drive.google.com/thumbnail?id=", "https://drive.google.com/file/d/") + "/preview";
                 return (
@@ -318,7 +326,7 @@ setDescription('Select a chapter to start learning.');
                 {pageType === 'chapter' && (
                     <>
                         {resources
-                         .filter(resource => !(userDetails?.role !== 'teacher' && (resource.type === 'lesson-plan-pdf' || resource.type === 'lesson-plan-word')))
+                         .filter(resource => !(userDetails?.role === 'student' && (resource.type === 'lesson-plan-pdf' || resource.type === 'lesson-plan-image')))
                          .map(resource => (
                             <Card key={resource.id} className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95 group" onClick={() => handleResourceClick(resource)}>
                                 <CardHeader className="p-4">
@@ -338,8 +346,13 @@ setDescription('Select a chapter to start learning.');
                 </div>
             </div>
             
-            <Dialog open={!!selectedResource} onOpenChange={() => setSelectedResource(null)}>
-                <DialogContent className="max-w-4xl w-full h-[90vh] p-0 bg-background/90 backdrop-blur-sm border-0 shadow-none data-[state=open]:sm:zoom-in-90 flex flex-col">
+            <Dialog open={!!selectedResource} onOpenChange={(open) => !open && setSelectedResource(null)}>
+                <DialogContent 
+                  className="max-w-4xl w-full h-[90vh] p-0 bg-background/90 backdrop-blur-sm border-0 shadow-none data-[state=open]:sm:zoom-in-90 flex flex-col"
+                  onInteractOutside={(e) => {
+                    e.preventDefault();
+                  }}
+                >
                     <DialogHeader className="p-2 bg-background/80 rounded-t-lg">
                         <DialogTitle className="text-foreground text-lg truncate px-2">{selectedResource?.title}</DialogTitle>
                     </DialogHeader>

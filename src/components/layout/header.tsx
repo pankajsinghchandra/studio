@@ -1,14 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { BookHeart, LogOut, Loader, Shield, LayoutDashboard } from 'lucide-react';
+import { BookHeart, LogOut, Loader, Shield, LayoutDashboard, Settings } from 'lucide-react';
 import SearchBar from '../search-bar';
 import { Button } from '../ui/button';
 import { getAuth, signOut } from 'firebase/auth';
-import { app } from '@/lib/firebase';
+import { app, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/app/providers';
 import { useRouter, usePathname } from 'next/navigation';
+import { useState } from 'react';
+import { doc, updateDoc } from 'firebase/firestore';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,14 +20,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 
 export default function Header() {
-  const { user, userDetails, loading } = useAuth();
+  const { user, userDetails, loading, fetchUserDetails } = useAuth();
   const auth = getAuth(app);
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
+  
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [tempName, setTempName] = useState(userDetails?.name || '');
+  const [tempRole, setTempRole] = useState(userDetails?.role || '');
 
   const handleLogout = () => {
     signOut(auth).then(() => {
@@ -44,6 +56,39 @@ export default function Header() {
     });
   };
   
+  const openSettings = () => {
+    setTempName(userDetails?.name || user?.displayName || '');
+    setTempRole(userDetails?.role || '');
+    setIsSettingsOpen(true);
+  }
+
+  const handleSettingsSave = async () => {
+    if (!user) return;
+    setIsSaving(true);
+    try {
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, {
+        name: tempName,
+        role: tempRole
+      });
+      await fetchUserDetails(user.uid); // Refetch user details
+      toast({
+        title: 'Success',
+        description: 'Your profile has been updated.',
+      });
+      setIsSettingsOpen(false);
+    } catch(error) {
+        console.error("Error updating profile: ", error);
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Failed to update profile.',
+        });
+    } finally {
+        setIsSaving(false);
+    }
+  }
+
   const isAdmin = user && user.email === 'quizpankaj@gmail.com';
 
   const renderAuthSection = () => {
@@ -77,7 +122,7 @@ export default function Header() {
                     </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {isAdmin && (
+                {isAdmin ? (
                   <>
                     <DropdownMenuItem onClick={() => router.push('/admin/dashboard')}>
                       <Shield className="mr-2 h-4 w-4" />
@@ -88,6 +133,11 @@ export default function Header() {
                       <span>User Dashboard</span>
                     </DropdownMenuItem>
                   </>
+                ) : (
+                    <DropdownMenuItem onClick={openSettings}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
@@ -116,6 +166,7 @@ export default function Header() {
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
   return (
+    <>
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 max-w-screen-2xl items-center">
         <Link href="/" className="mr-6 flex items-center space-x-2">
@@ -134,5 +185,59 @@ export default function Header() {
         </div>
       </div>
     </header>
+
+    <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Profile Settings</DialogTitle>
+                <DialogDescription>
+                    Update your name and role here. Click save when you're done.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="name" className="text-right">Name</Label>
+                    <Input id="name" value={tempName} onChange={(e) => setTempName(e.target.value)} className="col-span-3" />
+                </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="role" className="text-right">Role</Label>
+                     <Select onValueChange={setTempRole} value={tempRole}>
+                        <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="student">Student</SelectItem>
+                            <SelectItem value="teacher">Teacher</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+            <DialogFooter>
+                 <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button type="submit" disabled={isSaving}>
+                          {isSaving ? <Loader className="animate-spin mr-2"/> : null}
+                          Save changes
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action will update your profile information.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleSettingsSave}>
+                            Continue
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+    </>
   );
 }

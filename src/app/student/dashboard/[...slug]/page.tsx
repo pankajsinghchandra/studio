@@ -191,14 +191,6 @@ export default function DynamicPage() {
         router.push(path);
     };
     
-    const getGoogleDriveEmbedUrl = (url: string) => {
-      let fileIdMatch = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/);
-      if (fileIdMatch && fileIdMatch[1]) {
-        return `https://drive.google.com/uc?id=${fileIdMatch[1]}`;
-      }
-      return url;
-    };
-    
     const getYoutubeEmbedUrl = (url: string) => {
         const videoIdMatch = url.match(/(?:v=|vi\/|embed\/|youtu.be\/|watch\?v=)([a-zA-Z0-9_-]{11})/);
         if (videoIdMatch && videoIdMatch[1]) {
@@ -206,6 +198,15 @@ export default function DynamicPage() {
         }
         return null;
     }
+
+    const getGoogleDriveEmbedUrl = (url: string, resourceType: Resource['type']) => {
+        const fileIdMatch = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/);
+        if (fileIdMatch && fileIdMatch[1]) {
+            // For both PDF and Image types, the /preview URL works best for embedding.
+            return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
+        }
+        return url; // fallback to the original URL
+    };
 
 
     const handleResourceClick = (resource: Resource) => {
@@ -240,42 +241,37 @@ export default function DynamicPage() {
             }
         }
         
-        if (type === 'infographic' || type === 'mind-map' || type === 'lesson-plan-image') {
-            const embedUrl = getGoogleDriveEmbedUrl(url);
-             if (embedUrl) {
-                return (
-                    <div className="w-full h-full flex items-center justify-center">
-                        <DialogTitle className="sr-only">{title}</DialogTitle>
-                        <img 
-                            src={embedUrl} 
-                            alt={title}
-                            className="max-w-full max-h-full object-contain"
-                        />
-                    </div>
-                )
-            }
-        }
+        const isGoogleDriveResource = url.includes('drive.google.com');
 
-        if (type === 'pdf-note' || type === 'lesson-plan-pdf') {
-             if(url.includes('drive.google.com')) {
-                const fileIdMatch = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/);
-                if (fileIdMatch && fileIdMatch[1]) {
-                    const embedUrl = `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
-                    return (
-                        <div className="w-full h-full">
-                             <DialogTitle className="sr-only">{title}</DialogTitle>
-                            <iframe
-                                src={embedUrl}
-                                className="w-full h-full rounded-lg"
-                                frameBorder="0"
-                            ></iframe>
-                        </div>
-                    );
-                }
-            }
+        if (isGoogleDriveResource && (type === 'infographic' || type === 'mind-map' || type === 'lesson-plan-image' || type === 'pdf-note' || type === 'lesson-plan-pdf')) {
+            const embedUrl = getGoogleDriveEmbedUrl(url, type);
+            return (
+                <div className="w-full h-full">
+                    <DialogTitle className="sr-only">{title}</DialogTitle>
+                    <iframe
+                        src={embedUrl}
+                        className="w-full h-full rounded-lg border-0"
+                        frameBorder="0"
+                    ></iframe>
+                </div>
+            );
         }
         
-        // Fallback for other types or if embed fails
+        // Fallback for non-Google Drive images or if other logic fails
+        if (type === 'infographic' || type === 'mind-map' || type === 'lesson-plan-image') {
+             return (
+                <div className="w-full h-full flex items-center justify-center">
+                    <DialogTitle className="sr-only">{title}</DialogTitle>
+                    <img 
+                        src={url} 
+                        alt={title}
+                        className="max-w-full max-h-full object-contain"
+                    />
+                </div>
+            )
+        }
+
+        // Fallback for opening any other resource type in a new tab
         window.open(url, '_blank');
         setSelectedResource(null);
         return null;

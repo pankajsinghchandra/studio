@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { 
     FileText, Video, ImageIcon, BookOpen, ChevronRight, 
     School, Book, FlaskConical, Languages, Landmark, Calculator, Palette, Dna, Atom, 
-    Globe, Scroll, Milestone, Users, Drama, Leaf
+    Globe, Scroll, Milestone, Users, Drama, Leaf, Folder
 } from 'lucide-react';
 import { syllabus } from '@/lib/syllabus';
 

@@ -72,13 +72,13 @@ const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: 
     // Resource icons
     switch (resourceType) {
         case 'lesson-plan-pdf':
-        case 'lesson-plan-image':
         case 'pdf-note':
             return <FileText {...resourceIconProps} />;
         case 'video':
             return <Video {...resourceIconProps} />;
         case 'infographic':
         case 'mind-map':
+        case 'lesson-plan-image':
             return <ImageIcon {...resourceIconProps} />;
         default:
             return <BookOpen {...resourceIconProps} />;
@@ -192,25 +192,10 @@ export default function DynamicPage() {
     };
     
     const getGoogleDriveEmbedUrl = (url: string) => {
-      // Regex for file ID from standard sharing links
       let fileIdMatch = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/);
       if (fileIdMatch && fileIdMatch[1]) {
-        return `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}`;
+        return `https://drive.google.com/uc?id=${fileIdMatch[1]}`;
       }
-      
-      // Regex for file ID from viewer links (e.g., /view)
-      fileIdMatch = url.match(/drive\.google\.com\/file\/d\/(.*?)\/view/);
-      if (fileIdMatch && fileIdMatch[1]) {
-        return `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}`;
-      }
-
-      // Regex for file ID from preview links
-      fileIdMatch = url.match(/drive\.google\.com\/file\/d\/(.*?)\/preview/);
-      if (fileIdMatch && fileIdMatch[1]) {
-        return `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}`;
-      }
-
-      // If it's already a direct image link or another type of URL, return as is
       return url;
     };
     
@@ -234,13 +219,14 @@ export default function DynamicPage() {
     const renderDialogContent = () => {
         if (!selectedResource) return null;
 
-        const { type, url } = selectedResource;
+        const { type, url, title } = selectedResource;
         
         if (type === 'video') {
             const embedUrl = getYoutubeEmbedUrl(url);
             if (embedUrl) {
                 return (
                      <div className="aspect-video w-full h-full">
+                        <DialogTitle className="sr-only">{title}</DialogTitle>
                         <iframe
                             src={embedUrl}
                             title="YouTube video player"
@@ -258,11 +244,12 @@ export default function DynamicPage() {
             const embedUrl = getGoogleDriveEmbedUrl(url);
              if (embedUrl) {
                 return (
-                     <div className="w-full h-full flex items-center justify-center p-4">
+                    <div className="w-full h-full flex items-center justify-center">
+                        <DialogTitle className="sr-only">{title}</DialogTitle>
                         <img 
                             src={embedUrl} 
-                            alt="Resource Preview" 
-                            className="w-auto h-auto max-w-full max-h-[80vh] object-contain rounded-md" 
+                            alt={title}
+                            className="max-w-full max-h-full object-contain"
                         />
                     </div>
                 )
@@ -271,16 +258,20 @@ export default function DynamicPage() {
 
         if (type === 'pdf-note' || type === 'lesson-plan-pdf') {
              if(url.includes('drive.google.com')) {
-                const embedUrl = getGoogleDriveEmbedUrl(url).replace("https://drive.google.com/thumbnail?id=", "https://drive.google.com/file/d/") + "/preview";
-                return (
-                    <div className="w-full h-full">
-                        <iframe
-                            src={embedUrl}
-                            className="w-full h-full rounded-lg"
-                            frameBorder="0"
-                        ></iframe>
-                    </div>
-                );
+                const fileIdMatch = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/);
+                if (fileIdMatch && fileIdMatch[1]) {
+                    const embedUrl = `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
+                    return (
+                        <div className="w-full h-full">
+                             <DialogTitle className="sr-only">{title}</DialogTitle>
+                            <iframe
+                                src={embedUrl}
+                                className="w-full h-full rounded-lg"
+                                frameBorder="0"
+                            ></iframe>
+                        </div>
+                    );
+                }
             }
         }
         
@@ -327,11 +318,11 @@ export default function DynamicPage() {
                     <>
                         {resources
                          .filter(resource => !(userDetails?.role === 'student' && (resource.type === 'lesson-plan-pdf' || resource.type === 'lesson-plan-image')))
-                         .map(resource => (
+                         .map((resource, index) => (
                             <Card key={resource.id} className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95 group" onClick={() => handleResourceClick(resource)}>
                                 <CardHeader className="p-4">
                                     <div className="flex items-start gap-4">
-                                        {getIcon('resource', undefined, resource.type)}
+                                        {getIcon('resource', undefined, resource.type, undefined, index)}
                                         <div>
                                             <CardTitle className="font-headline text-xl text-foreground leading-tight">{resource.title}</CardTitle>
                                             <CardDescription className="mt-1 capitalize">{resource.type.replace(/-/g, ' ')}</CardDescription>
@@ -350,6 +341,7 @@ export default function DynamicPage() {
                 <DialogContent 
                   className="max-w-4xl w-full h-[90vh] p-0 bg-background/90 backdrop-blur-sm border-0 shadow-none data-[state=open]:sm:zoom-in-90 flex flex-col"
                   onInteractOutside={(e) => {
+                    // Prevent closing on outside click for better mobile experience
                     e.preventDefault();
                   }}
                 >

@@ -6,7 +6,6 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '@/hooks/use-auth';
 import type { Resource } from '@/lib/types';
-import Breadcrumb from '@/components/breadcrumb';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import LoadingOverlay from '@/components/loading-overlay';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -48,8 +47,8 @@ const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: 
 
     if (itemType === 'class') return <School {...iconProps} />;
     
-    if (itemType === 'subject') {
-        const nameLower = name?.toLowerCase() || '';
+    const getSubjectIcon = (subjectName: string) => {
+        const nameLower = subjectName.toLowerCase();
         for (const key in subjectIcons) {
             if (nameLower.includes(key)) {
                 const IconComponent = subjectIcons[key];
@@ -59,7 +58,14 @@ const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: 
         return <Folder {...iconProps} />;
     }
 
-    if (itemType === 'chapter') return <BookOpen {...iconProps} />;
+    if (itemType === 'subject') {
+       return getSubjectIcon(name || '');
+    }
+
+    if (itemType === 'chapter') {
+        const subjectName = usePathname().split('/')[4] || '';
+        return getSubjectIcon(decodeURIComponent(subjectName));
+    };
 
     // Resource icons
     switch (resourceType) {
@@ -119,11 +125,6 @@ export default function DynamicPage() {
             const subjectName = subjectId;
             const chapterName = chapterId;
 
-            const baseBreadcrumbs = [
-                { href: '/', label: 'Home' },
-                { href: `/student/dashboard/${className}`, label: `Class ${className}` },
-            ];
-
             try {
                 if (pageType === 'class') {
                     const classSyllabus = syllabus[className as keyof typeof syllabus];
@@ -137,7 +138,6 @@ export default function DynamicPage() {
                         description: `${(classSyllabus as any)[subject]?.length || 0} chapters`,
                         path: `/student/dashboard/${className}/${encodeURIComponent(subject)}`
                     })));
-                    setBreadcrumbItems(baseBreadcrumbs);
                 }
 
                 if (pageType === 'subject') {
@@ -151,7 +151,6 @@ export default function DynamicPage() {
                         description: 'View resources',
                         path: `/student/dashboard/${className}/${encodeURIComponent(subjectName)}/${encodeURIComponent(chapter)}`
                     })));
-                    setBreadcrumbItems([...baseBreadcrumbs, { href: `/student/dashboard/${className}/${encodeURIComponent(subjectName)}`, label: subjectName }]);
                 }
 
                 if (pageType === 'chapter') {
@@ -166,11 +165,6 @@ export default function DynamicPage() {
                     setTitle(chapterName);
                     setDescription('Available resources for this chapter.');
                     setResources(fetchedResources);
-                    setBreadcrumbItems([
-                        ...baseBreadcrumbs,
-                        { href: `/student/dashboard/${className}/${encodeURIComponent(subjectName)}`, label: subjectName },
-                        { href: `/student/dashboard/${className}/${encodeURIComponent(subjectName)}/${encodeURIComponent(chapterName)}`, label: chapterName }
-                    ]);
                 }
             } catch (error) {
                 console.error("Error fetching data: ", error);
@@ -189,12 +183,14 @@ export default function DynamicPage() {
     };
     
     const getGoogleDriveEmbedUrl = (url: string) => {
-        const fileIdRegex = /drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/;
-        const match = url.match(fileIdRegex);
-        if (match && match[1]) {
-            return `https://drive.google.com/uc?export=view&id=${match[1]}`;
-        }
-        return url; 
+      // Regex for file ID from both /d/ and /file/d/ URLs
+      const fileIdRegex = /drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/;
+      const match = url.match(fileIdRegex);
+      if (match && match[1]) {
+        // Use the thumbnail link which is more reliable for direct image viewing
+        return `https://lh3.googleusercontent.com/d/${match[1]}`;
+      }
+      return url; 
     };
     
     const getYoutubeEmbedUrl = (url: string) => {
@@ -251,12 +247,12 @@ export default function DynamicPage() {
         }
 
         if (type === 'pdf-note' || type === 'lesson-plan-pdf' || type === 'lesson-plan-word') {
-             const embedUrl = getGoogleDriveEmbedUrl(url);
              if(url.includes('drive.google.com')) {
+                const embedUrl = getGoogleDriveEmbedUrl(url).replace("https://lh3.googleusercontent.com/d/", "https://drive.google.com/file/d/") + "/preview";
                 return (
                     <div className="aspect-video w-full h-full">
                         <iframe
-                            src={`https://docs.google.com/gview?url=${url}&embedded=true`}
+                            src={embedUrl}
                             className="w-full h-full rounded-lg"
                             frameBorder="0"
                         ></iframe>
@@ -274,7 +270,6 @@ export default function DynamicPage() {
         <>
             <LoadingOverlay isLoading={isNavigating} />
             <div className="container mx-auto px-4 py-8">
-                <Breadcrumb items={breadcrumbItems} />
                 <header className="mb-8">
                     <h1 className="font-headline text-4xl font-bold text-foreground">{title}</h1>
                     <p className="text-lg text-muted-foreground">{description}</p>

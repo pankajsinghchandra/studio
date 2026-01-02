@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -10,37 +11,52 @@ import Breadcrumb from '@/components/breadcrumb';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import LoadingOverlay from '@/components/loading-overlay';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { FileText, Video, ImageIcon, BrainCircuit, BookOpen, Folder, File, ChevronRight, School, Book, FlaskConical, Languages, Landmark, Calculator, Palette } from 'lucide-react';
+import { 
+    FileText, Video, ImageIcon, BrainCircuit, BookOpen, Folder, File, ChevronRight, 
+    School, Book, FlaskConical, Languages, Landmark, Calculator, Palette, Dna, Atom, 
+    Globe, Scroll, Milestone, Users, Drama, Leaf
+} from 'lucide-react';
 import { syllabus } from '@/lib/syllabus';
 
 const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: string, resourceType?: string) => {
     const nameLower = name?.toLowerCase() || '';
-    if (itemType === 'class') return <School className="w-8 h-8 text-primary" />;
+    const iconProps = { className: "w-8 h-8 text-primary drop-shadow-[0_2px_2px_rgba(0,0,0,0.2)]" };
+    const resourceIconProps = { className: "w-8 h-8 text-primary/80 mt-1 drop-shadow-[0_2px_2px_rgba(0,0,0,0.2)]" };
+
+    if (itemType === 'class') return <School {...iconProps} />;
     if (itemType === 'subject') {
-        if (nameLower.includes('math')) return <Calculator className="w-8 h-8 text-primary" />;
-        if (nameLower.includes('science')) return <FlaskConical className="w-8 h-8 text-primary" />;
-        if (nameLower.includes('social')) return <Landmark className="w-8 h-8 text-primary" />;
-        if (nameLower.includes('hindi')) return <Languages className="w-8 h-8 text-primary" />;
-        if (nameLower.includes('english')) return <Book className="w-8 h-8 text-primary" />;
-        if (nameLower.includes('computer')) return <Palette className="w-8 h-8 text-primary" />;
-        return <Folder className="w-8 h-8 text-primary" />;
+        if (nameLower.includes('math')) return <Calculator {...iconProps} />;
+        if (nameLower.includes('science')) return <FlaskConical {...iconProps} />;
+        if (nameLower.includes('biology')) return <Dna {...iconProps} />;
+        if (nameLower.includes('physics')) return <Atom {...iconProps} />;
+        if (nameLower.includes('chemistry')) return <FlaskConical {...iconProps} />;
+        if (nameLower.includes('social science')) return <Users {...iconProps} />;
+        if (nameLower.includes('history')) return <Landmark {...iconProps} />;
+        if (nameLower.includes('geography')) return <Globe {...iconProps} />;
+        if (nameLower.includes('civics')) return <Milestone {...iconProps} />;
+        if (nameLower.includes('hindi')) return <Scroll {...iconProps} />;
+        if (nameLower.includes('english')) return <Book {...iconProps} />;
+        if (nameLower.includes('sanskrit')) return <Drama {...iconProps} />;
+        if (nameLower.includes('computer')) return <Palette {...iconProps} />;
+        if (nameLower.includes('environmental studies')) return <Leaf {...iconProps} />;
+        return <Folder {...iconProps} />;
     }
-    if (itemType === 'chapter') return <BookOpen className="w-8 h-8 text-primary" />;
+    if (itemType === 'chapter') return <BookOpen {...iconProps} />;
 
     // Resource icons
     switch (resourceType) {
         case 'lesson-plan-pdf':
         case 'lesson-plan-word':
         case 'pdf-note':
-            return <FileText className="w-8 h-8 text-primary/80 mt-1" />;
+            return <FileText {...resourceIconProps} />;
         case 'video':
-            return <Video className="w-8 h-8 text-primary/80 mt-1" />;
+            return <Video {...resourceIconProps} />;
         case 'infographic':
-            return <ImageIcon className="w-8 h-8 text-primary/80 mt-1" />;
+            return <ImageIcon {...resourceIconProps} />;
         case 'mind-map':
-            return <BrainCircuit className="w-8 h-8 text-primary/80 mt-1" />;
+            return <BrainCircuit {...resourceIconProps} />;
         default:
-            return <File className="w-8 h-8 text-primary/80 mt-1" />;
+            return <File {...resourceIconProps} />;
     }
 };
 
@@ -112,7 +128,7 @@ export default function DynamicPage() {
                     const subjectChapters = syllabus[className as keyof typeof syllabus]?.[subjectName as keyof any] || [];
 
                     setTitle(subjectName);
-setDescription('Select a chapter to start learning.');
+                    setDescription('Select a chapter to start learning.');
                     setCards(subjectChapters.map(chapter => ({
                         id: chapter,
                         name: chapter,

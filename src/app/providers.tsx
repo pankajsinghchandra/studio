@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode, useCa
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 interface UserDetails {
   name: string;
@@ -33,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const auth = getAuth(app);
   const router = useRouter();
+  const pathname = usePathname();
 
   const fetchUserDetails = useCallback(async (uid: string) => {
     try {

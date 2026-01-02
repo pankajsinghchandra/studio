@@ -1,6 +1,6 @@
 'use client';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/app/providers';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import LoadingOverlay from '@/components/loading-overlay';

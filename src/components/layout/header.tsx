@@ -7,7 +7,7 @@ import { Button } from '../ui/button';
 import { getAuth, signOut } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/app/providers';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   DropdownMenu,

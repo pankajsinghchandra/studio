@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { app, db } from "@/lib/firebase";
@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
+import { useAuth } from "@/app/providers";
 
 const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48">
@@ -30,6 +31,7 @@ const GoogleIcon = () => (
 
 export default function LoginPage() {
   const router = useRouter();
+  const { user, loading: authLoading, userDetails } = useAuth();
   const auth = getAuth(app);
   const { toast } = useToast();
   const [email, setEmail] = useState('');
@@ -39,13 +41,23 @@ export default function LoginPage() {
   const [selectedRole, setSelectedRole] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  
+  useEffect(() => {
+    if (!authLoading && user) {
+      if (userDetails?.email === 'quizpankaj@gmail.com') {
+        router.replace('/admin/dashboard');
+      } else {
+        router.replace('/');
+      }
+    }
+  }, [user, authLoading, userDetails, router]);
 
   const handleLoginSuccess = (user: User) => {
     toast({
         title: "Login Successful!",
         description: "Welcome back!",
     });
-    router.push('/');
+    // The useEffect above will handle redirection.
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -53,7 +65,8 @@ export default function LoginPage() {
     setIsLoading(true);
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
-        handleLoginSuccess(userCredential.user);
+        // handleLoginSuccess(userCredential.user);
+        // Let the onAuthStateChanged listener and useEffect handle the redirection logic
       })
       .catch((error) => {
         const errorMessage = error.message;
@@ -77,7 +90,7 @@ export default function LoginPage() {
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists()) {
-        handleLoginSuccess(user);
+        // User exists, let the useEffect handle redirection
       } else {
         setPendingUser(user);
         setShowRoleDialog(true);
@@ -118,7 +131,7 @@ export default function LoginPage() {
             title: "Registration Successful!",
             description: "Welcome! You can now access your dashboard.",
         });
-        router.push('/');
+        // The onAuthStateChanged listener will handle the new user state and redirect.
       })
       .catch((serverError) => {
         const permissionError = new FirestorePermissionError({
@@ -132,6 +145,10 @@ export default function LoginPage() {
         setIsLoading(false);
       });
   };
+
+  if (authLoading || user) {
+      return <div className="fixed inset-0 flex items-center justify-center bg-background/80 z-50"><Loader className="h-10 w-10 animate-spin text-primary" /></div>
+  }
 
   return (
     <>

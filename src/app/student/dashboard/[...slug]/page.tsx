@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/app/providers';
 import type { Resource } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import LoadingOverlay from '@/components/loading-overlay';
@@ -79,7 +79,7 @@ const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: 
         case 'mind-map':
             return <ImageIcon {...resourceIconProps} />;
         default:
-            return <File {...resourceIconProps} />;
+            return <BookOpen {...resourceIconProps} />;
     }
 };
 

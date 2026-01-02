@@ -10,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/ca
 import LoadingOverlay from '@/components/loading-overlay';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
-    FileText, Video, ImageIcon, BookOpen, Folder, ChevronRight, 
+    FileText, Video, ImageIcon, BookOpen, ChevronRight, 
     School, Book, FlaskConical, Languages, Landmark, Calculator, Palette, Dna, Atom, 
     Globe, Scroll, Milestone, Users, Drama, Leaf
 } from 'lucide-react';
@@ -38,9 +38,11 @@ const subjectIcons: { [key: string]: React.ElementType } = {
     'default': Folder
 };
 
-const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: string, resourceType?: string, subjectNameForChapter?: string) => {
+const chapterIcons = [Milestone, Scroll, Book, Users, Drama, Leaf, Landmark, Globe, Calculator, FlaskConical, Palette, Dna, Atom];
+
+const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: string, resourceType?: string, subjectNameForChapter?: string, index: number = 0) => {
     const iconColors = ['text-red-500', 'text-blue-500', 'text-green-500', 'text-yellow-500', 'text-purple-500', 'text-pink-500', 'text-indigo-500', 'text-teal-500'];
-    const randomColor = iconColors[Math.floor(Math.random() * iconColors.length)];
+    const randomColor = iconColors[index % iconColors.length];
 
     const iconProps = { className: `w-8 h-8 ${randomColor} drop-shadow-[0_2px_2px_rgba(0,0,0,0.1)]` };
     const resourceIconProps = { className: "w-8 h-8 text-primary/80 mt-1 drop-shadow-[0_2px_2px_rgba(0,0,0,0.2)]" };
@@ -63,8 +65,8 @@ const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: 
     }
 
     if (itemType === 'chapter') {
-        const subjectName = subjectNameForChapter || '';
-        return getSubjectIcon(decodeURIComponent(subjectName));
+        const IconComponent = chapterIcons[index % chapterIcons.length];
+        return <IconComponent {...iconProps} />;
     };
 
     // Resource icons
@@ -190,12 +192,16 @@ setDescription('Select a chapter to start learning.');
     };
     
     const getGoogleDriveEmbedUrl = (url: string) => {
-      // Regex for file ID from both /d/ and /file/d/ URLs
       const fileIdRegex = /drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/;
       const match = url.match(fileIdRegex);
       if (match && match[1]) {
-        // Use the thumbnail link which is more reliable for direct image viewing
-        return `https://lh3.googleusercontent.com/d/${match[1]}`;
+        return `https://drive.google.com/thumbnail?id=${match[1]}`;
+      }
+      // For viewer links
+      const viewerFileIdRegex = /drive\.google\.com\/file\/d\/(.*?)\/view/;
+      const viewerMatch = url.match(viewerFileIdRegex);
+       if (viewerMatch && viewerMatch[1]) {
+        return `https://drive.google.com/thumbnail?id=${viewerMatch[1]}`;
       }
       return url; 
     };
@@ -257,9 +263,9 @@ setDescription('Select a chapter to start learning.');
 
         if (type === 'pdf-note' || type === 'lesson-plan-pdf' || type === 'lesson-plan-word') {
              if(url.includes('drive.google.com')) {
-                const embedUrl = getGoogleDriveEmbedUrl(url).replace("https://lh3.googleusercontent.com/d/", "https://drive.google.com/file/d/") + "/preview";
+                const embedUrl = getGoogleDriveEmbedUrl(url).replace("https://drive.google.com/thumbnail?id=", "https://drive.google.com/file/d/") + "/preview";
                 return (
-                    <div className="aspect-video w-full h-full">
+                    <div className="w-full h-full">
                         <iframe
                             src={embedUrl}
                             className="w-full h-full rounded-lg"
@@ -288,7 +294,7 @@ setDescription('Select a chapter to start learning.');
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {pageType !== 'chapter' && (
                      cards.length > 0 ? (
-                            cards.map(card => (
+                            cards.map((card, index) => (
                                 <Card 
                                     key={card.id} 
                                     className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95 group"
@@ -296,7 +302,7 @@ setDescription('Select a chapter to start learning.');
                                 >
                                     <CardHeader className="flex flex-row items-center justify-between p-4">
                                         <div className='flex items-center gap-4'>
-                                          {getIcon(pageType === 'class' ? 'subject' : 'chapter', card.name, undefined, subjectNameForChapterIcon)}
+                                          {getIcon(pageType === 'class' ? 'subject' : 'chapter', card.name, undefined, subjectNameForChapterIcon, index)}
                                           <div>
                                             <CardTitle className="font-headline text-xl text-foreground">{card.name}</CardTitle>
                                             <CardDescription>{card.description}</CardDescription>

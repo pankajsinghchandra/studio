@@ -38,6 +38,8 @@ export default function Header() {
   const [isSaving, setIsSaving] = useState(false);
   const [tempName, setTempName] = useState(userDetails?.name || '');
   const [tempRole, setTempRole] = useState(userDetails?.role || '');
+  const [tempClass, setTempClass] = useState(userDetails?.userClass || '');
+  const [tempGender, setTempGender] = useState(userDetails?.gender || '');
 
   const handleLogout = () => {
     signOut(auth).then(() => {
@@ -59,6 +61,8 @@ export default function Header() {
   const openSettings = () => {
     setTempName(userDetails?.name || user?.displayName || '');
     setTempRole(userDetails?.role || '');
+    setTempClass(userDetails?.userClass || '');
+    setTempGender(userDetails?.gender || '');
     setIsSettingsOpen(true);
   }
 
@@ -67,9 +71,14 @@ export default function Header() {
     setIsSaving(true);
     try {
       const userDocRef = doc(db, 'users', user.uid);
-      const updates: {name: string, role?: string} = { name: tempName };
+      const updates: { [key: string]: any } = { name: tempName };
+      
       if (!isAdmin) {
         updates.role = tempRole;
+        if (tempRole === 'student') {
+            updates.userClass = tempClass;
+            updates.gender = tempGender;
+        }
       }
       
       await updateDoc(userDocRef, updates);
@@ -192,7 +201,7 @@ export default function Header() {
             <DialogHeader>
                 <DialogTitle>Profile Settings</DialogTitle>
                 <DialogDescription>
-                    Update your name and role here. Click save when you're done.
+                    Update your profile here. Click save when you're done.
                 </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -201,25 +210,75 @@ export default function Header() {
                     <Input id="name" value={tempName} onChange={(e) => setTempName(e.target.value)} className="col-span-3" />
                 </div>
                  {!isAdmin && (
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="role" className="text-right">Role</Label>
-                        <Select onValueChange={setTempRole} value={tempRole}>
-                            <SelectTrigger className="col-span-3">
-                                <SelectValue placeholder="Select a role" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="student">Student</SelectItem>
-                                <SelectItem value="teacher">Teacher</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    <>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="role" className="text-right">Role</Label>
+                            <Select onValueChange={setTempRole} value={tempRole}>
+                                <SelectTrigger className="col-span-3">
+                                    <SelectValue placeholder="Select a role" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="student">Student</SelectItem>
+                                    <SelectItem value="teacher">Teacher</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {tempRole === 'student' && (
+                            <div className="grid grid-cols-4 items-center gap-4">
+                               <Label htmlFor="class" className="text-right">Class</Label>
+                                <Select onValueChange={setTempClass} value={tempClass}>
+                                    <SelectTrigger id="class" className="col-span-3">
+                                        <SelectValue placeholder="Select Class" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {Array.from({ length: 6 }, (_, i) => i + 3).map(c => (
+                                          <SelectItem key={c} value={c.toString()}>Class {c}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+                         {tempRole === 'student' && (
+                            <div className="grid grid-cols-4 items-center gap-4">
+                               <Label htmlFor="gender" className="text-right">Gender</Label>
+                                <Select onValueChange={setTempGender} value={tempGender}>
+                                    <SelectTrigger id="gender" className="col-span-3">
+                                        <SelectValue placeholder="Select Gender" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="male">Male</SelectItem>
+                                        <SelectItem value="female">Female</SelectItem>
+                                        <SelectItem value="other">Other</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+                    </>
                  )}
             </div>
             <DialogFooter>
-                 <Button onClick={handleSettingsSave} disabled={isSaving}>
-                    {isSaving ? <Loader className="animate-spin mr-2"/> : null}
-                    Save changes
-                  </Button>
+                 <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button disabled={isSaving}>
+                            {isSaving ? <Loader className="animate-spin mr-2"/> : null}
+                            Save changes
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This will update your profile information.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleSettingsSave}>
+                                Continue
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </DialogFooter>
         </DialogContent>
     </Dialog>

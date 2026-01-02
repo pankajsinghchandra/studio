@@ -33,7 +33,6 @@ export default function RegisterPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
-    const [mobile, setMobile] = useState('');
     const [userClass, setUserClass] = useState('');
     const [gender, setGender] = useState('');
     const [role, setRole] = useState('');
@@ -134,16 +133,7 @@ export default function RegisterPage() {
             setIsLoading(false);
             return;
         }
-        if (role === 'student' && (!userClass || !gender)) {
-            toast({
-                variant: "destructive",
-                title: "Validation Error",
-                description: "Please select your class and gender.",
-            });
-            setIsLoading(false);
-            return;
-        }
-
+        
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
@@ -152,7 +142,6 @@ export default function RegisterPage() {
             const userData = {
                 uid: user.uid,
                 name,
-                mobile,
                 email,
                 userClass: role === 'student' ? userClass : '',
                 gender: role === 'student' ? gender : '',
@@ -170,11 +159,19 @@ export default function RegisterPage() {
             router.push('/login');
 
         } catch (error: any) {
-            toast({
-                variant: "destructive",
-                title: "Registration Failed",
-                description: error.message,
-            });
+            if (error.code === 'auth/email-already-in-use') {
+                toast({
+                    variant: "destructive",
+                    title: "Registration Failed",
+                    description: "This email is already registered. Please login instead.",
+                });
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "Registration Failed",
+                    description: error.message,
+                });
+            }
         } finally {
             setIsLoading(false);
         }
@@ -212,10 +209,7 @@ export default function RegisterPage() {
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" type="email" placeholder="name@example.com" required value={email} onChange={e => setEmail(e.target.value)} />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="mobile">Mobile Number</Label>
-                <Input id="mobile" type="tel" placeholder="9876543210" value={mobile} onChange={e => setMobile(e.target.value)} />
-              </div>
+             
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
@@ -237,8 +231,8 @@ export default function RegisterPage() {
               {role === 'student' && (
                   <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                          <Label htmlFor="class">Class</Label>
-                          <Select name="class" onValueChange={setUserClass} value={userClass} required>
+                          <Label htmlFor="class">Class (Optional)</Label>
+                          <Select name="class" onValueChange={setUserClass} value={userClass}>
                               <SelectTrigger id="class">
                                   <SelectValue placeholder="Select Class" />
                               </SelectTrigger>
@@ -246,14 +240,12 @@ export default function RegisterPage() {
                                   {Array.from({ length: 6 }, (_, i) => i + 3).map(c => (
                                       <SelectItem key={c} value={c.toString()}>Class {c}</SelectItem>
                                   ))}
-                                   <SelectItem value="7">Class 7</SelectItem>
-                                   <SelectItem value="8">Class 8</SelectItem>
                               </SelectContent>
                           </Select>
                       </div>
                       <div className="space-y-2">
-                          <Label htmlFor="gender">Gender</Label>
-                          <Select name="gender" onValueChange={setGender} value={gender} required>
+                          <Label htmlFor="gender">Gender (Optional)</Label>
+                          <Select name="gender" onValueChange={setGender} value={gender}>
                               <SelectTrigger id="gender">
                                   <SelectValue placeholder="Select Gender" />
                               </SelectTrigger>

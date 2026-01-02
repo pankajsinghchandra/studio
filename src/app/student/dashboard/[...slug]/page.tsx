@@ -10,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/ca
 import LoadingOverlay from '@/components/loading-overlay';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
-    FileText, Video, ImageIcon, BrainCircuit, BookOpen, Folder, File, ChevronRight, 
+    FileText, Video, ImageIcon, BookOpen, Folder, ChevronRight, 
     School, Book, FlaskConical, Languages, Landmark, Calculator, Palette, Dna, Atom, 
     Globe, Scroll, Milestone, Users, Drama, Leaf
 } from 'lucide-react';
@@ -38,7 +38,7 @@ const subjectIcons: { [key: string]: React.ElementType } = {
     'default': Folder
 };
 
-const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: string, resourceType?: string) => {
+const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: string, resourceType?: string, subjectNameForChapter?: string) => {
     const iconColors = ['text-red-500', 'text-blue-500', 'text-green-500', 'text-yellow-500', 'text-purple-500', 'text-pink-500', 'text-indigo-500', 'text-teal-500'];
     const randomColor = iconColors[Math.floor(Math.random() * iconColors.length)];
 
@@ -63,7 +63,7 @@ const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: 
     }
 
     if (itemType === 'chapter') {
-        const subjectName = usePathname().split('/')[4] || '';
+        const subjectName = subjectNameForChapter || '';
         return getSubjectIcon(decodeURIComponent(subjectName));
     };
 
@@ -103,7 +103,14 @@ export default function DynamicPage() {
         return 'unknown';
     }, [pathSegments]);
 
-    const [breadcrumbItems, setBreadcrumbItems] = useState<{ href: string; label: string }[]>([]);
+    const subjectNameForChapterIcon = useMemo(() => {
+        if (pageType === 'chapter' && pathSegments.length > 1) {
+            return pathSegments[1];
+        }
+        return '';
+    }, [pageType, pathSegments]);
+
+
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [cards, setCards] = useState<CardData[]>([]);
@@ -144,8 +151,8 @@ export default function DynamicPage() {
                     const subjectChapters = syllabus[className as keyof typeof syllabus]?.[subjectName as keyof any] || [];
 
                     setTitle(subjectName);
-                    setDescription('Select a chapter to start learning.');
-                    setCards(subjectChapters.map(chapter => ({
+setDescription('Select a chapter to start learning.');
+                    setCards(subjectChapters.map((chapter: string) => ({
                         id: chapter,
                         name: chapter,
                         description: 'View resources',
@@ -235,15 +242,17 @@ export default function DynamicPage() {
         
         if (type === 'infographic' || type === 'mind-map') {
             const embedUrl = getGoogleDriveEmbedUrl(url);
-            return (
-                 <div className="w-full h-full flex items-center justify-center p-4">
-                    <img 
-                        src={embedUrl} 
-                        alt="Resource Preview" 
-                        className="w-auto h-auto max-w-full max-h-[80vh] object-contain rounded-md" 
-                    />
-                </div>
-            )
+             if (embedUrl) {
+                return (
+                     <div className="w-full h-full flex items-center justify-center p-4">
+                        <img 
+                            src={embedUrl} 
+                            alt="Resource Preview" 
+                            className="w-auto h-auto max-w-full max-h-[80vh] object-contain rounded-md" 
+                        />
+                    </div>
+                )
+            }
         }
 
         if (type === 'pdf-note' || type === 'lesson-plan-pdf' || type === 'lesson-plan-word') {
@@ -261,6 +270,7 @@ export default function DynamicPage() {
             }
         }
         
+        // Fallback for other types or if embed fails
         window.open(url, '_blank');
         setSelectedResource(null);
         return null;
@@ -286,7 +296,7 @@ export default function DynamicPage() {
                                 >
                                     <CardHeader className="flex flex-row items-center justify-between p-4">
                                         <div className='flex items-center gap-4'>
-                                          {getIcon(pageType === 'class' ? 'subject' : 'chapter', card.name)}
+                                          {getIcon(pageType === 'class' ? 'subject' : 'chapter', card.name, undefined, subjectNameForChapterIcon)}
                                           <div>
                                             <CardTitle className="font-headline text-xl text-foreground">{card.name}</CardTitle>
                                             <CardDescription>{card.description}</CardDescription>
@@ -324,7 +334,7 @@ export default function DynamicPage() {
             
             <Dialog open={!!selectedResource} onOpenChange={() => setSelectedResource(null)}>
                 <DialogContent className="max-w-4xl w-full h-[90vh] p-0 bg-background/90 backdrop-blur-sm border-0 shadow-none data-[state=open]:sm:zoom-in-90 flex flex-col">
-                     <DialogHeader className="p-2 bg-background/80 rounded-t-lg">
+                    <DialogHeader className="p-2 bg-background/80 rounded-t-lg">
                         <DialogTitle className="text-foreground text-lg truncate px-2">{selectedResource?.title}</DialogTitle>
                     </DialogHeader>
                     <div className="flex-1 w-full h-full">

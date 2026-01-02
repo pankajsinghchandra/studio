@@ -30,15 +30,14 @@ const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: 
         if (nameLower.includes('biology')) return <Dna {...iconProps} />;
         if (nameLower.includes('physics')) return <Atom {...iconProps} />;
         if (nameLower.includes('chemistry')) return <FlaskConical {...iconProps} />;
-        if (nameLower.includes('social science')) return <Users {...iconProps} />;
+        if (nameLower.includes('social science') || nameLower.includes('civics')) return <Users {...iconProps} />;
         if (nameLower.includes('history')) return <Landmark {...iconProps} />;
         if (nameLower.includes('geography')) return <Globe {...iconProps} />;
-        if (nameLower.includes('civics')) return <Milestone {...iconProps} />;
         if (nameLower.includes('hindi')) return <Scroll {...iconProps} />;
         if (nameLower.includes('english')) return <Book {...iconProps} />;
         if (nameLower.includes('sanskrit')) return <Drama {...iconProps} />;
         if (nameLower.includes('computer')) return <Palette {...iconProps} />;
-        if (nameLower.includes('environmental studies')) return <Leaf {...iconProps} />;
+        if (nameLower.includes('environmental')) return <Leaf {...iconProps} />;
         return <Folder {...iconProps} />;
     }
     if (itemType === 'chapter') return <BookOpen {...iconProps} />;
@@ -172,16 +171,30 @@ export default function DynamicPage() {
         router.push(path);
     };
     
+    const getGoogleDriveEmbedUrl = (url: string) => {
+        const fileIdRegex = /drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/;
+        const match = url.match(fileIdRegex);
+        if (match && match[1]) {
+            return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+        }
+        return url;
+    };
+
     const handleResourceClick = (resource: Resource) => {
         if (resource.type === 'video') {
             if (resource.url.includes('youtube.com') || resource.url.includes('youtu.be')) {
-                const videoId = resource.url.split('v=')[1]?.split('&')[0] || resource.url.split('/').pop();
-                setSelectedVideoUrl(`https://www.youtube.com/embed/${videoId}`);
+                const videoIdMatch = resource.url.match(/(?:v=|\/|embed\/|youtu.be\/)([a-zA-Z0-9_-]{11})/);
+                if (videoIdMatch && videoIdMatch[1]) {
+                    setSelectedVideoUrl(`https://www.youtube.com/embed/${videoIdMatch[1]}`);
+                } else {
+                     window.open(resource.url, '_blank');
+                }
             } else {
                  window.open(resource.url, '_blank');
             }
         } else if (resource.type === 'infographic' || resource.type === 'mind-map') {
-            setSelectedImageUrl(resource.url);
+            const embedUrl = getGoogleDriveEmbedUrl(resource.url);
+            setSelectedImageUrl(embedUrl);
         } else {
             window.open(resource.url, '_blank');
         }
@@ -253,13 +266,13 @@ export default function DynamicPage() {
             </div>
             
             <Dialog open={!!selectedVideoUrl} onOpenChange={() => setSelectedVideoUrl(null)}>
-                <DialogContent className="max-w-4xl w-full h-auto p-0 bg-card">
+                <DialogContent className="max-w-4xl w-full h-auto p-0 bg-card border-0">
                     <div className="aspect-video">
                         <iframe
                             src={selectedVideoUrl || ''}
                             title="YouTube video player"
                             frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                             allowFullScreen
                             className="w-full h-full rounded-lg"
                         ></iframe>
@@ -268,13 +281,19 @@ export default function DynamicPage() {
             </Dialog>
 
             <Dialog open={!!selectedImageUrl} onOpenChange={() => setSelectedImageUrl(null)}>
-                <DialogContent className="max-w-4xl w-full p-0 bg-card">
-                     <DialogHeader className="p-4">
-                        <DialogTitle>Image Preview</DialogTitle>
+                <DialogContent className="max-w-5xl w-full p-0 bg-transparent border-0 shadow-none">
+                     <DialogHeader className="p-4 absolute top-0 right-0 z-10">
+                        {/* Title can be hidden or styled differently */}
                     </DialogHeader>
-                    <div className="p-4">
-                      {selectedImageUrl && <img src={selectedImageUrl} alt="Resource" className="w-full h-auto max-h-[80vh] object-contain rounded-md" />}
-                    </div>
+                    {selectedImageUrl && (
+                        <div className="w-full h-full flex items-center justify-center">
+                            <img 
+                                src={selectedImageUrl} 
+                                alt="Resource Preview" 
+                                className="w-auto h-auto max-w-full max-h-[90vh] object-contain rounded-md" 
+                            />
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
         </>

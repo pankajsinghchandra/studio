@@ -15,22 +15,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import LoadingOverlay from '@/components/loading-overlay';
 import { syllabus } from '@/lib/syllabus';
 
-const isValidUrl = (type: string, url: string): boolean => {
+const isValidUrl = (url: string): boolean => {
     if (!url) return false;
     try {
         new URL(url);
+        return true;
     } catch (_) {
         return false;
     }
-
-    if (type === 'video') {
-        return url.includes('youtube.com') || url.includes('youtu.be');
-    }
-    if (type === 'infographic' || type === 'mind-map') {
-        return /\.(jpg|jpeg|png|gif|svg|webp)$/i.test(url);
-    }
-    // For PDF/Word, we can't easily validate the content, so we just check for a valid URL structure.
-    return true;
 };
 
 
@@ -83,17 +75,11 @@ export default function ManageContentPage() {
         return;
     }
 
-    if (!isValidUrl(type, resourceUrl)) {
-        let errorMessage = 'Please enter a valid URL.';
-        if (type === 'video') {
-            errorMessage = 'Please enter a valid YouTube video URL.';
-        } else if (type === 'infographic' || type === 'mind-map') {
-            errorMessage = 'Please enter a valid image URL (e.g., jpg, png, gif).';
-        }
+    if (!isValidUrl(resourceUrl)) {
         toast({
             variant: 'destructive',
             title: 'Invalid Link',
-            description: errorMessage,
+            description: 'Please enter a valid URL.',
         });
         return;
     }
@@ -150,7 +136,7 @@ export default function ManageContentPage() {
                     <Select onValueChange={value => { setResourceClass(value); setSubject(''); setChapter(''); }} required value={resourceClass}>
                         <SelectTrigger id="class"><SelectValue placeholder="Select Class" /></SelectTrigger>
                         <SelectContent>
-                            {Object.keys(syllabus).map(c => <SelectItem key={c} value={c}>Class {c}</SelectItem>)}
+                            {Object.keys(syllabus).sort((a, b) => parseInt(a) - parseInt(b)).map(c => <SelectItem key={c} value={c}>Class {c}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>

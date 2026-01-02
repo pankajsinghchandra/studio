@@ -67,10 +67,12 @@ export default function Header() {
     setIsSaving(true);
     try {
       const userDocRef = doc(db, 'users', user.uid);
-      await updateDoc(userDocRef, {
-        name: tempName,
-        role: tempRole
-      });
+      const updates: {name: string, role?: string} = { name: tempName };
+      if (!isAdmin) {
+        updates.role = tempRole;
+      }
+      
+      await updateDoc(userDocRef, updates);
       await fetchUserDetails(user.uid); // Refetch user details
       toast({
         title: 'Success',
@@ -89,7 +91,7 @@ export default function Header() {
     }
   }
 
-  const isAdmin = user && user.email === 'quizpankaj@gmail.com';
+  const isAdmin = userDetails?.email === 'quizpankaj@gmail.com';
 
   const renderAuthSection = () => {
     if (loading) {
@@ -122,7 +124,7 @@ export default function Header() {
                     </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {isAdmin ? (
+                {isAdmin && (
                   <>
                     <DropdownMenuItem onClick={() => router.push('/admin/dashboard')}>
                       <Shield className="mr-2 h-4 w-4" />
@@ -133,12 +135,11 @@ export default function Header() {
                       <span>User Dashboard</span>
                     </DropdownMenuItem>
                   </>
-                ) : (
-                    <DropdownMenuItem onClick={openSettings}>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
-                    </DropdownMenuItem>
                 )}
+                <DropdownMenuItem onClick={openSettings}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
@@ -199,23 +200,25 @@ export default function Header() {
                     <Label htmlFor="name" className="text-right">Name</Label>
                     <Input id="name" value={tempName} onChange={(e) => setTempName(e.target.value)} className="col-span-3" />
                 </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="role" className="text-right">Role</Label>
-                     <Select onValueChange={setTempRole} value={tempRole}>
-                        <SelectTrigger className="col-span-3">
-                            <SelectValue placeholder="Select a role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="student">Student</SelectItem>
-                            <SelectItem value="teacher">Teacher</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
+                 {!isAdmin && (
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="role" className="text-right">Role</Label>
+                        <Select onValueChange={setTempRole} value={tempRole}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="student">Student</SelectItem>
+                                <SelectItem value="teacher">Teacher</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                 )}
             </div>
             <DialogFooter>
                  <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button type="submit" disabled={isSaving}>
+                        <Button type="button" disabled={isSaving}>
                           {isSaving ? <Loader className="animate-spin mr-2"/> : null}
                           Save changes
                         </Button>

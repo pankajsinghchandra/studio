@@ -36,6 +36,7 @@ export default function AdminDashboard() {
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedChapter, setSelectedChapter] = useState('');
+  const [selectedType, setSelectedType] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
 
@@ -110,9 +111,14 @@ export default function AdminDashboard() {
     if (selectedChapter) {
         filtered = filtered.filter(r => r.chapter === selectedChapter);
     }
+    
+    if (selectedType) {
+        filtered = filtered.filter(r => r.type === selectedType);
+    }
+
 
     setResources(filtered);
-  }, [selectedClass, selectedSubject, selectedChapter, allResources]);
+  }, [selectedClass, selectedSubject, selectedChapter, selectedType, allResources]);
 
   if (loading || !user) {
     return <LoadingOverlay isLoading={true} />;
@@ -144,7 +150,7 @@ export default function AdminDashboard() {
       <section className="mb-8">
         <h2 className="font-headline text-3xl font-semibold mb-4">Manage Notes</h2>
         <Card className="bg-card p-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                     <Label htmlFor="class-filter">Class</Label>
                     <Select value={selectedClass || 'all'} onValueChange={value => { setSelectedClass(value === 'all' ? '' : value); setSelectedSubject(''); setSelectedChapter(''); }}>
@@ -172,6 +178,21 @@ export default function AdminDashboard() {
                         <SelectContent>
                              <SelectItem value="all">All Chapters</SelectItem>
                              {chapters.map(ch => <SelectItem key={ch} value={ch}>{ch}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                 <div>
+                    <Label htmlFor="type-filter">Resource Type</Label>
+                    <Select value={selectedType || 'all'} onValueChange={value => setSelectedType(value === 'all' ? '' : value)}>
+                        <SelectTrigger id="type-filter"><SelectValue placeholder="Filter by Type" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Types</SelectItem>
+                            <SelectItem value="lesson-plan-pdf">Lesson Plan (PDF)</SelectItem>
+                            <SelectItem value="lesson-plan-image">Lesson Plan (Image)</SelectItem>
+                            <SelectItem value="video">Video</SelectItem>
+                            <SelectItem value="infographic">Infographic (Image)</SelectItem>
+                            <SelectItem value="mind-map">Mind Map (Image)</SelectItem>
+                            <SelectItem value="pdf-note">PDF Note</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>

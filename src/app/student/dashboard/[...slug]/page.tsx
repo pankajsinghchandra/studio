@@ -11,6 +11,7 @@ import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/ca
 import LoadingOverlay from '@/components/loading-overlay';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FileText, Video, ImageIcon, BrainCircuit, BookOpen, Folder, File, ChevronRight, School, Book, FlaskConical, Languages, Landmark, Calculator, Palette } from 'lucide-react';
+import { syllabus } from '@/lib/syllabus';
 
 const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: string, resourceType?: string) => {
     const nameLower = name?.toLowerCase() || '';
@@ -81,7 +82,7 @@ export default function DynamicPage() {
 
         const [classId, subjectId, chapterId] = pathSegments.map(decodeURIComponent);
 
-        const fetchFirestoreData = async () => {
+        const fetchData = async () => {
             const className = classId;
             const subjectName = subjectId;
             const chapterName = chapterId;
@@ -93,40 +94,26 @@ export default function DynamicPage() {
 
             try {
                 if (pageType === 'class') {
-                    const q = query(collection(db, "resources"), where("class", "==", className));
-                    const querySnapshot = await getDocs(q);
-                    const subjectMap = new Map<string, Set<string>>();
-                    querySnapshot.forEach(doc => {
-                        const resource = doc.data();
-                        if (!subjectMap.has(resource.subject)) {
-                            subjectMap.set(resource.subject, new Set());
-                        }
-                        subjectMap.get(resource.subject)!.add(resource.chapter);
-                    });
-
+                    const classSyllabus = syllabus[className as keyof typeof syllabus];
+                    const subjectNames = classSyllabus ? Object.keys(classSyllabus) : [];
+                    
                     setTitle(`Class ${className}`);
                     setDescription('Select a subject to explore.');
-                    setCards(Array.from(subjectMap.entries()).map(([subject, chapters]) => ({
+                    setCards(subjectNames.map(subject => ({
                         id: subject,
                         name: subject,
-                        description: `${chapters.size} chapters`,
+                        description: `${(classSyllabus as any)[subject]?.length || 0} chapters`,
                         path: `/student/dashboard/${className}/${encodeURIComponent(subject)}`
                     })));
                     setBreadcrumbItems(baseBreadcrumbs);
                 }
 
                 if (pageType === 'subject') {
-                    const q = query(collection(db, "resources"), 
-                        where("class", "==", className), 
-                        where("subject", "==", subjectName)
-                    );
-                    const querySnapshot = await getDocs(q);
-                    const chapters = new Set<string>();
-                    querySnapshot.forEach(doc => chapters.add(doc.data().chapter));
+                    const subjectChapters = syllabus[className as keyof typeof syllabus]?.[subjectName as keyof any] || [];
 
                     setTitle(subjectName);
-                    setDescription('Select a chapter to start learning.');
-                    setCards(Array.from(chapters).map(chapter => ({
+setDescription('Select a chapter to start learning.');
+                    setCards(subjectChapters.map(chapter => ({
                         id: chapter,
                         name: chapter,
                         description: 'View resources',
@@ -154,13 +141,13 @@ export default function DynamicPage() {
                     ]);
                 }
             } catch (error) {
-                console.error("Error fetching data from Firestore: ", error);
+                console.error("Error fetching data: ", error);
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchFirestoreData();
+        fetchData();
 
     }, [pageType, pathSegments, authLoading, user]);
 
@@ -270,7 +257,7 @@ export default function DynamicPage() {
                         <DialogTitle>Image Preview</DialogTitle>
                     </DialogHeader>
                     <div className="p-4">
-                      <img src={selectedImageUrl || ''} alt="Resource" className="w-full h-auto max-h-[80vh] object-contain rounded-md" />
+                      {selectedImageUrl && <img src={selectedImageUrl} alt="Resource" className="w-full h-auto max-h-[80vh] object-contain rounded-md" />}
                     </div>
                 </DialogContent>
             </Dialog>

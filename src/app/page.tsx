@@ -4,10 +4,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import LoadingOverlay from '@/components/loading-overlay';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Award, Book, Briefcase, GraduationCap, PenTool, School, Dna, Atom, History, Microscope, Languages, Globe, Calculator, FlaskConical, Palette } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { syllabus } from '@/lib/syllabus';
 
 
 interface ClassInfo {
@@ -30,41 +28,25 @@ export default function Home() {
     if (!loading && !user) {
       router.replace('/login');
     }
-    if (!loading && userDetails?.email === 'quizpankaj@gmail.com') {
-      // Admin is already on the user dashboard if they are on this page.
-      // The redirect to admin dashboard is in useAuth hook for initial login.
-    }
-  }, [user, userDetails, loading, router]);
+  }, [user, loading, router]);
 
   useEffect(() => {
     if (user) {
-      const fetchClasses = async () => {
-        setDataLoading(true);
-        const querySnapshot = await getDocs(collection(db, 'resources'));
-        const resources = querySnapshot.docs.map(doc => doc.data());
-        
-        const classMap = new Map<string, Set<string>>();
-
-        resources.forEach(resource => {
-          if (resource.class) {
-            if (!classMap.has(resource.class)) {
-              classMap.set(resource.class, new Set());
-            }
-            classMap.get(resource.class)!.add(resource.subject);
-          }
-        });
-        
-        const fetchedClasses: ClassInfo[] = Array.from(classMap.entries()).map(([className, subjectsSet], index) => ({
-          id: className,
-          name: `Class ${className}`,
-          subjects: subjectsSet.size,
+      setDataLoading(true);
+      const classKeys = Object.keys(syllabus);
+      
+      const fetchedClasses: ClassInfo[] = classKeys.map((classKey, index) => {
+        const subjects = Object.keys(syllabus[classKey as keyof typeof syllabus]);
+        return {
+          id: classKey,
+          name: `Class ${classKey}`,
+          subjects: subjects.length,
           icon: classIcons[index % classIcons.length],
-        })).sort((a, b) => parseInt(a.id) - parseInt(b.id));
+        };
+      }).sort((a, b) => parseInt(a.id) - parseInt(b.id));
 
-        setClasses(fetchedClasses);
-        setDataLoading(false);
-      };
-      fetchClasses();
+      setClasses(fetchedClasses);
+      setDataLoading(false);
     }
   }, [user]);
   
@@ -98,7 +80,7 @@ export default function Home() {
             </h2>
             {classes.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {classes.map((c, index) => (
+              {classes.map((c) => (
                   <Card 
                       key={c.id} 
                       className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95 group"

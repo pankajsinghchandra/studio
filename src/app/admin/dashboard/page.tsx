@@ -3,7 +3,7 @@
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { collection, getDocs, deleteDoc, doc, query, where } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -14,6 +14,9 @@ import { useToast } from '@/hooks/use-toast';
 import LoadingOverlay from '@/components/loading-overlay';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { syllabus } from '@/lib/syllabus';
+import type { Resource } from '@/lib/types';
+
 
 export default function AdminDashboard() {
   const { user, loading } = useAuth();
@@ -49,9 +52,10 @@ export default function AdminDashboard() {
     const resourcesList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     setAllResources(resourcesList);
     setResources(resourcesList);
-
-    const uniqueClasses = [...new Set(resourcesList.map(r => r.class))].sort();
-    setClasses(uniqueClasses);
+    
+    // Use syllabus to populate filters
+    const classKeys = Object.keys(syllabus);
+    setClasses(classKeys.sort());
     
     setIsLoadingData(false);
   };
@@ -79,24 +83,28 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     let filtered = allResources;
+
     if (selectedClass) {
         filtered = filtered.filter(r => r.class === selectedClass);
-        const uniqueSubjects = [...new Set(filtered.map(r => r.subject))].sort();
-        setSubjects(uniqueSubjects);
+        const subjectKeys = Object.keys(syllabus[selectedClass as keyof typeof syllabus] || {});
+        setSubjects(subjectKeys.sort());
     } else {
         setSubjects([]);
         setChapters([]);
     }
+
     if (selectedSubject) {
         filtered = filtered.filter(r => r.subject === selectedSubject);
-        const uniqueChapters = [...new Set(filtered.map(r => r.chapter))].sort();
-        setChapters(uniqueChapters);
+        const chapterKeys = syllabus[selectedClass as keyof typeof syllabus]?.[selectedSubject as keyof any] || [];
+        setChapters(chapterKeys.sort());
     } else {
         setChapters([]);
     }
+    
     if (selectedChapter) {
         filtered = filtered.filter(r => r.chapter === selectedChapter);
     }
+
     setResources(filtered);
   }, [selectedClass, selectedSubject, selectedChapter, allResources]);
 
@@ -159,7 +167,7 @@ export default function AdminDashboard() {
 
       <section>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {resources.map(resource => (
+          {resources.map((resource: Resource & { id: string }) => (
             <Card key={resource.id} className="bg-card flex flex-col">
               <CardHeader>
                 <CardTitle>{resource.title}</CardTitle>

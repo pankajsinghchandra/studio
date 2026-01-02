@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -88,8 +87,7 @@ export default function DynamicPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isNavigating, setIsNavigating] = useState(false);
     
-    const [selectedVideoUrl, setSelectedVideoUrl] = useState<string | null>(null);
-    const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+    const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
 
     useEffect(() => {
         if (pageType === 'unknown' || authLoading || !user) return;
@@ -175,33 +173,69 @@ export default function DynamicPage() {
         const fileIdRegex = /drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/;
         const match = url.match(fileIdRegex);
         if (match && match[1]) {
+            // For images, we can use the uc?id= endpoint for direct viewing
             return `https://drive.google.com/uc?export=view&id=${match[1]}`;
         }
-        return url;
+        return url; // Return original URL if no match
     };
+    
+    const getYoutubeEmbedUrl = (url: string) => {
+        const videoIdMatch = url.match(/(?:v=|\/|embed\/|youtu.be\/)([a-zA-Z0-9_-]{11})/);
+        if (videoIdMatch && videoIdMatch[1]) {
+            return `https://www.youtube.com/embed/${videoIdMatch[1]}`;
+        }
+        return null;
+    }
+
 
     const handleResourceClick = (resource: Resource) => {
-        if (resource.type === 'video') {
-            if (resource.url.includes('youtube.com') || resource.url.includes('youtu.be')) {
-                const videoIdMatch = resource.url.match(/(?:v=|\/|embed\/|youtu.be\/)([a-zA-Z0-9_-]{11})/);
-                if (videoIdMatch && videoIdMatch[1]) {
-                    setSelectedVideoUrl(`https://www.youtube.com/embed/${videoIdMatch[1]}`);
-                } else {
-                     window.open(resource.url, '_blank');
-                }
-            } else {
-                 window.open(resource.url, '_blank');
-            }
-        } else if (resource.type === 'infographic' || resource.type === 'mind-map') {
-            const embedUrl = getGoogleDriveEmbedUrl(resource.url);
-            setSelectedImageUrl(embedUrl);
-        } else {
-            window.open(resource.url, '_blank');
-        }
+        setSelectedResource(resource);
     };
     
     if (authLoading || isLoading) {
         return <LoadingOverlay isLoading={true} />;
+    }
+
+    const renderDialogContent = () => {
+        if (!selectedResource) return null;
+
+        const { type, url } = selectedResource;
+        
+        if (type === 'video') {
+            const embedUrl = getYoutubeEmbedUrl(url);
+            if (embedUrl) {
+                return (
+                     <div className="aspect-video">
+                        <iframe
+                            src={embedUrl}
+                            title="YouTube video player"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                            className="w-full h-full rounded-lg"
+                        ></iframe>
+                    </div>
+                )
+            }
+        }
+        
+        if (type === 'infographic' || type === 'mind-map') {
+            const embedUrl = getGoogleDriveEmbedUrl(url);
+            return (
+                 <div className="w-full h-full flex items-center justify-center">
+                    <img 
+                        src={embedUrl} 
+                        alt="Resource Preview" 
+                        className="w-auto h-auto max-w-full max-h-[90vh] object-contain rounded-md" 
+                    />
+                </div>
+            )
+        }
+        
+        // Fallback for other types or links that can't be embedded
+        window.open(url, '_blank');
+        setSelectedResource(null); // Close dialog if we opened a new tab
+        return null;
     }
 
     return (
@@ -265,35 +299,12 @@ export default function DynamicPage() {
                 </div>
             </div>
             
-            <Dialog open={!!selectedVideoUrl} onOpenChange={() => setSelectedVideoUrl(null)}>
-                <DialogContent className="max-w-4xl w-full h-auto p-0 bg-card border-0">
-                    <div className="aspect-video">
-                        <iframe
-                            src={selectedVideoUrl || ''}
-                            title="YouTube video player"
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                            allowFullScreen
-                            className="w-full h-full rounded-lg"
-                        ></iframe>
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            <Dialog open={!!selectedImageUrl} onOpenChange={() => setSelectedImageUrl(null)}>
-                <DialogContent className="max-w-5xl w-full p-0 bg-transparent border-0 shadow-none">
-                     <DialogHeader className="p-4 absolute top-0 right-0 z-10">
-                        {/* Title can be hidden or styled differently */}
+            <Dialog open={!!selectedResource} onOpenChange={() => setSelectedResource(null)}>
+                <DialogContent className="max-w-5xl w-full p-0 bg-transparent border-0 shadow-none data-[state=open]:sm:zoom-in-90">
+                     <DialogHeader className="p-2 absolute top-0 left-0 z-10 bg-gradient-to-b from-black/60 to-transparent w-full rounded-t-lg">
+                        <DialogTitle className="text-white text-lg truncate px-2">{selectedResource?.title}</DialogTitle>
                     </DialogHeader>
-                    {selectedImageUrl && (
-                        <div className="w-full h-full flex items-center justify-center">
-                            <img 
-                                src={selectedImageUrl} 
-                                alt="Resource Preview" 
-                                className="w-auto h-auto max-w-full max-h-[90vh] object-contain rounded-md" 
-                            />
-                        </div>
-                    )}
+                    {selectedResource && renderDialogContent()}
                 </DialogContent>
             </Dialog>
         </>

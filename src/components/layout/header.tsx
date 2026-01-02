@@ -216,28 +216,10 @@ export default function Header() {
                  )}
             </div>
             <DialogFooter>
-                 <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button type="button" disabled={isSaving}>
-                          {isSaving ? <Loader className="animate-spin mr-2"/> : null}
-                          Save changes
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action will update your profile information.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleSettingsSave}>
-                            Continue
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                 <Button onClick={handleSettingsSave} disabled={isSaving}>
+                    {isSaving ? <Loader className="animate-spin mr-2"/> : null}
+                    Save changes
+                  </Button>
             </DialogFooter>
         </DialogContent>
     </Dialog>

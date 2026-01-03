@@ -8,13 +8,14 @@ import { useAuth } from '@/app/providers';
 import type { Resource } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import LoadingOverlay from '@/components/loading-overlay';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { 
-    FileText, Video, ImageIcon, BookOpen, ChevronRight, 
+    FileText, Video, ImageIcon, BookOpen, ChevronRight, ExternalLink,
     School, Book, FlaskConical, Languages, Landmark, Calculator, Palette, Dna, Atom, 
     Globe, Scroll, Milestone, Users, Drama, Leaf, Folder, X
 } from 'lucide-react';
 import { syllabus } from '@/lib/syllabus';
+import { Button } from '@/components/ui/button';
 
 const subjectIcons: { [key: string]: React.ElementType } = {
     'mathematics': Calculator,
@@ -201,11 +202,12 @@ export default function DynamicPage() {
     }
 
     const getGoogleDriveEmbedUrl = (url: string) => {
+        // Use the /preview URL for embedding to get the viewer with controls
         const fileIdMatch = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/);
         if (fileIdMatch && fileIdMatch[1]) {
             return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
         }
-        return url;
+        return url; // Fallback to original URL if no ID is found
     };
 
 
@@ -221,67 +223,56 @@ export default function DynamicPage() {
         if (!selectedResource) return null;
 
         const { type, url, title } = selectedResource;
-        
+        let embedUrl: string | null = null;
+        let isDirectEmbeddable = false;
+
         if (type === 'video') {
-            const embedUrl = getYoutubeEmbedUrl(url);
-            if (embedUrl) {
-                return (
-                     <div className="aspect-video w-full h-full">
-                        <DialogTitle className="sr-only">{title}</DialogTitle>
-                        <iframe
-                            src={embedUrl}
-                            title="YouTube video player"
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                            allowFullScreen
-                            className="w-full h-full rounded-lg"
-                        ></iframe>
+            embedUrl = getYoutubeEmbedUrl(url);
+            isDirectEmbeddable = !!embedUrl;
+        } else if (['infographic', 'mind-map', 'lesson-plan-image', 'pdf-note', 'lesson-plan-pdf'].includes(type) && url.includes('drive.google.com')) {
+            embedUrl = getGoogleDriveEmbedUrl(url);
+            isDirectEmbeddable = true;
+        } else if (type === 'lesson-plan-text') {
+            isDirectEmbeddable = true;
+        } else if (['infographic', 'mind-map', 'lesson-plan-image'].includes(type)) {
+            embedUrl = url;
+            isDirectEmbeddable = true;
+        }
+
+        if (isDirectEmbeddable) {
+            if (type === 'lesson-plan-text') {
+                 return (
+                    <div className="w-full h-full prose prose-sm max-w-none p-6 text-foreground bg-background rounded-lg overflow-y-auto">
+                        <div dangerouslySetInnerHTML={{ __html: url.replace(/\n/g, '<br />') }} />
                     </div>
                 )
             }
-        }
-        
-        const isGoogleDriveResource = url.includes('drive.google.com');
-
-        if (isGoogleDriveResource && (type === 'infographic' || type === 'mind-map' || type === 'lesson-plan-image' || type === 'pdf-note' || type === 'lesson-plan-pdf')) {
-            const embedUrl = getGoogleDriveEmbedUrl(url);
+             if (['infographic', 'mind-map', 'lesson-plan-image'].includes(type) && !url.includes('drive.google.com')) {
+                return (
+                    <div className="w-full h-full flex items-center justify-center bg-muted/20">
+                        <img 
+                            src={url} 
+                            alt={title}
+                            className="max-w-full max-h-full object-contain"
+                        />
+                    </div>
+                )
+            }
             return (
-                <div className="w-full h-full">
-                    <DialogTitle className="sr-only">{title}</DialogTitle>
-                    <iframe
-                        src={embedUrl}
-                        className="w-full h-full rounded-lg border-0"
-                        frameBorder="0"
-                    ></iframe>
-                </div>
-            );
-        }
-
-        if (type === 'lesson-plan-text') {
-            return (
-                <div className="w-full h-full prose prose-sm max-w-none p-6 text-foreground bg-background rounded-lg overflow-y-auto">
-                    <DialogTitle className="text-2xl font-bold mb-4">{title}</DialogTitle>
-                    <div dangerouslySetInnerHTML={{ __html: url.replace(/\n/g, '<br />') }} />
-                </div>
+                 <iframe
+                    src={embedUrl || url}
+                    title={title}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    className="w-full h-full rounded-b-lg"
+                ></iframe>
             )
         }
         
-        if (type === 'infographic' || type === 'mind-map' || type === 'lesson-plan-image') {
-             return (
-                <div className="w-full h-full flex items-center justify-center">
-                    <DialogTitle className="sr-only">{title}</DialogTitle>
-                    <img 
-                        src={url} 
-                        alt={title}
-                        className="max-w-full max-h-full object-contain"
-                    />
-                </div>
-            )
-        }
-
-        // Fallback for opening any other resource type in a new tab
+        // Fallback for non-embeddable or external URLs
         window.open(url, '_blank');
-        setSelectedResource(null);
+        setSelectedResource(null); // Close dialog after opening new tab
         return null;
     }
 
@@ -341,21 +332,31 @@ export default function DynamicPage() {
                 </div>
             </div>
             
-            <Dialog open={!!selectedResource} onOpenChange={(open) => !open && setSelectedResource(null)}>
+             <Dialog open={!!selectedResource} onOpenChange={(open) => !open && setSelectedResource(null)}>
                 <DialogContent 
-                  className="max-w-none w-screen h-screen p-2 bg-background/95 backdrop-blur-sm border-0 shadow-none data-[state=open]:sm:zoom-in-90 flex flex-col"
+                  className="max-w-none w-screen h-screen p-0 bg-background/95 backdrop-blur-sm border-0 shadow-none data-[state=open]:sm:zoom-in-90 flex flex-col"
                   onInteractOutside={(e) => e.preventDefault()}
                 >
-                    <DialogHeader className="p-2 bg-transparent rounded-t-lg flex-row justify-between items-center z-10">
+                    <DialogHeader className="p-2 bg-transparent rounded-t-lg flex-row justify-between items-center z-10 shrink-0">
                         <DialogTitle className="text-foreground text-lg truncate px-2">{selectedResource?.title}</DialogTitle>
-                         <DialogDescription>
-                            <button onClick={() => setSelectedResource(null)} className="p-1 rounded-full text-foreground/70 hover:text-foreground hover:bg-muted/80 transition-colors">
-                                <X className="w-6 h-6" />
-                                <span className="sr-only">Close</span>
-                            </button>
-                        </DialogDescription>
+                         <div className="flex items-center gap-2">
+                             {selectedResource?.url && selectedResource.type !== 'lesson-plan-text' && (
+                                <a href={selectedResource.url} target="_blank" rel="noopener noreferrer">
+                                    <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground">
+                                        <ExternalLink className="w-5 h-5" />
+                                        <span className="sr-only">Open in new tab</span>
+                                    </Button>
+                                </a>
+                             )}
+                            <DialogClose asChild>
+                                <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground">
+                                    <X className="w-6 h-6" />
+                                    <span className="sr-only">Close</span>
+                                </Button>
+                            </DialogClose>
+                         </div>
                     </DialogHeader>
-                    <div className="flex-1 w-full h-full -mt-12">
+                    <div className="flex-1 w-full h-full bg-muted/40">
                       {selectedResource && renderDialogContent()}
                     </div>
                 </DialogContent>

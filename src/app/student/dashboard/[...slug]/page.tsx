@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { 
     FileText, Video, ImageIcon, BookOpen, ChevronRight, 
     School, Book, FlaskConical, Languages, Landmark, Calculator, Palette, Dna, Atom, 
-    Globe, Scroll, Milestone, Users, Drama, Leaf, Folder
+    Globe, Scroll, Milestone, Users, Drama, Leaf, Folder, X
 } from 'lucide-react';
 import { syllabus } from '@/lib/syllabus';
 
@@ -343,19 +343,19 @@ export default function DynamicPage() {
             
             <Dialog open={!!selectedResource} onOpenChange={(open) => !open && setSelectedResource(null)}>
                 <DialogContent 
-                  className="max-w-4xl w-full h-[90vh] p-0 bg-background/90 backdrop-blur-sm border-0 shadow-none data-[state=open]:sm:zoom-in-90 flex flex-col"
+                  className="max-w-none w-screen h-screen p-2 bg-background/95 backdrop-blur-sm border-0 shadow-none data-[state=open]:sm:zoom-in-90 flex flex-col"
+                  onInteractOutside={(e) => e.preventDefault()}
                 >
-                    <DialogHeader className="p-2 bg-background/80 rounded-t-lg flex-row justify-between items-center">
+                    <DialogHeader className="p-2 bg-transparent rounded-t-lg flex-row justify-between items-center z-10">
                         <DialogTitle className="text-foreground text-lg truncate px-2">{selectedResource?.title}</DialogTitle>
                          <DialogDescription>
-                            <button onClick={() => setSelectedResource(null)} className="p-1 rounded-full hover:bg-muted">
-                                <ChevronRight className="w-4 h-4 rotate-45" />
-                                <ChevronRight className="w-4 h-4 -mt-2.5 rotate-135" />
+                            <button onClick={() => setSelectedResource(null)} className="p-1 rounded-full text-foreground/70 hover:text-foreground hover:bg-muted/80 transition-colors">
+                                <X className="w-6 h-6" />
                                 <span className="sr-only">Close</span>
                             </button>
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="flex-1 w-full h-full p-2">
+                    <div className="flex-1 w-full h-full -mt-12">
                       {selectedResource && renderDialogContent()}
                     </div>
                 </DialogContent>

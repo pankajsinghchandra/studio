@@ -16,6 +16,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader } from "lucide-react";
 import { useAuth } from "@/app/providers";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48">
@@ -36,11 +37,13 @@ export default function RegisterPage() {
     const [userClass, setUserClass] = useState('');
     const [gender, setGender] = useState('');
     const [role, setRole] = useState('');
+    const [termsAccepted, setTermsAccepted] = useState(false);
     
     const [isLoading, setIsLoading] = useState(false);
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     
     const [showRoleDialog, setShowRoleDialog] = useState(false);
+    const [showTermsDialog, setShowTermsDialog] = useState(false);
     const [pendingUser, setPendingUser] = useState<User | null>(null);
     const [selectedRole, setSelectedRole] = useState('');
 
@@ -82,6 +85,10 @@ export default function RegisterPage() {
           toast({ variant: "destructive", title: "Please select a role." });
           return;
         }
+        if (!termsAccepted) {
+            toast({ variant: "destructive", title: "Please accept the terms and conditions." });
+            return;
+        }
         
         setIsLoading(true);
         const userDocRef = doc(db, "users", pendingUser.uid);
@@ -92,11 +99,12 @@ export default function RegisterPage() {
             name: pendingUser.displayName,
             email: pendingUser.email,
             role: selectedRole,
+            termsAccepted: true,
         };
 
         try {
             if (userDoc.exists()) {
-                await updateDoc(userDocRef, { role: selectedRole });
+                await updateDoc(userDocRef, { role: selectedRole, termsAccepted: true });
             } else {
                 await setDoc(userDocRef, { ...userData, createdAt: new Date() });
             }
@@ -133,6 +141,15 @@ export default function RegisterPage() {
             setIsLoading(false);
             return;
         }
+        if (!termsAccepted) {
+            toast({
+                variant: "destructive",
+                title: "Terms & Conditions",
+                description: "You must accept the terms and conditions to register.",
+            });
+            setIsLoading(false);
+            return;
+        }
         
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -146,6 +163,7 @@ export default function RegisterPage() {
                 userClass: role === 'student' ? userClass : '',
                 gender: role === 'student' ? gender : '',
                 role,
+                termsAccepted: true,
                 createdAt: new Date(),
             };
 
@@ -258,9 +276,22 @@ export default function RegisterPage() {
                       </div>
                   </div>
               )}
+               <div className="flex items-center space-x-2 pt-2">
+                    <Checkbox id="terms" checked={termsAccepted} onCheckedChange={(checked) => setTermsAccepted(checked as boolean)} />
+                    <Label htmlFor="terms" className="text-sm text-muted-foreground">
+                        I agree to the{' '}
+                        <button
+                            type="button"
+                            onClick={() => setShowTermsDialog(true)}
+                            className="text-primary hover:underline"
+                        >
+                            Terms & Conditions
+                        </button>
+                    </Label>
+                </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
-              <Button className="w-full" type="submit" disabled={isLoading}>
+              <Button className="w-full" type="submit" disabled={isLoading || !termsAccepted}>
                   {isLoading && <Loader className="animate-spin mr-2"/>}
                   Register
               </Button>
@@ -280,7 +311,7 @@ export default function RegisterPage() {
             <DialogHeader>
               <DialogTitle>One Last Step</DialogTitle>
               <DialogDescription>
-                Please select your role to complete your registration.
+                Please select your role and accept the terms to complete your registration.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -294,14 +325,48 @@ export default function RegisterPage() {
                   <SelectItem value="teacher">Teacher</SelectItem>
                 </SelectContent>
               </Select>
+               <div className="flex items-center space-x-2 pt-2">
+                    <Checkbox id="google-terms" checked={termsAccepted} onCheckedChange={(checked) => setTermsAccepted(checked as boolean)} />
+                    <Label htmlFor="google-terms" className="text-sm text-muted-foreground">
+                        I agree to the{' '}
+                        <button
+                            type="button"
+                            onClick={() => setShowTermsDialog(true)}
+                            className="text-primary hover:underline"
+                        >
+                            Terms & Conditions
+                        </button>
+                    </Label>
+                </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleRoleSubmit} disabled={!selectedRole || isLoading}>
+              <Button onClick={handleRoleSubmit} disabled={!selectedRole || isLoading || !termsAccepted}>
                 {isLoading && <Loader className="animate-spin mr-2"/>}
                 Complete Sign-Up
               </Button>
             </DialogFooter>
           </DialogContent>
+        </Dialog>
+        
+        <Dialog open={showTermsDialog} onOpenChange={setShowTermsDialog}>
+            <DialogContent className="sm:max-w-md">
+                 <DialogHeader>
+                    <DialogTitle>नियम एवं शर्तें (Terms & Conditions)</DialogTitle>
+                </DialogHeader>
+                <div className="prose prose-sm max-h-60 overflow-y-auto pr-4 text-sm text-muted-foreground">
+                    <p>इस ऐप का उपयोग करने से पहले कृपया निम्नलिखित शर्तों को ध्यान से पढ़ें:</p>
+                    <ul className="list-disc space-y-2">
+                        <li><strong>उपयोग की अनुमति:</strong> यह ऐप केवल शैक्षणिक उद्देश्यों के लिए है। उपयोगकर्ता इसका उपयोग सीखने और अभ्यास के लिए कर सकते हैं।</li>
+                        <li><strong>डेटा सुरक्षा:</strong> हम उपयोगकर्ता की गोपनीयता का सम्मान करते हैं। ऐप के सुचारू संचालन के लिए केवल आवश्यक तकनीकी डेटा का ही उपयोग किया जाता है।</li>
+                        <li><strong>सेवाओं का विस्तार और रखरखाव:</strong> भविष्य में ऐप की गुणवत्ता बनाए रखने, सर्वर के खर्चों और नई सुविधाओं (जैसे AI मोड, ऑफलाइन टेस्ट) को जोड़ने के लिए, ऐप में तृतीय-पक्ष सेवाओं (Third-party services) या प्रमोशनल कंटेंट का समावेश किया जा सकता है। यह उपयोगकर्ताओं के लिए ऐप को 'फ्री' रखने में सहायक होगा।</li>
+                        <li><strong>अस्वीकरण (Disclaimer):</strong> यह एक स्वतंत्र पहल है और इसका किसी भी सरकारी विभाग के साथ आधिकारिक वित्तीय संबंध नहीं है। यह ऐप केवल सहायता के उद्देश्य से है। यह किसी भी सरकारी विभाग का आधिकारिक ऐप नहीं है। इस ऐप का उपयोग पूरी तरह से स्वैच्छिक है।</li>
+                        <li><strong>सहमति:</strong> ऐप का उपयोग जारी रखकर, आप इन शर्तों से अपनी सहमति प्रदान करते हैं।</li>
+                    </ul>
+                </div>
+                <DialogFooter>
+                    <Button onClick={() => setShowTermsDialog(false)}>Close</Button>
+                </DialogFooter>
+            </DialogContent>
         </Dialog>
     </>
   );

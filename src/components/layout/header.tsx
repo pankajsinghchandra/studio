@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookHeart, LogOut, Loader, Shield, LayoutDashboard, Settings } from 'lucide-react';
+import { BookHeart, LogOut, Loader, Shield, LayoutDashboard, Settings, Info } from 'lucide-react';
 import SearchBar from '../search-bar';
 import { Button } from '../ui/button';
 import { getAuth, signOut } from 'firebase/auth';
@@ -35,6 +35,7 @@ export default function Header() {
   const { toast } = useToast();
   
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAboutUsOpen, setIsAboutUsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [tempName, setTempName] = useState(userDetails?.name || '');
   const [tempRole, setTempRole] = useState(userDetails?.role || '');
@@ -148,6 +149,10 @@ export default function Header() {
                 <DropdownMenuItem onClick={openSettings}>
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsAboutUsOpen(true)}>
+                    <Info className="mr-2 h-4 w-4" />
+                    <span>About Us</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
@@ -280,6 +285,25 @@ export default function Header() {
                     </AlertDialogContent>
                 </AlertDialog>
             </DialogFooter>
+        </DialogContent>
+    </Dialog>
+    
+    <Dialog open={isAboutUsOpen} onOpenChange={setIsAboutUsOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle className="font-headline">Vidyalaya Notes - About Us</DialogTitle>
+                <DialogDescription>Vidyalaya Notes - आपकी डिजिटल लाइब्रेरी</DialogDescription>
+            </DialogHeader>
+            <div className="prose prose-sm max-w-none text-muted-foreground">
+                <p>"Vidyalaya Notes" शिक्षकों और छात्रों के लिए एक आधुनिक सहायक उपकरण (Teaching-Learning Aid) है।</p>
+                <h4 className="font-headline text-foreground">हमारी मुख्य विशेषताएँ:</h4>
+                <ul className="list-disc space-y-2">
+                    <li><strong>हमारा विजन:</strong> क्लासरूम की पढ़ाई को रोचक बनाने के लिए वीडियो, गानों के माध्यम से कविताएँ और कहानियाँ और विजुअल माइंडमैप्स उपलब्ध कराना।</li>
+                    <li><strong>स्वामित्व:</strong> इस प्लेटफॉर्म का संचालन और तकनीकी रखरखाव श्रीमती मीरा देवी द्वारा किया जाता है।</li>
+                    <li><strong>कंटेंट क्रेडिट:</strong> इसमें दी गई सामग्री अनुभवी शिक्षकों के परामर्श और NCERT/SCERT के पाठ्यक्रम पर आधारित है।</li>
+                    <li>यह ऐप शिक्षकों के शिक्षण कार्य को सुलभ बनाने के लिए एक 'स्वयंसेवी' पहल है।</li>
+                </ul>
+            </div>
         </DialogContent>
     </Dialog>
     </>

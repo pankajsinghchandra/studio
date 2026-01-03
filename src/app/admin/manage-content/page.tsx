@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import LoadingOverlay from '@/components/loading-overlay';
 import { syllabus } from '@/lib/syllabus';
+import { Textarea } from '@/components/ui/textarea';
 
 const isValidUrl = (url: string): boolean => {
     if (!url) return false;
@@ -37,6 +38,7 @@ export default function ManageContentPage() {
   const [chapter, setChapter] = useState('');
   const [type, setType] = useState('');
   const [resourceUrl, setResourceUrl] = useState('');
+  const [textContent, setTextContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const subjects = useMemo(() => {
@@ -66,7 +68,11 @@ export default function ManageContentPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    if (!title || !resourceClass || !subject || !chapter || !type || !resourceUrl) {
+    
+    const isTextPlan = type === 'lesson-plan-text';
+    const isUrlPlan = !isTextPlan;
+
+    if (!title || !resourceClass || !subject || !chapter || !type) {
         toast({
             variant: 'destructive',
             title: 'Missing Fields',
@@ -75,11 +81,20 @@ export default function ManageContentPage() {
         return;
     }
 
-    if (!isValidUrl(resourceUrl)) {
+    if (isUrlPlan && !isValidUrl(resourceUrl)) {
         toast({
             variant: 'destructive',
             title: 'Invalid Link',
-            description: 'Please enter a valid URL. It must start with http:// or https://',
+            description: 'Please enter a valid URL for this resource type. It must start with http:// or https://',
+        });
+        return;
+    }
+
+    if (isTextPlan && !textContent.trim()) {
+        toast({
+            variant: 'destructive',
+            title: 'Missing Content',
+            description: 'Please enter the content for the text-based lesson plan.',
         });
         return;
     }
@@ -93,7 +108,7 @@ export default function ManageContentPage() {
         subject,
         chapter,
         type,
-        url: resourceUrl,
+        url: isTextPlan ? textContent : resourceUrl,
         authorId: user.uid,
         createdAt: new Date(),
       });
@@ -169,6 +184,7 @@ export default function ManageContentPage() {
                 <SelectContent>
                   <SelectItem value="lesson-plan-pdf">Lesson Plan (PDF)</SelectItem>
                   <SelectItem value="lesson-plan-image">Lesson Plan (Image)</SelectItem>
+                  <SelectItem value="lesson-plan-text">Lesson Plan (Text)</SelectItem>
                   <SelectItem value="video">Video</SelectItem>
                   <SelectItem value="infographic">Infographic (Image)</SelectItem>
                   <SelectItem value="mind-map">Mind Map (Image)</SelectItem>
@@ -177,10 +193,32 @@ export default function ManageContentPage() {
               </Select>
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="resourceUrl">Resource Link</Label>
-              <Input id="resourceUrl" type="url" placeholder="https://example.com/resource" required value={resourceUrl} onChange={(e) => setResourceUrl(e.target.value)} />
-            </div>
+            {type === 'lesson-plan-text' ? (
+                <div className="space-y-2">
+                    <Label htmlFor="textContent">Lesson Content</Label>
+                    <Textarea 
+                        id="textContent" 
+                        placeholder="Type your lesson plan content here..." 
+                        required 
+                        value={textContent} 
+                        onChange={(e) => setTextContent(e.target.value)}
+                        className="min-h-[200px]"
+                    />
+                </div>
+            ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="resourceUrl">Resource Link</Label>
+                  <Input 
+                    id="resourceUrl" 
+                    type="url" 
+                    placeholder="https://example.com/resource" 
+                    required={type !== 'lesson-plan-text'}
+                    value={resourceUrl} 
+                    onChange={(e) => setResourceUrl(e.target.value)} 
+                  />
+                </div>
+            )}
+
 
             <Button className="w-full" type="submit" disabled={isSubmitting}>
               {isSubmitting ? 'Submitting...' : 'Add Resource'}

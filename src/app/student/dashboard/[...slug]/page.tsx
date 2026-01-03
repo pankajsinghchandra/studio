@@ -8,7 +8,7 @@ import { useAuth } from '@/app/providers';
 import type { Resource } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import LoadingOverlay from '@/components/loading-overlay';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { 
     FileText, Video, ImageIcon, BookOpen, ChevronRight, 
     School, Book, FlaskConical, Languages, Landmark, Calculator, Palette, Dna, Atom, 
@@ -73,6 +73,7 @@ const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: 
     switch (resourceType) {
         case 'lesson-plan-pdf':
         case 'pdf-note':
+        case 'lesson-plan-text':
             return <FileText {...resourceIconProps} />;
         case 'video':
             return <Video {...resourceIconProps} />;
@@ -199,13 +200,12 @@ export default function DynamicPage() {
         return null;
     }
 
-    const getGoogleDriveEmbedUrl = (url: string, resourceType: Resource['type']) => {
+    const getGoogleDriveEmbedUrl = (url: string) => {
         const fileIdMatch = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/);
         if (fileIdMatch && fileIdMatch[1]) {
-            // For both PDF and Image types, the /preview URL works best for embedding.
             return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
         }
-        return url; // fallback to the original URL
+        return url;
     };
 
 
@@ -244,7 +244,7 @@ export default function DynamicPage() {
         const isGoogleDriveResource = url.includes('drive.google.com');
 
         if (isGoogleDriveResource && (type === 'infographic' || type === 'mind-map' || type === 'lesson-plan-image' || type === 'pdf-note' || type === 'lesson-plan-pdf')) {
-            const embedUrl = getGoogleDriveEmbedUrl(url, type);
+            const embedUrl = getGoogleDriveEmbedUrl(url);
             return (
                 <div className="w-full h-full">
                     <DialogTitle className="sr-only">{title}</DialogTitle>
@@ -256,8 +256,16 @@ export default function DynamicPage() {
                 </div>
             );
         }
+
+        if (type === 'lesson-plan-text') {
+            return (
+                <div className="w-full h-full prose prose-sm max-w-none p-6 text-foreground bg-background rounded-lg overflow-y-auto">
+                    <DialogTitle className="text-2xl font-bold mb-4">{title}</DialogTitle>
+                    <div dangerouslySetInnerHTML={{ __html: url.replace(/\n/g, '<br />') }} />
+                </div>
+            )
+        }
         
-        // Fallback for non-Google Drive images or if other logic fails
         if (type === 'infographic' || type === 'mind-map' || type === 'lesson-plan-image') {
              return (
                 <div className="w-full h-full flex items-center justify-center">
@@ -313,7 +321,7 @@ export default function DynamicPage() {
                 {pageType === 'chapter' && (
                     <>
                         {resources
-                         .filter(resource => !(userDetails?.role === 'student' && (resource.type === 'lesson-plan-pdf' || resource.type === 'lesson-plan-image')))
+                         .filter(resource => !(userDetails?.role === 'student' && (resource.type === 'lesson-plan-pdf' || resource.type === 'lesson-plan-image' || resource.type === 'lesson-plan-text')))
                          .map((resource, index) => (
                             <Card key={resource.id} className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95 group" onClick={() => handleResourceClick(resource)}>
                                 <CardHeader className="p-4">
@@ -336,15 +344,18 @@ export default function DynamicPage() {
             <Dialog open={!!selectedResource} onOpenChange={(open) => !open && setSelectedResource(null)}>
                 <DialogContent 
                   className="max-w-4xl w-full h-[90vh] p-0 bg-background/90 backdrop-blur-sm border-0 shadow-none data-[state=open]:sm:zoom-in-90 flex flex-col"
-                  onInteractOutside={(e) => {
-                    // Prevent closing on outside click for better mobile experience
-                    e.preventDefault();
-                  }}
                 >
-                    <DialogHeader className="p-2 bg-background/80 rounded-t-lg">
+                    <DialogHeader className="p-2 bg-background/80 rounded-t-lg flex-row justify-between items-center">
                         <DialogTitle className="text-foreground text-lg truncate px-2">{selectedResource?.title}</DialogTitle>
+                         <DialogDescription>
+                            <button onClick={() => setSelectedResource(null)} className="p-1 rounded-full hover:bg-muted">
+                                <ChevronRight className="w-4 h-4 rotate-45" />
+                                <ChevronRight className="w-4 h-4 -mt-2.5 rotate-135" />
+                                <span className="sr-only">Close</span>
+                            </button>
+                        </DialogDescription>
                     </DialogHeader>
-                    <div className="flex-1 w-full h-full">
+                    <div className="flex-1 w-full h-full p-2">
                       {selectedResource && renderDialogContent()}
                     </div>
                 </DialogContent>

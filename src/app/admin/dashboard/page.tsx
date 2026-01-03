@@ -189,6 +189,7 @@ export default function AdminDashboard() {
                             <SelectItem value="all">All Types</SelectItem>
                             <SelectItem value="lesson-plan-pdf">Lesson Plan (PDF)</SelectItem>
                             <SelectItem value="lesson-plan-image">Lesson Plan (Image)</SelectItem>
+                            <SelectItem value="lesson-plan-text">Lesson Plan (Text)</SelectItem>
                             <SelectItem value="video">Video</SelectItem>
                             <SelectItem value="infographic">Infographic (Image)</SelectItem>
                             <SelectItem value="mind-map">Mind Map (Image)</SelectItem>
@@ -210,9 +211,13 @@ export default function AdminDashboard() {
                     <CardDescription>{resource.type} - Class {resource.class}, {resource.subject}, Chapter {resource.chapter}</CardDescription>
                   </CardHeader>
                   <CardContent className="flex-grow">
-                    <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
-                      View Resource
-                    </a>
+                     {resource.type !== 'lesson-plan-text' ? (
+                        <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                          View Resource
+                        </a>
+                      ) : (
+                        <p className="text-sm text-muted-foreground line-clamp-3">{resource.url}</p>
+                      )}
                   </CardContent>
                   <CardFooter>
                     <AlertDialog>
@@ -261,9 +266,11 @@ export default function AdminDashboard() {
                             <TableCell><Badge>{resource.class}</Badge></TableCell>
                             <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-2">
-                                     <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                                        <Button variant="ghost" size="sm">View</Button>
-                                    </a>
+                                     {resource.type !== 'lesson-plan-text' && (
+                                        <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                            <Button variant="ghost" size="sm">View</Button>
+                                        </a>
+                                      )}
                                     <AlertDialog>
                                       <AlertDialogTrigger asChild>
                                         <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">

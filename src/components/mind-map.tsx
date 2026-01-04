@@ -35,7 +35,7 @@ const Node: React.FC<{ node: MindMapNode; isRoot?: boolean; level?: number }> = 
 
   const parentRef = React.useRef<HTMLDivElement>(null);
   const childrenContainerRef = React.useRef<HTMLDivElement>(null);
-  const [svgHeight, setSvgHeight] = React.useState(0);
+  const [svgDimensions, setSvgDimensions] = React.useState({ height: 0, width: 0, top: 0 });
   const [svgPaths, setSvgPaths] = React.useState<string[]>([]);
 
   React.useEffect(() => {
@@ -46,55 +46,65 @@ const Node: React.FC<{ node: MindMapNode; isRoot?: boolean; level?: number }> = 
             const parentRect = parentRef.current.getBoundingClientRect();
             const containerRect = childrenContainerRef.current.getBoundingClientRect();
             
-            if (containerRect.height === 0) {
+            if (containerRect.height === 0 || parentRect.height === 0) {
                 requestAnimationFrame(calculatePath);
                 return;
             }
-            
-            const startY = parentRect.height / 2;
-            const childrenElements = Array.from(childrenContainerRef.current.children);
-            const paths: string[] = [];
 
+            const childrenElements = Array.from(childrenContainerRef.current.children) as HTMLElement[];
             if (childrenElements.length === 0) return;
 
-            const branchStartX = 0; // Start directly from parent edge
+            const svgWidth = 80;
+            const startX = 0;
+            const endX = svgWidth;
             
-            childrenElements.forEach(child => {
-                const childEl = child as HTMLElement;
-                const childRect = childEl.getBoundingClientRect();
-                const childY = (childRect.top - containerRect.top) + (childRect.height / 2);
+            const firstChildRect = childrenElements[0].getBoundingClientRect();
+            const lastChildRect = childrenElements[childrenElements.length - 1].getBoundingClientRect();
+            
+            const startY = parentRect.top - containerRect.top + (parentRect.height / 2);
+            
+            const svgTop = Math.min(startY, firstChildRect.top - containerRect.top);
+            const svgHeight = Math.max(startY, lastChildRect.bottom - containerRect.top) - svgTop;
 
-                const controlPointX1 = branchStartX + 40;
-                const controlPointY1 = startY;
-                const controlPointX2 = branchStartX + 40;
-                const controlPointY2 = childY;
+            const paths: string[] = [];
+
+            childrenElements.forEach(child => {
+                const childRect = child.getBoundingClientRect();
+                const childY = (childRect.top - containerRect.top) + (childRect.height / 2) - svgTop;
                 
-                paths.push(`M ${branchStartX} ${startY} C ${controlPointX1} ${controlPointY1}, ${controlPointX2} ${controlPointY2}, 80 ${childY}`);
+                const controlX1 = startX + (endX - startX) * 0.5;
+                const controlY1 = startY - svgTop;
+                const controlX2 = startX + (endX - startX) * 0.5;
+                const controlY2 = childY;
+                
+                paths.push(`M ${startX} ${startY - svgTop} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${endX} ${childY}`);
             });
             
-            setSvgHeight(containerRect.height);
+            setSvgDimensions({ height: svgHeight, width: svgWidth, top: svgTop });
             setSvgPaths(paths);
         };
         
-        // Use a timeout to ensure children are rendered
         const timeoutId = setTimeout(calculatePath, 50);
         
         const resizeObserver = new ResizeObserver(calculatePath);
-        resizeObserver.observe(childrenContainerRef.current);
-        resizeObserver.observe(parentRef.current);
-
+        if (childrenContainerRef.current) {
+          resizeObserver.observe(childrenContainerRef.current);
+        }
+        if (parentRef.current) {
+          resizeObserver.observe(parentRef.current);
+        }
 
         return () => {
           clearTimeout(timeoutId);
           resizeObserver.disconnect();
-        }
+        };
     }
   }, [isOpen, hasChildren, node.children]);
   
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="relative flex items-start">
-        <div ref={parentRef} className="relative z-10 flex items-center" style={{marginTop: hasChildren && isOpen ? `calc(${svgHeight/2}px - 20px)` : '0px'}}>
+        <div ref={parentRef} className="relative z-10 flex items-center">
             <CollapsibleTrigger
                 disabled={!hasChildren}
                 className={cn(
@@ -120,13 +130,13 @@ const Node: React.FC<{ node: MindMapNode; isRoot?: boolean; level?: number }> = 
         {hasChildren && (
             <div className="relative ml-6 flex items-center">
                 <svg
-                    height={svgHeight}
-                    width={80}
+                    height={svgDimensions.height}
+                    width={svgDimensions.width}
                     className={cn(
-                        'transition-opacity duration-300 absolute',
+                        'transition-opacity duration-300 absolute left-0',
                         isOpen ? 'opacity-100' : 'opacity-0'
                     )}
-                    style={{ overflow: 'visible' }}
+                    style={{ top: `${svgDimensions.top}px`, overflow: 'visible' }}
                     >
                     {svgPaths.map((path, index) => (
                          <path
@@ -144,7 +154,7 @@ const Node: React.FC<{ node: MindMapNode; isRoot?: boolean; level?: number }> = 
                     <div
                     ref={childrenContainerRef}
                     className={cn(
-                        'flex flex-col justify-center gap-2 pl-24 transition-all duration-300',
+                        'flex flex-col gap-2 pl-24 transition-all duration-300',
                         !isOpen && 'hidden'
                     )}
                     >
@@ -165,8 +175,10 @@ interface MindMapProps {
 
 const MindMap: React.FC<MindMapProps> = ({ data }) => {
   return (
-    <div className="p-8 w-full h-full overflow-auto">
-      <Node node={data} isRoot />
+    <div className="p-8 w-full h-full overflow-auto flex items-center justify-center">
+        <div className="flex">
+            <Node node={data} isRoot />
+        </div>
     </div>
   );
 };

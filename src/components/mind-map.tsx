@@ -94,7 +94,7 @@ const Node: React.FC<NodeProps> = ({
                 const controlX2 = startX + (endX - startX) * 0.5;
                 const controlY2 = childY;
                 
-                paths.push(`M ${startX} ${startY - svgTop} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${endX} ${childY} L ${svgWidth} ${childY}`);
+                paths.push(`M ${startX},${startY - svgTop} C ${controlX1},${controlY1} ${controlX2},${controlY2} ${endX},${childY} L ${svgWidth},${childY}`);
             });
             
             setSvgDimensions({ height: svgHeight, width: svgWidth, top: svgTop });
@@ -210,23 +210,23 @@ const MindMap: React.FC<MindMapProps> = ({ data }) => {
   };
 
   return (
-    <div className="p-8 w-full h-full overflow-auto relative">
-      <div className="flex">
-        <Node node={data} isRoot allOpen={allOpen} />
-      </div>
-      <div className="fixed bottom-4 right-4 z-20 flex gap-2">
-         {isAllOpen ? (
-            <Button onClick={handleCollapseAll} variant="default" size="sm" className="shadow-lg">
-                <MinusSquare className="h-4 w-4 mr-2" />
-                Collapse All
-            </Button>
-         ) : (
-            <Button onClick={handleExpandAll} variant="default" size="sm" className="shadow-lg">
-                <PlusSquare className="h-4 w-4 mr-2" />
-                Expand All
-            </Button>
-         )}
-      </div>
+    <div className="w-full h-full overflow-auto pb-8">
+        <div className="p-8 inline-block min-w-full">
+            <Node node={data} isRoot allOpen={allOpen} />
+        </div>
+        <div className="fixed bottom-4 right-4 z-20 flex gap-2">
+            {isAllOpen ? (
+                <Button onClick={handleCollapseAll} variant="default" size="sm" className="shadow-lg">
+                    <MinusSquare className="h-4 w-4 mr-2" />
+                    Collapse All
+                </Button>
+            ) : (
+                <Button onClick={handleExpandAll} variant="default" size="sm" className="shadow-lg">
+                    <PlusSquare className="h-4 w-4 mr-2" />
+                    Expand All
+                </Button>
+            )}
+        </div>
     </div>
   );
 };

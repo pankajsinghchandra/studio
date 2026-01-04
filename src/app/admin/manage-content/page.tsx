@@ -28,6 +28,7 @@ const isValidUrl = (url: string): boolean => {
 };
 
 const isValidJson = (str: string): boolean => {
+    if (!str) return true; // Empty is valid until submission
     try {
         JSON.parse(str);
     } catch (e) {
@@ -51,6 +52,7 @@ export default function ManageContentPage() {
   const [resourceUrl, setResourceUrl] = useState('');
   const [textContent, setTextContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [jsonError, setJsonError] = useState('');
 
   const subjects = useMemo(() => {
     return resourceClass ? Object.keys(syllabus[resourceClass as keyof typeof syllabus] || {}) : [];
@@ -63,6 +65,18 @@ export default function ManageContentPage() {
     }
     return [];
   }, [resourceClass, subject]);
+
+  useEffect(() => {
+    if (type === 'mind-map-json') {
+      if (!isValidJson(textContent)) {
+        setJsonError('The content is not valid JSON. Please check the format.');
+      } else {
+        setJsonError('');
+      }
+    } else {
+      setJsonError('');
+    }
+  }, [textContent, type]);
 
 
   useEffect(() => {
@@ -86,8 +100,8 @@ export default function ManageContentPage() {
       const reader = new FileReader();
       reader.onload = (e) => {
         const content = e.target?.result as string;
+        setTextContent(content);
         if (isValidJson(content)) {
-          setTextContent(content);
           toast({
             title: 'File Uploaded',
             description: 'The JSON content has been loaded into the text area.',
@@ -148,7 +162,7 @@ export default function ManageContentPage() {
         toast({
             variant: 'destructive',
             title: 'Invalid JSON',
-            description: 'The mind map content is not valid JSON. Please check the format.',
+            description: jsonError || 'The mind map content is not valid JSON. Please check the format.',
         });
         return;
     }
@@ -170,6 +184,7 @@ export default function ManageContentPage() {
       toast({
         title: 'Success!',
         description: 'Resource has been added successfully.',
+        duration: 1500,
       });
       router.push('/admin/dashboard');
     } catch (error) {
@@ -278,6 +293,7 @@ export default function ManageContentPage() {
                         onChange={(e) => setTextContent(e.target.value)}
                         className="min-h-[200px] font-mono text-sm"
                     />
+                    {jsonError && <p className="text-sm text-destructive mt-1">{jsonError}</p>}
                 </div>
             ) : (
                 <div className="space-y-2">
@@ -303,3 +319,5 @@ export default function ManageContentPage() {
     </div>
   );
 }
+
+    

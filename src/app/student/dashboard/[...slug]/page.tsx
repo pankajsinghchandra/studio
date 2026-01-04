@@ -8,7 +8,6 @@ import { useAuth } from '@/app/providers';
 import type { Resource } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import LoadingOverlay from '@/components/loading-overlay';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { 
     FileText, Video, ImageIcon, BookOpen, ChevronRight, ExternalLink,
     School, Book, FlaskConical, Languages, Landmark, Calculator, Palette, Dna, Atom, 
@@ -257,8 +256,11 @@ setDescription('Select a chapter to start learning.');
             }
             if (type === 'lesson-plan-text') {
                  return (
-                    <div className="w-full h-full prose prose-sm max-w-none p-6 text-foreground bg-background rounded-lg overflow-y-auto">
-                        <div dangerouslySetInnerHTML={{ __html: url.replace(/\n/g, '<br />') }} />
+                    <div className="w-full h-full prose prose-sm max-w-none p-6 text-foreground bg-background rounded-lg overflow-y-auto relative">
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                            <span className="text-7xl font-bold text-muted-foreground/10 rotate-[-30deg]">Vidyalaya Notes</span>
+                        </div>
+                        <div className="relative z-10" dangerouslySetInnerHTML={{ __html: url.replace(/\n/g, '<br />') }} />
                     </div>
                 )
             }

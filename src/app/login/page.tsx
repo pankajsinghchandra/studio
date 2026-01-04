@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User, sendEmailVerification } from "firebase/auth";
 import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { app, db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
@@ -55,7 +55,15 @@ export default function LoginPage() {
     setIsLoading(true);
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
-        // Let the useEffect handle the redirection logic
+        if (!userCredential.user.emailVerified) {
+            auth.signOut();
+            toast({
+                variant: "destructive",
+                title: "Login Failed",
+                description: "Email not verified. Please check your inbox.",
+            });
+            return;
+        }
         toast({
             title: "Login Successful!",
             description: "Welcome back!",
@@ -83,13 +91,11 @@ export default function LoginPage() {
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists() && userDoc.data()?.role) {
-        // User exists and has a role, let the useEffect handle redirection
          toast({
             title: "Login Successful!",
             description: "Welcome back!",
         });
       } else {
-        // New user or existing user without a role
         setPendingUser(user);
         setShowRoleDialog(true);
       }
@@ -125,10 +131,8 @@ export default function LoginPage() {
 
     try {
       if (userDoc.exists()) {
-        // User document exists, just update the role
         await updateDoc(userDocRef, { role: selectedRole });
       } else {
-        // New user, create the document
         await setDoc(userDocRef, { ...userData, createdAt: new Date() });
       }
        setShowRoleDialog(false);
@@ -136,7 +140,6 @@ export default function LoginPage() {
             title: "Registration Complete!",
             description: "Welcome! You're all set up.",
         });
-        // The onAuthStateChanged listener will handle the new user state and redirect.
     } catch (error: any) {
         console.error("Error setting role: ", error);
         toast({
@@ -237,5 +240,3 @@ export default function LoginPage() {
     </>
   );
 }
-
-    

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { getAuth, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
+import { getAuth, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User, sendEmailVerification } from "firebase/auth";
 import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { app, db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
@@ -132,7 +132,6 @@ export default function RegisterPage() {
                 await setDoc(userDocRef, { ...userData, createdAt: new Date() });
             }
             setShowRoleDialog(false);
-            // Sign out to force a re-login, which will trigger the auth listener correctly
             await auth.signOut(); 
             toast({
                 title: "Registration Successful!",
@@ -158,6 +157,8 @@ export default function RegisterPage() {
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
+
+            await sendEmailVerification(user);
             
             const userDocRef = doc(db, "users", user.uid);
             const userData = {
@@ -176,7 +177,7 @@ export default function RegisterPage() {
             
             toast({
                 title: "Registration Successful!",
-                description: "You can now log in with your new credentials.",
+                description: "Please check your email to verify your account before logging in.",
             });
             router.push('/login');
 
@@ -448,5 +449,3 @@ export default function RegisterPage() {
     </>
   );
 }
-
-    

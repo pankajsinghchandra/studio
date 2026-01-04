@@ -57,33 +57,37 @@ const Node: React.FC<{ node: MindMapNode; isRoot?: boolean; level?: number }> = 
 
             if (childrenElements.length === 0) return;
 
-            const branchStartX = 24;
-            const horizontalLine = `M 0 ${startY} H ${branchStartX}`;
-            paths.push(horizontalLine);
+            const branchStartX = 0; // Start directly from parent edge
             
             childrenElements.forEach(child => {
                 const childEl = child as HTMLElement;
                 const childRect = childEl.getBoundingClientRect();
                 const childY = (childRect.top - containerRect.top) + (childRect.height / 2);
 
-                const controlPointX1 = branchStartX + 20;
+                const controlPointX1 = branchStartX + 40;
                 const controlPointY1 = startY;
-                const controlPointX2 = branchStartX + 20;
+                const controlPointX2 = branchStartX + 40;
                 const controlPointY2 = childY;
                 
-                paths.push(`M ${branchStartX} ${startY} C ${controlPointX1} ${controlPointY1}, ${controlPointX2} ${controlPointY2}, 72 ${childY}`);
+                paths.push(`M ${branchStartX} ${startY} C ${controlPointX1} ${controlPointY1}, ${controlPointX2} ${controlPointY2}, 80 ${childY}`);
             });
             
             setSvgHeight(containerRect.height);
             setSvgPaths(paths);
         };
         
-        requestAnimationFrame(calculatePath);
+        // Use a timeout to ensure children are rendered
+        const timeoutId = setTimeout(calculatePath, 50);
         
         const resizeObserver = new ResizeObserver(calculatePath);
         resizeObserver.observe(childrenContainerRef.current);
+        resizeObserver.observe(parentRef.current);
 
-        return () => resizeObserver.disconnect();
+
+        return () => {
+          clearTimeout(timeoutId);
+          resizeObserver.disconnect();
+        }
     }
   }, [isOpen, hasChildren, node.children]);
   
@@ -117,7 +121,7 @@ const Node: React.FC<{ node: MindMapNode; isRoot?: boolean; level?: number }> = 
             <div className="relative ml-6 flex items-center">
                 <svg
                     height={svgHeight}
-                    width={72}
+                    width={80}
                     className={cn(
                         'transition-opacity duration-300 absolute',
                         isOpen ? 'opacity-100' : 'opacity-0'

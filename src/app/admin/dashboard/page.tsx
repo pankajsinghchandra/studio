@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import Link from 'next/link';
-import { PlusCircle, Trash2, LayoutGrid, List } from 'lucide-react';
+import { PlusCircle, Trash2, LayoutGrid, List, Eye, Download } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import LoadingOverlay from '@/components/loading-overlay';
@@ -18,6 +18,8 @@ import { syllabus } from '@/lib/syllabus';
 import type { Resource } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
+import MindMap, { type MindMapNode } from '@/components/mind-map';
 
 
 export default function AdminDashboard() {
@@ -38,6 +40,8 @@ export default function AdminDashboard() {
   const [selectedChapter, setSelectedChapter] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
 
 
   useEffect(() => {
@@ -85,6 +89,23 @@ export default function AdminDashboard() {
         setIsDeleting(false);
     }
   };
+  
+  const handleDownload = (resource: Resource) => {
+    const isJson = resource.type === 'mind-map-json';
+    const fileExtension = isJson ? 'json' : 'txt';
+    const mimeType = isJson ? 'application/json' : 'text/plain';
+    const content = resource.url;
+
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${resource.title}.${fileExtension}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     let filtered = allResources;
@@ -125,6 +146,32 @@ export default function AdminDashboard() {
   }
   
   const isTextBased = (type: string) => type === 'lesson-plan-text' || type === 'mind-map-json';
+
+  const renderDialogContent = () => {
+    if (!selectedResource) return null;
+
+    const { type, url } = selectedResource;
+    
+    if (type === 'mind-map-json') {
+        try {
+            const mindMapData = JSON.parse(url);
+            return <MindMap data={mindMapData} />;
+        } catch (e) {
+            return <div className="p-6 text-destructive-foreground bg-destructive">Invalid Mind Map JSON format.</div>
+        }
+    }
+
+    if (type === 'lesson-plan-text') {
+         return (
+            <div className="w-full h-full prose prose-sm max-w-none p-6 text-foreground bg-background rounded-lg overflow-y-auto">
+                <div dangerouslySetInnerHTML={{ __html: url.replace(/\n/g, '<br />') }} />
+            </div>
+        )
+    }
+    
+    return null;
+  };
+
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -219,7 +266,14 @@ export default function AdminDashboard() {
                           View Resource
                         </a>
                       ) : (
-                        <p className="text-sm text-muted-foreground line-clamp-3">{resource.url}</p>
+                         <div className="flex items-center gap-2">
+                             <Button variant="outline" size="sm" onClick={() => setSelectedResource(resource)}>
+                                <Eye className="mr-2 h-4 w-4" /> View
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDownload(resource)}>
+                                <Download className="mr-2 h-4 w-4" /> Download
+                            </Button>
+                         </div>
                       )}
                   </CardContent>
                   <CardFooter>
@@ -269,7 +323,12 @@ export default function AdminDashboard() {
                             <TableCell><Badge>{resource.class}</Badge></TableCell>
                             <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-2">
-                                     {!isTextBased(resource.type) && (
+                                     {isTextBased(resource.type) ? (
+                                        <>
+                                            <Button variant="ghost" size="sm" onClick={() => setSelectedResource(resource)}>View</Button>
+                                            <Button variant="ghost" size="sm" onClick={() => handleDownload(resource)}>Download</Button>
+                                        </>
+                                      ) : (
                                         <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                                             <Button variant="ghost" size="sm">View</Button>
                                         </a>
@@ -309,6 +368,23 @@ export default function AdminDashboard() {
             </div>
         )}
       </section>
+      
+        <Dialog open={!!selectedResource} onOpenChange={(open) => !open && setSelectedResource(null)}>
+            <DialogContent 
+              className="max-w-4xl w-full h-[80vh] p-0 flex flex-col"
+            >
+                <DialogHeader className="p-4 border-b">
+                    <DialogTitle>{selectedResource?.title}</DialogTitle>
+                    <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground" />
+                </DialogHeader>
+                <div className="flex-1 w-full h-full overflow-auto">
+                  {selectedResource && renderDialogContent()}
+                </div>
+            </DialogContent>
+        </Dialog>
+
     </div>
   );
 }
+
+    

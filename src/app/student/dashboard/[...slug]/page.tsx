@@ -196,7 +196,7 @@ export default function DynamicPage() {
     const getYoutubeEmbedUrl = (url: string) => {
         const videoIdMatch = url.match(/(?:v=|vi\/|embed\/|youtu.be\/|watch\?v=)([a-zA-Z0-9_-]{11})/);
         if (videoIdMatch && videoIdMatch[1]) {
-            return `https://www.youtube.com/embed/${videoIdMatch[1]}`;
+            return `https://www.youtube-nocookie.com/embed/${videoIdMatch[1]}`;
         }
         return null;
     }
@@ -271,9 +271,18 @@ export default function DynamicPage() {
         }
         
         // Fallback for non-embeddable or external URLs
-        window.open(url, '_blank');
-        setSelectedResource(null); // Close dialog after opening new tab
-        return null;
+        // We now handle this with the pop-out button, so we just show an info message in the dialog
+        return (
+            <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-muted/40">
+                <p className="text-lg font-semibold text-foreground mb-2">This content cannot be shown here.</p>
+                <p className="text-muted-foreground mb-4">Please use the button below to open it in a new tab.</p>
+                <Button asChild>
+                    <a href={url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="mr-2 h-4 w-4" /> Open Content
+                    </a>
+                </Button>
+            </div>
+        );
     }
 
     return (
@@ -332,25 +341,30 @@ export default function DynamicPage() {
                 </div>
             </div>
             
-             <Dialog open={!!selectedResource} onOpenChange={(open) => !open && setSelectedResource(null)}>
+            <Dialog open={!!selectedResource} onOpenChange={(open) => !open && setSelectedResource(null)}>
                 <DialogContent 
                   className="max-w-none w-screen h-screen p-0 bg-background/95 backdrop-blur-sm border-0 shadow-none data-[state=open]:sm:zoom-in-90 flex flex-col"
-                  onInteractOutside={(e) => e.preventDefault()}
+                  onInteractOutside={(e) => {
+                      const target = e.target as HTMLElement;
+                      if (!target.closest('[data-radix-dialog-content]')) {
+                          e.preventDefault();
+                      }
+                  }}
                 >
-                    <DialogHeader className="p-2 bg-transparent rounded-t-lg flex-row justify-between items-center z-10 shrink-0">
+                    <DialogHeader className="p-2 bg-transparent rounded-t-lg flex-row justify-between items-center z-10 shrink-0 border-b">
                         <DialogTitle className="text-foreground text-lg truncate px-2">{selectedResource?.title}</DialogTitle>
                          <div className="flex items-center gap-2">
-                             {selectedResource?.url && selectedResource.type !== 'lesson-plan-text' && (
-                                <a href={selectedResource.url} target="_blank" rel="noopener noreferrer">
-                                    <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground">
+                             {selectedResource?.url && (
+                                <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground" asChild>
+                                    <a href={selectedResource.url} target="_blank" rel="noopener noreferrer">
                                         <ExternalLink className="w-5 h-5" />
                                         <span className="sr-only">Open in new tab</span>
-                                    </Button>
-                                </a>
+                                    </a>
+                                </Button>
                              )}
                             <DialogClose asChild>
                                 <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground">
-                                    <X className="w-6 h-6" />
+                                    <X className="w-5 h-5" />
                                     <span className="sr-only">Close</span>
                                 </Button>
                             </DialogClose>
@@ -364,3 +378,5 @@ export default function DynamicPage() {
         </>
     );
 }
+
+    

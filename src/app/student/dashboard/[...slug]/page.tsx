@@ -380,7 +380,7 @@ setDescription('Select a chapter to start learning.');
                 <DialogContent 
                   className="max-w-none w-screen h-screen p-0 bg-background/95 backdrop-blur-sm border-0 shadow-none data-[state=open]:sm:zoom-in-90 flex flex-col"
                 >
-                    <DialogHeader className="p-2 bg-card rounded-t-lg flex-row justify-between items-center z-10 shrink-0 border-b">
+                    <div className="p-2 bg-card/80 backdrop-blur-sm flex-row justify-between items-center z-10 shrink-0 border-b flex">
                         <DialogTitle className="text-foreground text-lg truncate px-2">{selectedResource?.title}</DialogTitle>
                          <div className="flex items-center gap-2">
                             {selectedResource?.url && !['lesson-plan-text', 'mind-map-json'].includes(selectedResource.type) && (
@@ -398,7 +398,7 @@ setDescription('Select a chapter to start learning.');
                                 </Button>
                             </DialogClose>
                          </div>
-                    </DialogHeader>
+                    </div>
                     <div className="flex-1 w-full h-full bg-muted/40">
                       {selectedResource && renderDialogContent()}
                     </div>

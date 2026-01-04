@@ -57,17 +57,21 @@ const Node: React.FC<{ node: MindMapNode; isRoot?: boolean; level?: number }> = 
 
             if (childrenElements.length === 0) return;
 
+            const branchStartX = 24;
+            const horizontalLine = `M 0 ${startY} H ${branchStartX}`;
+            paths.push(horizontalLine);
+            
             childrenElements.forEach(child => {
                 const childEl = child as HTMLElement;
                 const childRect = childEl.getBoundingClientRect();
                 const childY = (childRect.top - containerRect.top) + (childRect.height / 2);
 
-                const controlPointX1 = 40;
+                const controlPointX1 = branchStartX + 20;
                 const controlPointY1 = startY;
-                const controlPointX2 = 40;
+                const controlPointX2 = branchStartX + 20;
                 const controlPointY2 = childY;
                 
-                paths.push(`M 0 ${startY} C ${controlPointX1} ${controlPointY1}, ${controlPointX2} ${controlPointY2}, 72 ${childY}`);
+                paths.push(`M ${branchStartX} ${startY} C ${controlPointX1} ${controlPointY1}, ${controlPointX2} ${controlPointY2}, 72 ${childY}`);
             });
             
             setSvgHeight(containerRect.height);
@@ -86,7 +90,7 @@ const Node: React.FC<{ node: MindMapNode; isRoot?: boolean; level?: number }> = 
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="relative flex items-start">
-        <div ref={parentRef} className="relative z-10 flex items-center" style={{marginTop: hasChildren && isOpen ? `${(svgHeight/2) - 20}px` : '0px'}}>
+        <div ref={parentRef} className="relative z-10 flex items-center" style={{marginTop: hasChildren && isOpen ? `calc(${svgHeight/2}px - 20px)` : '0px'}}>
             <CollapsibleTrigger
                 disabled={!hasChildren}
                 className={cn(

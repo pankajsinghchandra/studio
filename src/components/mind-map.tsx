@@ -25,12 +25,12 @@ const Node: React.FC<NodeProps> = ({ node, isRoot = false }) => {
   const hasChildren = node.children && node.children.length > 0;
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="relative pl-8 group">
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="relative pl-12 group">
       {!isRoot && (
-        <div className="absolute left-0 top-[18px] h-full w-px bg-muted-foreground/30"></div>
+        <div className="absolute left-4 top-[18px] h-full w-px bg-muted-foreground/30"></div>
       )}
       {!isRoot && (
-        <div className="absolute left-0 top-[18px] w-8 h-px bg-muted-foreground/30"></div>
+        <div className="absolute left-4 top-[18px] w-8 h-px bg-muted-foreground/30"></div>
       )}
 
       <div className="flex items-center gap-2">
@@ -55,7 +55,7 @@ const Node: React.FC<NodeProps> = ({ node, isRoot = false }) => {
           )}
         </CollapsibleTrigger>
         {!hasChildren && !isRoot && (
-          <div className="absolute -left-[3px] top-[14px] h-2 w-2 rounded-full bg-border border-2 border-card" />
+           <div className="absolute left-1 top-[14px] h-2 w-2 rounded-full bg-border border-2 border-card" />
         )}
       </div>
 

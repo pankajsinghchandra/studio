@@ -376,34 +376,30 @@ setDescription('Select a chapter to start learning.');
                 </div>
             </div>
             
-            <Dialog open={!!selectedResource} onOpenChange={(open) => !open && setSelectedResource(null)}>
-                <DialogContent 
-                  className="max-w-none w-screen h-screen p-0 bg-background/95 backdrop-blur-sm border-0 shadow-none data-[state=open]:sm:zoom-in-90 flex flex-col"
-                >
-                    <div className="p-2 bg-card/80 backdrop-blur-sm flex-row justify-between items-center z-10 shrink-0 border-b flex">
-                        <DialogTitle className="text-foreground text-lg truncate px-2">{selectedResource?.title}</DialogTitle>
-                         <div className="flex items-center gap-2">
-                            {selectedResource?.url && !['lesson-plan-text', 'mind-map-json'].includes(selectedResource.type) && (
+             {selectedResource && (
+                <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col animate-in fade-in-0">
+                    <header className="p-2 bg-card/80 backdrop-blur-sm flex-row justify-between items-center z-10 shrink-0 border-b flex">
+                        <h2 className="text-foreground text-lg truncate px-2 font-semibold">{selectedResource.title}</h2>
+                        <div className="flex items-center gap-2">
+                            {selectedResource.url && !['lesson-plan-text', 'mind-map-json'].includes(selectedResource.type) && (
                                 <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground" asChild>
                                     <a href={selectedResource.url} target="_blank" rel="noopener noreferrer">
                                         <ExternalLink className="w-5 h-5" />
                                         <span className="sr-only">Open in new tab</span>
                                     </a>
                                 </Button>
-                             )}
-                            <DialogClose asChild>
-                                <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground">
-                                    <X className="w-5 h-5" />
-                                    <span className="sr-only">Close</span>
-                                </Button>
-                            </DialogClose>
-                         </div>
-                    </div>
+                            )}
+                            <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground" onClick={() => setSelectedResource(null)}>
+                                <X className="w-5 h-5" />
+                                <span className="sr-only">Close</span>
+                            </Button>
+                        </div>
+                    </header>
                     <div className="flex-1 w-full h-full bg-muted/40">
-                      {selectedResource && renderDialogContent()}
+                        {renderDialogContent()}
                     </div>
-                </DialogContent>
-            </Dialog>
+                </div>
+            )}
         </>
     );
 }

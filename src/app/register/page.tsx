@@ -15,8 +15,22 @@ import { useToast } from "@/hooks/use-toast";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader } from "lucide-react";
-import { useAuth } from "@/app/providers";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+
+const formSchema = z.object({
+  name: z.string().min(2, { message: "Name must be at least 2 characters." }),
+  email: z.string().email({ message: "Invalid email address." }).refine(email => email.endsWith('@gmail.com'), { message: "Only @gmail.com addresses are allowed." }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+  role: z.enum(['student', 'teacher'], { required_error: "You must select a role." }),
+  userClass: z.string().optional(),
+  gender: z.string().optional(),
+  termsAccepted: z.literal(true, { errorMap: () => ({ message: "You must accept the terms and conditions." }) }),
+});
+
 
 const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48">
@@ -31,14 +45,8 @@ export default function RegisterPage() {
     const router = useRouter();
     const auth = getAuth(app);
     const { toast } = useToast();
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [name, setName] = useState('');
-    const [userClass, setUserClass] = useState('');
-    const [gender, setGender] = useState('');
-    const [role, setRole] = useState('');
-    const [termsAccepted, setTermsAccepted] = useState(false);
-    
+    const [termsAcceptedDialog, setTermsAcceptedDialog] = useState(false);
+
     const [isLoading, setIsLoading] = useState(false);
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     
@@ -46,6 +54,21 @@ export default function RegisterPage() {
     const [showTermsDialog, setShowTermsDialog] = useState(false);
     const [pendingUser, setPendingUser] = useState<User | null>(null);
     const [selectedRole, setSelectedRole] = useState('');
+
+    const form = useForm<z.infer<typeof formSchema>>({
+        resolver: zodResolver(formSchema),
+        defaultValues: {
+            name: "",
+            email: "",
+            password: "",
+            role: undefined,
+            userClass: "",
+            gender: "",
+            termsAccepted: false,
+        },
+    });
+
+    const role = form.watch('role');
 
     const handleGoogleSignIn = async () => {
         setIsGoogleLoading(true);
@@ -85,7 +108,7 @@ export default function RegisterPage() {
           toast({ variant: "destructive", title: "Please select a role." });
           return;
         }
-        if (!termsAccepted) {
+        if (!termsAcceptedDialog) {
             toast({ variant: "destructive", title: "Please accept the terms and conditions." });
             return;
         }
@@ -129,40 +152,21 @@ export default function RegisterPage() {
     };
 
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = async (values: z.infer<typeof formSchema>) => {
         setIsLoading(true);
-        if (!role) {
-            toast({
-                variant: "destructive",
-                title: "Validation Error",
-                description: "Please select a role (Teacher or Student).",
-            });
-            setIsLoading(false);
-            return;
-        }
-        if (!termsAccepted) {
-            toast({
-                variant: "destructive",
-                title: "Terms & Conditions",
-                description: "You must accept the terms and conditions to register.",
-            });
-            setIsLoading(false);
-            return;
-        }
         
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
             
             const userDocRef = doc(db, "users", user.uid);
             const userData = {
                 uid: user.uid,
-                name,
-                email,
-                userClass: role === 'student' ? userClass : '',
-                gender: role === 'student' ? gender : '',
-                role,
+                name: values.name,
+                email: values.email,
+                userClass: values.role === 'student' ? values.userClass : '',
+                gender: values.role === 'student' ? values.gender : '',
+                role: values.role,
                 termsAccepted: true,
                 createdAt: new Date(),
             };
@@ -178,11 +182,7 @@ export default function RegisterPage() {
 
         } catch (error: any) {
             if (error.code === 'auth/email-already-in-use') {
-                toast({
-                    variant: "destructive",
-                    title: "Registration Failed",
-                    description: "This email is already registered. Please login instead.",
-                });
+                form.setError("email", { type: "manual", message: "This email is already registered." });
             } else {
                 toast({
                     variant: "destructive",
@@ -199,110 +199,187 @@ export default function RegisterPage() {
     <>
       <div className="flex items-center justify-center min-h-[calc(100vh-10rem)] py-8">
         <Card className="w-full max-w-md">
-          <form onSubmit={handleSubmit}>
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-headline">Create an Account</CardTitle>
-              <CardDescription>Fill in the details below to get started.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isGoogleLoading}>
-                  {isGoogleLoading ? <Loader className="animate-spin mr-2"/> : <GoogleIcon />} 
-                  Sign up with Google
-              </Button>
-              <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-2 text-muted-foreground">
-                          Or create an account with email
-                      </span>
-                  </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input id="name" placeholder="John Doe" required value={name} onChange={e => setName(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="name@example.com" required value={email} onChange={e => setEmail(e.target.value)} />
-              </div>
-             
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                  <Label>You are a...</Label>
-                  <RadioGroup onValueChange={setRole} value={role} className="flex space-x-4">
-                      <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="student" id="student" />
-                          <Label htmlFor="student">Student</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="teacher" id="teacher" />
-                          <Label htmlFor="teacher">Teacher</Label>
-                      </div>
-                  </RadioGroup>
-              </div>
-              
-              {role === 'student' && (
-                  <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                          <Label htmlFor="class">Class (Optional)</Label>
-                          <Select name="class" onValueChange={setUserClass} value={userClass}>
-                              <SelectTrigger id="class">
-                                  <SelectValue placeholder="Select Class" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  {Array.from({ length: 6 }, (_, i) => i + 3).map(c => (
-                                      <SelectItem key={c} value={c.toString()}>Class {c}</SelectItem>
-                                  ))}
-                              </SelectContent>
-                          </Select>
-                      </div>
-                      <div className="space-y-2">
-                          <Label htmlFor="gender">Gender (Optional)</Label>
-                          <Select name="gender" onValueChange={setGender} value={gender}>
-                              <SelectTrigger id="gender">
-                                  <SelectValue placeholder="Select Gender" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  <SelectItem value="male">Male</SelectItem>
-                                  <SelectItem value="female">Female</SelectItem>
-                                  <SelectItem value="other">Other</SelectItem>
-                              </SelectContent>
-                          </Select>
-                      </div>
-                  </div>
-              )}
-               <div className="flex items-center space-x-2 pt-2">
-                    <Checkbox id="terms" checked={termsAccepted} onCheckedChange={(checked) => setTermsAccepted(checked as boolean)} />
-                    <Label htmlFor="terms" className="text-sm text-muted-foreground">
-                        I agree to the{' '}
-                        <button
-                            type="button"
-                            onClick={() => setShowTermsDialog(true)}
-                            className="text-primary hover:underline"
-                        >
-                            Terms & Conditions
-                        </button>
-                    </Label>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)}>
+              <CardHeader className="text-center">
+                <CardTitle className="text-2xl font-headline">Create an Account</CardTitle>
+                <CardDescription>Fill in the details below to get started.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isGoogleLoading}>
+                    {isGoogleLoading ? <Loader className="animate-spin mr-2"/> : <GoogleIcon />} 
+                    Sign up with Google
+                </Button>
+                <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-card px-2 text-muted-foreground">
+                            Or create an account with email
+                        </span>
+                    </div>
                 </div>
-            </CardContent>
-            <CardFooter className="flex flex-col gap-4">
-              <Button className="w-full" type="submit" disabled={isLoading || !termsAccepted}>
-                  {isLoading && <Loader className="animate-spin mr-2"/>}
-                  Register
-              </Button>
-              <p className="text-sm text-muted-foreground">
-                  Already have an account?{' '}
-                <Link href="/login" className="text-primary hover:underline">
-                  Login
-                </Link>
-              </p>
-            </CardFooter>
-          </form>
+                
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="John Doe" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="name@gmail.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+               
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem className="space-y-2">
+                        <FormLabel>You are a...</FormLabel>
+                        <FormControl>
+                            <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="flex space-x-4"
+                            >
+                            <FormItem className="flex items-center space-x-2">
+                                <FormControl>
+                                <RadioGroupItem value="student" id="student" />
+                                </FormControl>
+                                <FormLabel htmlFor="student" className="font-normal">Student</FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-2">
+                                <FormControl>
+                                <RadioGroupItem value="teacher" id="teacher" />
+                                </FormControl>
+                                <FormLabel htmlFor="teacher" className="font-normal">Teacher</FormLabel>
+                            </FormItem>
+                            </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {role === 'student' && (
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                        control={form.control}
+                        name="userClass"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Class (Optional)</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {Array.from({ length: 6 }, (_, i) => i + 3).map(c => (
+                                            <SelectItem key={c} value={c.toString()}>Class {c}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="gender"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Gender (Optional)</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger><SelectValue placeholder="Select Gender" /></SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    <SelectItem value="male">Male</SelectItem>
+                                    <SelectItem value="female">Female</SelectItem>
+                                    <SelectItem value="other">Other</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    </div>
+                )}
+                 <FormField
+                    control={form.control}
+                    name="termsAccepted"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-2 space-y-0 pt-2">
+                            <FormControl>
+                                <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                                <Label htmlFor="terms" className="text-sm text-muted-foreground">
+                                    I agree to the{' '}
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowTermsDialog(true)}
+                                        className="text-primary hover:underline"
+                                    >
+                                        Terms & Conditions
+                                    </button>
+                                </Label>
+                                <FormMessage />
+                            </div>
+                        </FormItem>
+                    )}
+                    />
+              </CardContent>
+              <CardFooter className="flex flex-col gap-4">
+                <Button className="w-full" type="submit" disabled={isLoading}>
+                    {isLoading && <Loader className="animate-spin mr-2"/>}
+                    Register
+                </Button>
+                <p className="text-sm text-muted-foreground">
+                    Already have an account?{' '}
+                  <Link href="/login" className="text-primary hover:underline">
+                    Login
+                  </Link>
+                </p>
+              </CardFooter>
+            </form>
+          </Form>
         </Card>
       </div>
 
@@ -326,7 +403,7 @@ export default function RegisterPage() {
                 </SelectContent>
               </Select>
                <div className="flex items-center space-x-2 pt-2">
-                    <Checkbox id="google-terms" checked={termsAccepted} onCheckedChange={(checked) => setTermsAccepted(checked as boolean)} />
+                    <Checkbox id="google-terms" checked={termsAcceptedDialog} onCheckedChange={(checked) => setTermsAcceptedDialog(checked as boolean)} />
                     <Label htmlFor="google-terms" className="text-sm text-muted-foreground">
                         I agree to the{' '}
                         <button
@@ -340,7 +417,7 @@ export default function RegisterPage() {
                 </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleRoleSubmit} disabled={!selectedRole || isLoading || !termsAccepted}>
+              <Button onClick={handleRoleSubmit} disabled={!selectedRole || isLoading || !termsAcceptedDialog}>
                 {isLoading && <Loader className="animate-spin mr-2"/>}
                 Complete Sign-Up
               </Button>
@@ -371,3 +448,5 @@ export default function RegisterPage() {
     </>
   );
 }
+
+    

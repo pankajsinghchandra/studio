@@ -43,7 +43,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (!authLoading && user) {
       if (userDetails?.email === 'quizpankaj@gmail.com') {
-        router.replace('/admin/dashboard');
+        router.replace('/admin');
       } else {
         router.replace('/');
       }
@@ -237,3 +237,5 @@ export default function LoginPage() {
     </>
   );
 }
+
+    

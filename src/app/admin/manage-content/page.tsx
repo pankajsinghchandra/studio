@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import LoadingOverlay from '@/components/loading-overlay';
 import { syllabus } from '@/lib/syllabus';
 import { Textarea } from '@/components/ui/textarea';
-import { UploadCloud } from 'lucide-react';
+import { UploadCloud, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 const isValidUrl = (url: string): boolean => {
@@ -40,7 +40,7 @@ const isValidJson = (str: string): boolean => {
 
 
 export default function ManageContentPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, userDetails } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -81,10 +81,10 @@ export default function ManageContentPage() {
 
 
   useEffect(() => {
-      if (!loading && (!user || user.email !== 'quizpankaj@gmail.com')) {
+      if (!loading && (!user || userDetails?.email !== 'quizpankaj@gmail.com')) {
         router.replace('/');
       }
-  }, [user, loading, router]);
+  }, [user, loading, router, userDetails]);
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -210,7 +210,8 @@ export default function ManageContentPage() {
           Add New Content
         </h1>
         <Button asChild variant="outline">
-          <Link href="/admin/dashboard">
+          <Link href="/admin">
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Dashboard
           </Link>
         </Button>
@@ -330,3 +331,5 @@ export default function ManageContentPage() {
     </div>
   );
 }
+
+    

@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import Link from 'next/link';
-import { PlusCircle, Trash2, LayoutGrid, List, Eye, Download, Loader, X } from 'lucide-react';
+import { PlusCircle, Trash2, LayoutGrid, List, Eye, Download, Loader, X, ArrowLeft } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import LoadingOverlay from '@/components/loading-overlay';
@@ -23,12 +23,12 @@ import MindMap from '@/components/mind-map';
 
 
 export default function AdminDashboard() {
-  const { user, loading } = useAuth();
+  const { user, loading, userDetails } = useAuth();
   const router = useRouter();
   const [resources, setResources] = useState<any[]>([]);
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   
   const [allResources, setAllResources] = useState<any[]>([]);
   const [classes, setClasses] = useState<string[]>([]);
@@ -49,10 +49,9 @@ export default function AdminDashboard() {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-
   useEffect(() => {
     if (!loading) {
-      if (!user || user.email !== 'quizpankaj@gmail.com') {
+      if (!user || userDetails?.email !== 'quizpankaj@gmail.com') {
         router.replace('/');
       } else {
         fetchInitialResources();
@@ -60,7 +59,7 @@ export default function AdminDashboard() {
          setClasses(classKeys.sort((a, b) => parseInt(a) - parseInt(b)));
       }
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, userDetails]);
   
   const fetchInitialResources = async () => {
     setIsLoadingData(true);
@@ -213,7 +212,7 @@ export default function AdminDashboard() {
     const filtersActive = !!selectedClass || !!selectedSubject || !!selectedChapter || !!selectedType;
     setHasMore(!filtersActive && lastVisible !== null && allResources.length % 20 === 0);
 
-  }, [selectedClass, selectedSubject, selectedChapter, selectedType, allResources]);
+  }, [selectedClass, selectedSubject, selectedChapter, selectedType, allResources, lastVisible]);
 
   if (loading || !user) {
     return <LoadingOverlay isLoading={true} />;
@@ -252,26 +251,26 @@ export default function AdminDashboard() {
       {(isDeleting || isLoadingData) && <LoadingOverlay isLoading={true} />}
       <header className="flex justify-between items-center mb-8">
         <h1 className="font-headline text-4xl font-bold text-foreground">
-          Admin Dashboard
+          Manage Content
         </h1>
         <div className="flex items-center gap-2">
+            <Button variant="outline" asChild>
+                <Link href="/admin">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Dashboard
+                </Link>
+            </Button>
             <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('grid')}>
                 <LayoutGrid className="h-5 w-5" />
             </Button>
             <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')}>
                 <List className="h-5 w-5" />
             </Button>
-            <Button asChild>
-              <Link href="/admin/manage-content">
-                <PlusCircle className="mr-2" />
-                Add New Content
-              </Link>
-            </Button>
         </div>
       </header>
 
       <section className="mb-8">
-        <h2 className="font-headline text-3xl font-semibold mb-4">Manage Notes</h2>
+        <h2 className="font-headline text-3xl font-semibold mb-4">All Resources</h2>
         <Card className="bg-card p-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
@@ -464,6 +463,7 @@ export default function AdminDashboard() {
             >
                 <DialogHeader className="p-4 border-b">
                     <DialogTitle>{selectedResource?.title}</DialogTitle>
+                    <DialogClose />
                 </DialogHeader>
                 <div className="flex-1 w-full h-full overflow-auto">
                   {selectedResource && renderDialogContent()}
@@ -474,3 +474,5 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
+    

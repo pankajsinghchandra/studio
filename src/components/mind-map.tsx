@@ -7,7 +7,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Button } from './ui/button';
-import { ChevronsUpDown, Plus, Minus } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface MindMapNode {
@@ -29,35 +29,34 @@ const Node: React.FC<NodeProps> = ({ node, isRoot = false }) => {
       {!isRoot && (
         <div className="absolute left-0 top-[18px] h-full w-px bg-muted-foreground/30"></div>
       )}
-       {!isRoot && (
+      {!isRoot && (
         <div className="absolute left-0 top-[18px] w-8 h-px bg-muted-foreground/30"></div>
       )}
 
-      <div className="relative flex items-center gap-2">
-        <CollapsibleTrigger asChild>
-          {hasChildren ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 absolute -left-12 top-1/2 -translate-y-1/2 rounded-full bg-background border border-border"
-            >
-              {isOpen ? <Minus className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-              <span className="sr-only">Toggle</span>
-            </Button>
-          ) : (
-             <div className="absolute -left-12 top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-border" />
-          )}
-        </CollapsibleTrigger>
-        <div
+      <div className="flex items-center gap-2">
+        <CollapsibleTrigger
+          disabled={!hasChildren}
           className={cn(
-            'rounded-lg px-4 py-2 text-sm font-medium shadow-md',
+            'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-md w-auto',
             isRoot
               ? 'bg-primary text-primary-foreground'
-              : 'bg-card text-card-foreground border'
+              : 'bg-card text-card-foreground border',
+            !hasChildren ? 'cursor-default' : ''
           )}
         >
-          {node.label}
-        </div>
+          <span>{node.label}</span>
+          {hasChildren && (
+            <ChevronRight
+              className={cn(
+                'h-4 w-4 shrink-0 transition-transform duration-200',
+                isOpen && 'rotate-90'
+              )}
+            />
+          )}
+        </CollapsibleTrigger>
+        {!hasChildren && !isRoot && (
+          <div className="absolute -left-[3px] top-[14px] h-2 w-2 rounded-full bg-border border-2 border-card" />
+        )}
       </div>
 
       {hasChildren && (

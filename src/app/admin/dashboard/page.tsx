@@ -19,7 +19,7 @@ import type { Resource } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
-import MindMap, { type MindMapNode } from '@/components/mind-map';
+import MindMap from '@/components/mind-map';
 
 
 export default function AdminDashboard() {
@@ -267,10 +267,10 @@ export default function AdminDashboard() {
                         </a>
                       ) : (
                          <div className="flex items-center gap-2">
-                             <Button variant="outline" size="sm" onClick={() => setSelectedResource(resource)}>
+                             <Button variant="default" size="sm" onClick={() => setSelectedResource(resource)}>
                                 <Eye className="mr-2 h-4 w-4" /> View
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleDownload(resource)}>
+                            <Button variant="default" size="sm" onClick={() => handleDownload(resource)}>
                                 <Download className="mr-2 h-4 w-4" /> Download
                             </Button>
                          </div>
@@ -310,6 +310,7 @@ export default function AdminDashboard() {
                         <TableHead>Title</TableHead>
                         <TableHead>Subject</TableHead>
                         <TableHead>Chapter</TableHead>
+                        <TableHead>Type</TableHead>
                         <TableHead>Class</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -320,13 +321,14 @@ export default function AdminDashboard() {
                             <TableCell className="font-medium">{resource.title}</TableCell>
                             <TableCell><Badge variant="secondary">{resource.subject}</Badge></TableCell>
                             <TableCell>{resource.chapter}</TableCell>
+                            <TableCell><Badge variant="outline">{resource.type}</Badge></TableCell>
                             <TableCell><Badge>{resource.class}</Badge></TableCell>
                             <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-2">
                                      {isTextBased(resource.type) ? (
                                         <>
-                                            <Button variant="ghost" size="sm" onClick={() => setSelectedResource(resource)}>View</Button>
-                                            <Button variant="ghost" size="sm" onClick={() => handleDownload(resource)}>Download</Button>
+                                            <Button variant="default" size="sm" onClick={() => setSelectedResource(resource)}>View</Button>
+                                            <Button variant="default" size="sm" onClick={() => handleDownload(resource)}>Download</Button>
                                         </>
                                       ) : (
                                         <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
@@ -386,5 +388,3 @@ export default function AdminDashboard() {
     </div>
   );
 }
-
-    

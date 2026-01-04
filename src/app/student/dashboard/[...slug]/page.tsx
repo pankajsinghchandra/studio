@@ -312,6 +312,13 @@ setDescription('Select a chapter to start learning.');
             </div>
         );
     }
+    
+    const getResourceTypeLabel = (type: string) => {
+        if (type === 'mind-map-json') {
+            return 'Mind Map';
+        }
+        return type.replace(/-/g, ' ');
+    };
 
     return (
         <>
@@ -357,7 +364,7 @@ setDescription('Select a chapter to start learning.');
                                         {getIcon('resource', undefined, resource.type, undefined, index)}
                                         <div>
                                             <CardTitle className="font-headline text-xl text-foreground leading-tight">{resource.title}</CardTitle>
-                                            <CardDescription className="mt-1 capitalize">{resource.type.replace(/-/g, ' ')}</CardDescription>
+                                            <CardDescription className="mt-1 capitalize">{getResourceTypeLabel(resource.type)}</CardDescription>
                                         </div>
                                     </div>
                                 </CardHeader>

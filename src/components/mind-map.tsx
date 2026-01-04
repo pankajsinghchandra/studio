@@ -50,7 +50,7 @@ const Node: React.FC<{ node: MindMapNode; isRoot?: boolean; level?: number }> = 
 
       if (containerRect.height > 0) {
         // Path from parent to the vertical line
-        const path = `M0,${startY} L24,${startY} `;
+        let path = `M0,${startY} L24,${startY} `;
 
         const firstChild = childrenContainerRef.current.firstElementChild as HTMLElement;
         const lastChild = childrenContainerRef.current.lastElementChild as HTMLElement;

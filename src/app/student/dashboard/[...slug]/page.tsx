@@ -224,6 +224,7 @@ setDescription('Select a chapter to start learning.');
         const { type, url, title } = selectedResource;
         let embedUrl: string | null = null;
         let isDirectEmbeddable = false;
+        let isGoogleDriveEmbed = false;
 
         if (type === 'video') {
             embedUrl = getYoutubeEmbedUrl(url);
@@ -231,6 +232,7 @@ setDescription('Select a chapter to start learning.');
         } else if (['infographic', 'mind-map', 'lesson-plan-image', 'pdf-note', 'lesson-plan-pdf'].includes(type) && url.includes('drive.google.com')) {
             embedUrl = getGoogleDriveEmbedUrl(url);
             isDirectEmbeddable = true;
+            isGoogleDriveEmbed = true;
         } else if (type === 'lesson-plan-text') {
             isDirectEmbeddable = true;
         } else if (['infographic', 'mind-map', 'lesson-plan-image'].includes(type)) {
@@ -257,6 +259,21 @@ setDescription('Select a chapter to start learning.');
                     </div>
                 )
             }
+            if (isGoogleDriveEmbed) {
+                return (
+                    <div className="w-full h-full overflow-hidden">
+                        <iframe
+                            src={embedUrl || url}
+                            title={title}
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                            className="w-full h-[calc(100%+48px)] -mt-12 rounded-b-lg"
+                        ></iframe>
+                    </div>
+                )
+            }
+
             return (
                  <iframe
                     src={embedUrl || url}
@@ -341,7 +358,6 @@ setDescription('Select a chapter to start learning.');
             <Dialog open={!!selectedResource} onOpenChange={(open) => !open && setSelectedResource(null)}>
                 <DialogContent 
                   className="max-w-none w-screen h-screen p-0 bg-background/95 backdrop-blur-sm border-0 shadow-none data-[state=open]:sm:zoom-in-90 flex flex-col"
-                  onInteractOutside={(e) => e.preventDefault()}
                 >
                     <DialogHeader className="p-2 bg-card rounded-t-lg flex-row justify-between items-center z-10 shrink-0 border-b">
                         <DialogTitle className="text-foreground text-lg truncate px-2">{selectedResource?.title}</DialogTitle>

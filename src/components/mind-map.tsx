@@ -40,114 +40,119 @@ const Node: React.FC<{ node: MindMapNode; isRoot?: boolean; level?: number }> = 
 
   React.useEffect(() => {
     if (isOpen && hasChildren && parentRef.current && childrenContainerRef.current) {
-      const parentRect = parentRef.current.getBoundingClientRect();
-      const containerRect = childrenContainerRef.current.getBoundingClientRect();
+        const calculatePath = () => {
+            if (!parentRef.current || !childrenContainerRef.current) return;
 
-      const startY = parentRect.height / 2;
-      const endY = containerRect.height;
-      
-      setSvgHeight(endY);
+            const parentRect = parentRef.current.getBoundingClientRect();
+            const containerRect = childrenContainerRef.current.getBoundingClientRect();
+            
+            // Wait until the container has a valid height
+            if (containerRect.height === 0) {
+                 // Retry after a short delay if container is not rendered yet
+                requestAnimationFrame(calculatePath);
+                return;
+            }
 
-      if (containerRect.height > 0) {
-        // Path from parent to the vertical line
-        let path = `M0,${startY} L24,${startY} `;
+            const startY = parentRect.height / 2;
+            const childrenElements = Array.from(childrenContainerRef.current.children);
+            
+            if (childrenElements.length === 0) return;
 
-        const firstChild = childrenContainerRef.current.firstElementChild as HTMLElement;
-        const lastChild = childrenContainerRef.current.lastElementChild as HTMLElement;
-
-        if (firstChild && lastChild) {
+            const firstChild = childrenElements[0] as HTMLElement;
+            const lastChild = childrenElements[childrenElements.length - 1] as HTMLElement;
+            
             const firstChildRect = firstChild.getBoundingClientRect();
             const lastChildRect = lastChild.getBoundingClientRect();
 
             const firstChildY = (firstChildRect.top - containerRect.top) + (firstChildRect.height / 2);
             const lastChildY = (lastChildRect.top - containerRect.top) + (lastChildRect.height / 2);
-            
+
+            let path = `M0,${startY} L24,${startY} `; // Line from parent
+
             // Vertical Bracket Line
             path += `M48,${firstChildY} C32,${firstChildY} 32,${(firstChildY + lastChildY) / 2} 48,${(firstChildY + lastChildY) / 2} C64,${(firstChildY + lastChildY) / 2} 64,${lastChildY} 48,${lastChildY} `;
-
+            
             // Horizontal lines to children
-             Array.from(childrenContainerRef.current.children).forEach(child => {
+            childrenElements.forEach(child => {
                 const childEl = child as HTMLElement;
                 const childRect = childEl.getBoundingClientRect();
                 const childY = (childRect.top - containerRect.top) + (childRect.height / 2);
                 path += `M48,${childY} L72,${childY} `;
             });
-        }
-         setSvgPath(path);
-      }
+
+            setSvgHeight(containerRect.height);
+            setSvgPath(path);
+        };
+        
+        // Use requestAnimationFrame to ensure layout is calculated after render
+        requestAnimationFrame(calculatePath);
     }
-  }, [isOpen, hasChildren, node.children]);
+  }, [isOpen, hasChildren, node.children]); // Rerun when children change or open state changes
   
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="relative pl-8">
-      <div className="flex items-center">
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="relative flex items-start">
         {/* Node itself */}
-        <div ref={parentRef} className="relative z-10">
-          <CollapsibleTrigger
-            disabled={!hasChildren}
-            className={cn(
-              'flex min-h-[40px] items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-md',
-              isRoot
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-card text-card-foreground border',
-              !hasChildren && 'cursor-default'
-            )}
-          >
-            <span>{node.label}</span>
-            {hasChildren && (
-              <ChevronRight
+        <div ref={parentRef} className="relative z-10 flex items-center" style={{marginTop: hasChildren && isOpen ? `${(svgHeight/2) - 20}px` : '0px'}}>
+            <CollapsibleTrigger
+                disabled={!hasChildren}
                 className={cn(
-                  'h-4 w-4 shrink-0 transition-transform duration-200',
-                  isOpen && 'rotate-90'
+                'flex min-h-[40px] items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-md',
+                isRoot
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-card text-card-foreground border',
+                !hasChildren && 'cursor-default'
                 )}
-              />
-            )}
-          </CollapsibleTrigger>
+            >
+                <span>{node.label}</span>
+                {hasChildren && (
+                <ChevronRight
+                    className={cn(
+                    'h-4 w-4 shrink-0 transition-transform duration-200',
+                    isOpen && 'rotate-90'
+                    )}
+                />
+                )}
+            </CollapsibleTrigger>
         </div>
 
         {/* Children and connecting lines */}
         {hasChildren && (
-          <div className="relative ml-6">
-            <div
-              ref={childrenContainerRef}
-              className="absolute left-0 top-1/2 -translate-y-1/2"
-            >
-              <svg
-                  height={svgHeight}
-                  width={72}
-                  className={cn(
-                    'absolute left-0 top-0 transition-opacity duration-300',
-                    isOpen ? 'opacity-100' : 'opacity-0'
-                  )}
-                  style={{ overflow: 'visible' }}
-                >
-                  <path
-                    d={svgPath}
-                    stroke={color}
-                    strokeWidth="2"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
+            <div className="relative ml-6 flex items-center">
+                <svg
+                    height={svgHeight}
+                    width={72}
+                    className={cn(
+                        'transition-opacity duration-300 absolute',
+                        isOpen ? 'opacity-100' : 'opacity-0'
+                    )}
+                    style={{ overflow: 'visible' }}
+                    >
+                    <path
+                        d={svgPath}
+                        stroke={color}
+                        strokeWidth="2"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
                 </svg>
 
-              <CollapsibleContent forceMount asChild className="flex-1">
-                <div
-                  className={cn(
-                    'flex flex-col justify-center gap-2 pl-24 transition-all duration-300',
-                    !isOpen && 'hidden'
-                  )}
-                >
-                  {node.children?.map((child, index) => (
-                    <Node key={index} node={child} level={level + 1} />
-                  ))}
-                </div>
-              </CollapsibleContent>
+                <CollapsibleContent forceMount asChild>
+                    <div
+                    ref={childrenContainerRef}
+                    className={cn(
+                        'flex flex-col justify-center gap-2 pl-24 transition-all duration-300',
+                        !isOpen && 'hidden'
+                    )}
+                    >
+                    {node.children?.map((child, index) => (
+                        <Node key={index} node={child} level={level + 1} />
+                    ))}
+                    </div>
+                </CollapsibleContent>
             </div>
-          </div>
         )}
-      </div>
     </Collapsible>
   );
 };

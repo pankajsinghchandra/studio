@@ -16,6 +16,7 @@ import LoadingOverlay from '@/components/loading-overlay';
 import { syllabus } from '@/lib/syllabus';
 import { Textarea } from '@/components/ui/textarea';
 import { UploadCloud } from 'lucide-react';
+import Link from 'next/link';
 
 const isValidUrl = (url: string): boolean => {
     if (!url) return false;
@@ -203,11 +204,21 @@ export default function ManageContentPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <LoadingOverlay isLoading={isSubmitting} />
+       <LoadingOverlay isLoading={isSubmitting} />
+       <header className="flex justify-between items-center mb-8">
+        <h1 className="font-headline text-4xl font-bold text-foreground">
+          Add New Content
+        </h1>
+        <Button asChild variant="outline">
+          <Link href="/admin/dashboard">
+            Back to Dashboard
+          </Link>
+        </Button>
+      </header>
       <Card className="w-full max-w-2xl mx-auto">
         <form onSubmit={handleSubmit}>
           <CardHeader>
-            <CardTitle className="text-2xl font-headline">Add New Content</CardTitle>
+            <CardTitle className="text-2xl font-headline">New Resource</CardTitle>
             <CardDescription>Fill in the details to upload a new resource.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -319,5 +330,3 @@ export default function ManageContentPage() {
     </div>
   );
 }
-
-    

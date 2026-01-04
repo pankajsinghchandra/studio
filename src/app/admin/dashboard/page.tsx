@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import Link from 'next/link';
-import { PlusCircle, Trash2, LayoutGrid, List, Eye, Download, Loader } from 'lucide-react';
+import { PlusCircle, Trash2, LayoutGrid, List, Eye, Download, Loader, X } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import LoadingOverlay from '@/components/loading-overlay';
@@ -464,10 +464,6 @@ export default function AdminDashboard() {
             >
                 <DialogHeader className="p-4 border-b">
                     <DialogTitle>{selectedResource?.title}</DialogTitle>
-                     <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-                        <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                        <span className="sr-only">Close</span>
-                    </DialogClose>
                 </DialogHeader>
                 <div className="flex-1 w-full h-full overflow-auto">
                   {selectedResource && renderDialogContent()}

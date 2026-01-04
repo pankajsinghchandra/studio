@@ -202,12 +202,11 @@ export default function DynamicPage() {
     }
 
     const getGoogleDriveEmbedUrl = (url: string) => {
-        // Use the /preview URL for embedding to get the viewer with controls
         const fileIdMatch = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/);
         if (fileIdMatch && fileIdMatch[1]) {
             return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
         }
-        return url; // Fallback to original URL if no ID is found
+        return url;
     };
 
 
@@ -270,8 +269,6 @@ export default function DynamicPage() {
             )
         }
         
-        // Fallback for non-embeddable or external URLs
-        // We now handle this with the pop-out button, so we just show an info message in the dialog
         return (
             <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-muted/40">
                 <p className="text-lg font-semibold text-foreground mb-2">This content cannot be shown here.</p>
@@ -351,10 +348,10 @@ export default function DynamicPage() {
                       }
                   }}
                 >
-                    <DialogHeader className="p-2 bg-transparent rounded-t-lg flex-row justify-between items-center z-10 shrink-0 border-b">
+                    <DialogHeader className="p-2 bg-card rounded-t-lg flex-row justify-between items-center z-10 shrink-0 border-b">
                         <DialogTitle className="text-foreground text-lg truncate px-2">{selectedResource?.title}</DialogTitle>
                          <div className="flex items-center gap-2">
-                             {selectedResource?.url && (
+                            {selectedResource?.url && selectedResource?.type !== 'lesson-plan-text' && (
                                 <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground" asChild>
                                     <a href={selectedResource.url} target="_blank" rel="noopener noreferrer">
                                         <ExternalLink className="w-5 h-5" />
@@ -378,5 +375,3 @@ export default function DynamicPage() {
         </>
     );
 }
-
-    

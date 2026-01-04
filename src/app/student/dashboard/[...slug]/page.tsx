@@ -204,8 +204,7 @@ setDescription('Select a chapter to start learning.');
     const getGoogleDriveEmbedUrl = (url: string) => {
         const fileIdMatch = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/);
         if (fileIdMatch && fileIdMatch[1]) {
-            // Append &rm=minimal to request a minimal UI, which hides the pop-out button.
-            return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview?rm=minimal`;
+            return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
         }
         return url;
     };
@@ -342,6 +341,7 @@ setDescription('Select a chapter to start learning.');
             <Dialog open={!!selectedResource} onOpenChange={(open) => !open && setSelectedResource(null)}>
                 <DialogContent 
                   className="max-w-none w-screen h-screen p-0 bg-background/95 backdrop-blur-sm border-0 shadow-none data-[state=open]:sm:zoom-in-90 flex flex-col"
+                  onInteractOutside={(e) => e.preventDefault()}
                 >
                     <DialogHeader className="p-2 bg-card rounded-t-lg flex-row justify-between items-center z-10 shrink-0 border-b">
                         <DialogTitle className="text-foreground text-lg truncate px-2">{selectedResource?.title}</DialogTitle>

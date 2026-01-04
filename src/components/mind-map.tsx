@@ -6,8 +6,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, PlusSquare, MinusSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 export interface MindMapNode {
   label: string;
@@ -24,10 +25,18 @@ const colors = [
   '#ec4899', // pink-500
 ];
 
-const Node: React.FC<{ node: MindMapNode; isRoot?: boolean; level?: number }> = ({
+interface NodeProps {
+    node: MindMapNode;
+    isRoot?: boolean;
+    level?: number;
+    allOpen: boolean | null;
+}
+
+const Node: React.FC<NodeProps> = ({
   node,
   isRoot = false,
   level = 0,
+  allOpen,
 }) => {
   const [isOpen, setIsOpen] = React.useState(isRoot);
   const hasChildren = node.children && node.children.length > 0;
@@ -37,6 +46,14 @@ const Node: React.FC<{ node: MindMapNode; isRoot?: boolean; level?: number }> = 
   const childrenContainerRef = React.useRef<HTMLDivElement>(null);
   const [svgDimensions, setSvgDimensions] = React.useState({ height: 0, width: 0, top: 0 });
   const [svgPaths, setSvgPaths] = React.useState<string[]>([]);
+  
+  React.useEffect(() => {
+    if (allOpen !== null) {
+      if (hasChildren) {
+        setIsOpen(allOpen);
+      }
+    }
+  }, [allOpen, hasChildren]);
 
   React.useEffect(() => {
     if (isOpen && hasChildren && parentRef.current && childrenContainerRef.current) {
@@ -56,7 +73,6 @@ const Node: React.FC<{ node: MindMapNode; isRoot?: boolean; level?: number }> = 
 
             const svgWidth = 80;
             const startX = 0;
-            const endX = svgWidth;
             
             const firstChildRect = childrenElements[0].getBoundingClientRect();
             const lastChildRect = childrenElements[childrenElements.length - 1].getBoundingClientRect();
@@ -67,6 +83,7 @@ const Node: React.FC<{ node: MindMapNode; isRoot?: boolean; level?: number }> = 
             const svgHeight = Math.max(startY, lastChildRect.bottom - containerRect.top) - svgTop;
 
             const paths: string[] = [];
+            const endX = svgWidth / 2;
 
             childrenElements.forEach(child => {
                 const childRect = child.getBoundingClientRect();
@@ -77,7 +94,7 @@ const Node: React.FC<{ node: MindMapNode; isRoot?: boolean; level?: number }> = 
                 const controlX2 = startX + (endX - startX) * 0.5;
                 const controlY2 = childY;
                 
-                paths.push(`M ${startX} ${startY - svgTop} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${endX} ${childY}`);
+                paths.push(`M ${startX} ${startY - svgTop} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${endX} ${childY} L ${svgWidth} ${childY}`);
             });
             
             setSvgDimensions({ height: svgHeight, width: svgWidth, top: svgTop });
@@ -159,7 +176,7 @@ const Node: React.FC<{ node: MindMapNode; isRoot?: boolean; level?: number }> = 
                     )}
                     >
                     {node.children?.map((child, index) => (
-                        <Node key={index} node={child} level={level + 1} />
+                        <Node key={index} node={child} level={level + 1} allOpen={allOpen} />
                     ))}
                     </div>
                 </CollapsibleContent>
@@ -174,11 +191,42 @@ interface MindMapProps {
 }
 
 const MindMap: React.FC<MindMapProps> = ({ data }) => {
+  const [allOpen, setAllOpen] = React.useState<boolean | null>(null);
+  const [isAllOpen, setIsAllOpen] = React.useState(false);
+
+  const toggleAll = () => {
+    setAllOpen(!isAllOpen);
+    setIsAllOpen(!isAllOpen);
+  };
+  
+  const handleExpandAll = () => {
+    setAllOpen(true);
+    setIsAllOpen(true);
+  };
+
+  const handleCollapseAll = () => {
+    setAllOpen(false);
+    setIsAllOpen(false);
+  };
+
   return (
-    <div className="p-8 w-full h-full overflow-auto flex items-center justify-center">
-        <div className="flex">
-            <Node node={data} isRoot />
-        </div>
+    <div className="p-8 w-full h-full overflow-auto relative">
+      <div className="flex">
+        <Node node={data} isRoot allOpen={allOpen} />
+      </div>
+      <div className="fixed bottom-4 right-4 z-20 flex gap-2">
+         {isAllOpen ? (
+            <Button onClick={handleCollapseAll} variant="default" size="sm" className="shadow-lg">
+                <MinusSquare className="h-4 w-4 mr-2" />
+                Collapse All
+            </Button>
+         ) : (
+            <Button onClick={handleExpandAll} variant="default" size="sm" className="shadow-lg">
+                <PlusSquare className="h-4 w-4 mr-2" />
+                Expand All
+            </Button>
+         )}
+      </div>
     </div>
   );
 };

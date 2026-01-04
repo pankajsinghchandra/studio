@@ -36,7 +36,7 @@ const Node: React.FC<{ node: MindMapNode; isRoot?: boolean; level?: number }> = 
   const parentRef = React.useRef<HTMLDivElement>(null);
   const childrenContainerRef = React.useRef<HTMLDivElement>(null);
   const [svgHeight, setSvgHeight] = React.useState(0);
-  const [svgPath, setSvgPath] = React.useState('');
+  const [svgPaths, setSvgPaths] = React.useState<string[]>([]);
 
   React.useEffect(() => {
     if (isOpen && hasChildren && parentRef.current && childrenContainerRef.current) {
@@ -46,53 +46,46 @@ const Node: React.FC<{ node: MindMapNode; isRoot?: boolean; level?: number }> = 
             const parentRect = parentRef.current.getBoundingClientRect();
             const containerRect = childrenContainerRef.current.getBoundingClientRect();
             
-            // Wait until the container has a valid height
             if (containerRect.height === 0) {
-                 // Retry after a short delay if container is not rendered yet
                 requestAnimationFrame(calculatePath);
                 return;
             }
-
+            
             const startY = parentRect.height / 2;
             const childrenElements = Array.from(childrenContainerRef.current.children);
-            
+            const paths: string[] = [];
+
             if (childrenElements.length === 0) return;
 
-            const firstChild = childrenElements[0] as HTMLElement;
-            const lastChild = childrenElements[childrenElements.length - 1] as HTMLElement;
-            
-            const firstChildRect = firstChild.getBoundingClientRect();
-            const lastChildRect = lastChild.getBoundingClientRect();
-
-            const firstChildY = (firstChildRect.top - containerRect.top) + (firstChildRect.height / 2);
-            const lastChildY = (lastChildRect.top - containerRect.top) + (lastChildRect.height / 2);
-
-            let path = `M0,${startY} L24,${startY} `; // Line from parent
-
-            // Vertical Bracket Line
-            path += `M48,${firstChildY} C32,${firstChildY} 32,${(firstChildY + lastChildY) / 2} 48,${(firstChildY + lastChildY) / 2} C64,${(firstChildY + lastChildY) / 2} 64,${lastChildY} 48,${lastChildY} `;
-            
-            // Horizontal lines to children
             childrenElements.forEach(child => {
                 const childEl = child as HTMLElement;
                 const childRect = childEl.getBoundingClientRect();
                 const childY = (childRect.top - containerRect.top) + (childRect.height / 2);
-                path += `M48,${childY} L72,${childY} `;
-            });
 
+                const controlPointX1 = 40;
+                const controlPointY1 = startY;
+                const controlPointX2 = 40;
+                const controlPointY2 = childY;
+                
+                paths.push(`M 0 ${startY} C ${controlPointX1} ${controlPointY1}, ${controlPointX2} ${controlPointY2}, 72 ${childY}`);
+            });
+            
             setSvgHeight(containerRect.height);
-            setSvgPath(path);
+            setSvgPaths(paths);
         };
         
-        // Use requestAnimationFrame to ensure layout is calculated after render
         requestAnimationFrame(calculatePath);
+        
+        const resizeObserver = new ResizeObserver(calculatePath);
+        resizeObserver.observe(childrenContainerRef.current);
+
+        return () => resizeObserver.disconnect();
     }
-  }, [isOpen, hasChildren, node.children]); // Rerun when children change or open state changes
+  }, [isOpen, hasChildren, node.children]);
   
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="relative flex items-start">
-        {/* Node itself */}
         <div ref={parentRef} className="relative z-10 flex items-center" style={{marginTop: hasChildren && isOpen ? `${(svgHeight/2) - 20}px` : '0px'}}>
             <CollapsibleTrigger
                 disabled={!hasChildren}
@@ -116,7 +109,6 @@ const Node: React.FC<{ node: MindMapNode; isRoot?: boolean; level?: number }> = 
             </CollapsibleTrigger>
         </div>
 
-        {/* Children and connecting lines */}
         {hasChildren && (
             <div className="relative ml-6 flex items-center">
                 <svg
@@ -128,14 +120,16 @@ const Node: React.FC<{ node: MindMapNode; isRoot?: boolean; level?: number }> = 
                     )}
                     style={{ overflow: 'visible' }}
                     >
-                    <path
-                        d={svgPath}
-                        stroke={color}
-                        strokeWidth="2"
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    />
+                    {svgPaths.map((path, index) => (
+                         <path
+                            key={index}
+                            d={path}
+                            stroke={color}
+                            strokeWidth="2"
+                            fill="none"
+                            strokeLinecap="round"
+                        />
+                    ))}
                 </svg>
 
                 <CollapsibleContent forceMount asChild>

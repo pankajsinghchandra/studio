@@ -26,6 +26,15 @@ const isValidUrl = (url: string): boolean => {
     }
 };
 
+const isValidJson = (str: string): boolean => {
+    try {
+        JSON.parse(str);
+    } catch (e) {
+        return false;
+    }
+    return true;
+};
+
 
 export default function ManageContentPage() {
   const { user, loading } = useAuth();
@@ -70,7 +79,8 @@ export default function ManageContentPage() {
     if (!user) return;
     
     const isTextPlan = type === 'lesson-plan-text';
-    const isUrlPlan = !isTextPlan;
+    const isMindMap = type === 'mind-map-json';
+    const isUrlPlan = !isTextPlan && !isMindMap;
 
     if (!title || !resourceClass || !subject || !chapter || !type) {
         toast({
@@ -90,11 +100,20 @@ export default function ManageContentPage() {
         return;
     }
 
-    if (isTextPlan && !textContent.trim()) {
+    if ((isTextPlan || isMindMap) && !textContent.trim()) {
         toast({
             variant: 'destructive',
             title: 'Missing Content',
-            description: 'Please enter the content for the text-based lesson plan.',
+            description: `Please enter the content for the ${isMindMap ? 'mind map' : 'lesson plan'}.`,
+        });
+        return;
+    }
+
+    if (isMindMap && !isValidJson(textContent)) {
+        toast({
+            variant: 'destructive',
+            title: 'Invalid JSON',
+            description: 'The mind map content is not valid JSON. Please check the format.',
         });
         return;
     }
@@ -108,7 +127,7 @@ export default function ManageContentPage() {
         subject,
         chapter,
         type,
-        url: isTextPlan ? textContent : resourceUrl,
+        url: isUrlPlan ? resourceUrl : textContent,
         authorId: user.uid,
         createdAt: new Date(),
       });
@@ -129,6 +148,8 @@ export default function ManageContentPage() {
       setIsSubmitting(false);
     }
   };
+
+  const isTextOrJsonContent = type === 'lesson-plan-text' || type === 'mind-map-json';
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -188,21 +209,22 @@ export default function ManageContentPage() {
                   <SelectItem value="video">Video</SelectItem>
                   <SelectItem value="infographic">Infographic (Image)</SelectItem>
                   <SelectItem value="mind-map">Mind Map (Image)</SelectItem>
+                  <SelectItem value="mind-map-json">Mind Map (JSON)</SelectItem>
                   <SelectItem value="pdf-note">PDF Note</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
-            {type === 'lesson-plan-text' ? (
+            {isTextOrJsonContent ? (
                 <div className="space-y-2">
-                    <Label htmlFor="textContent">Lesson Content</Label>
+                    <Label htmlFor="textContent">{type === 'mind-map-json' ? 'Mind Map JSON Content' : 'Lesson Content'}</Label>
                     <Textarea 
                         id="textContent" 
-                        placeholder="Type your lesson plan content here..." 
+                        placeholder={type === 'mind-map-json' ? 'Paste your mind map JSON here...' : 'Type your lesson plan content here...'}
                         required 
                         value={textContent} 
                         onChange={(e) => setTextContent(e.target.value)}
-                        className="min-h-[200px]"
+                        className="min-h-[200px] font-mono text-sm"
                     />
                 </div>
             ) : (
@@ -212,7 +234,7 @@ export default function ManageContentPage() {
                     id="resourceUrl" 
                     type="url" 
                     placeholder="https://example.com/resource" 
-                    required={type !== 'lesson-plan-text'}
+                    required={!isTextOrJsonContent}
                     value={resourceUrl} 
                     onChange={(e) => setResourceUrl(e.target.value)} 
                   />

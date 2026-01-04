@@ -123,6 +123,8 @@ export default function AdminDashboard() {
   if (loading || !user) {
     return <LoadingOverlay isLoading={true} />;
   }
+  
+  const isTextBased = (type: string) => type === 'lesson-plan-text' || type === 'mind-map-json';
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -193,6 +195,7 @@ export default function AdminDashboard() {
                             <SelectItem value="video">Video</SelectItem>
                             <SelectItem value="infographic">Infographic (Image)</SelectItem>
                             <SelectItem value="mind-map">Mind Map (Image)</SelectItem>
+                            <SelectItem value="mind-map-json">Mind Map (JSON)</SelectItem>
                             <SelectItem value="pdf-note">PDF Note</SelectItem>
                         </SelectContent>
                     </Select>
@@ -211,7 +214,7 @@ export default function AdminDashboard() {
                     <CardDescription>{resource.type} - Class {resource.class}, {resource.subject}, Chapter {resource.chapter}</CardDescription>
                   </CardHeader>
                   <CardContent className="flex-grow">
-                     {resource.type !== 'lesson-plan-text' ? (
+                     {!isTextBased(resource.type) ? (
                         <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
                           View Resource
                         </a>
@@ -266,7 +269,7 @@ export default function AdminDashboard() {
                             <TableCell><Badge>{resource.class}</Badge></TableCell>
                             <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-2">
-                                     {resource.type !== 'lesson-plan-text' && (
+                                     {!isTextBased(resource.type) && (
                                         <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                                             <Button variant="ghost" size="sm">View</Button>
                                         </a>

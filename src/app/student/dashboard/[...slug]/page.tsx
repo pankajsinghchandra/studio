@@ -12,10 +12,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@
 import { 
     FileText, Video, ImageIcon, BookOpen, ChevronRight, ExternalLink,
     School, Book, FlaskConical, Languages, Landmark, Calculator, Palette, Dna, Atom, 
-    Globe, Scroll, Milestone, Users, Drama, Leaf, Folder, X
+    Globe, Scroll, Milestone, Users, Drama, Leaf, Folder, X, Share2
 } from 'lucide-react';
 import { syllabus } from '@/lib/syllabus';
 import { Button } from '@/components/ui/button';
+import MindMap, { type MindMapNode as MindMapNodeType } from '@/components/mind-map';
 
 const subjectIcons: { [key: string]: React.ElementType } = {
     'mathematics': Calculator,
@@ -82,6 +83,8 @@ const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: 
         case 'mind-map':
         case 'lesson-plan-image':
             return <ImageIcon {...resourceIconProps} />;
+        case 'mind-map-json':
+            return <Share2 {...resourceIconProps} />;
         default:
             return <BookOpen {...resourceIconProps} />;
     }
@@ -225,6 +228,7 @@ setDescription('Select a chapter to start learning.');
         let embedUrl: string | null = null;
         let isDirectEmbeddable = false;
         let isGoogleDriveEmbed = false;
+        let mindMapData: MindMapNodeType | null = null;
 
         if (type === 'video') {
             embedUrl = getYoutubeEmbedUrl(url);
@@ -233,14 +237,24 @@ setDescription('Select a chapter to start learning.');
             embedUrl = getGoogleDriveEmbedUrl(url);
             isDirectEmbeddable = true;
             isGoogleDriveEmbed = true;
-        } else if (type === 'lesson-plan-text') {
+        } else if (type === 'lesson-plan-text' || type === 'mind-map-json') {
             isDirectEmbeddable = true;
+            if (type === 'mind-map-json') {
+                try {
+                    mindMapData = JSON.parse(url);
+                } catch (e) {
+                    return <div className="p-6 text-destructive-foreground bg-destructive">Invalid Mind Map JSON format.</div>
+                }
+            }
         } else if (['infographic', 'mind-map', 'lesson-plan-image'].includes(type)) {
             embedUrl = url;
             isDirectEmbeddable = true;
         }
 
         if (isDirectEmbeddable) {
+             if (type === 'mind-map-json' && mindMapData) {
+                return <MindMap data={mindMapData} />
+            }
             if (type === 'lesson-plan-text') {
                  return (
                     <div className="w-full h-full prose prose-sm max-w-none p-6 text-foreground bg-background rounded-lg overflow-y-auto">
@@ -362,7 +376,7 @@ setDescription('Select a chapter to start learning.');
                     <DialogHeader className="p-2 bg-card rounded-t-lg flex-row justify-between items-center z-10 shrink-0 border-b">
                         <DialogTitle className="text-foreground text-lg truncate px-2">{selectedResource?.title}</DialogTitle>
                          <div className="flex items-center gap-2">
-                            {selectedResource?.url && selectedResource?.type !== 'lesson-plan-text' && (
+                            {selectedResource?.url && !['lesson-plan-text', 'mind-map-json'].includes(selectedResource.type) && (
                                 <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground" asChild>
                                     <a href={selectedResource.url} target="_blank" rel="noopener noreferrer">
                                         <ExternalLink className="w-5 h-5" />

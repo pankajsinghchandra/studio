@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '@/app/providers';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import LoadingOverlay from '@/components/loading-overlay';
 import { syllabus } from '@/lib/syllabus';
 import { Textarea } from '@/components/ui/textarea';
+import { UploadCloud } from 'lucide-react';
 
 const isValidUrl = (url: string): boolean => {
     if (!url) return false;
@@ -40,6 +41,7 @@ export default function ManageContentPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState('');
   const [resourceClass, setResourceClass] = useState('');
@@ -68,6 +70,39 @@ export default function ManageContentPage() {
         router.replace('/');
       }
   }, [user, loading, router]);
+  
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.type !== 'application/json') {
+        toast({
+          variant: 'destructive',
+          title: 'Invalid File Type',
+          description: 'Please upload a valid .json file.',
+        });
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        if (isValidJson(content)) {
+          setTextContent(content);
+          toast({
+            title: 'File Uploaded',
+            description: 'The JSON content has been loaded into the text area.',
+          });
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'Invalid JSON',
+            description: 'The content of the file is not valid JSON.',
+          });
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
 
 
   if (loading || !user) {
@@ -217,10 +252,27 @@ export default function ManageContentPage() {
             
             {isTextOrJsonContent ? (
                 <div className="space-y-2">
-                    <Label htmlFor="textContent">{type === 'mind-map-json' ? 'Mind Map JSON Content' : 'Lesson Content'}</Label>
+                    <div className="flex justify-between items-center">
+                        <Label htmlFor="textContent">{type === 'mind-map-json' ? 'Mind Map JSON Content' : 'Lesson Content'}</Label>
+                        {type === 'mind-map-json' && (
+                            <>
+                                <input 
+                                    type="file" 
+                                    ref={fileInputRef} 
+                                    onChange={handleFileChange} 
+                                    className="hidden" 
+                                    accept=".json"
+                                />
+                                <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                                    <UploadCloud className="mr-2 h-4 w-4" />
+                                    Upload JSON File
+                                </Button>
+                            </>
+                        )}
+                    </div>
                     <Textarea 
                         id="textContent" 
-                        placeholder={type === 'mind-map-json' ? 'Paste your mind map JSON here...' : 'Type your lesson plan content here...'}
+                        placeholder={type === 'mind-map-json' ? 'Paste your mind map JSON here, or upload a file.' : 'Type your lesson plan content here...'}
                         required 
                         value={textContent} 
                         onChange={(e) => setTextContent(e.target.value)}

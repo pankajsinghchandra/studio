@@ -76,7 +76,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [auth, fetchUserDetails]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth]);
 
   const handleAcceptTerms = async () => {
       if (!user) return;

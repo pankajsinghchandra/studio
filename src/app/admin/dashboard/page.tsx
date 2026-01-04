@@ -2,13 +2,13 @@
 
 import { useAuth } from '@/app/providers';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { collection, getDocs, deleteDoc, doc, query, orderBy, limit, startAfter, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import Link from 'next/link';
-import { PlusCircle, Trash2, LayoutGrid, List, Eye, Download } from 'lucide-react';
+import { PlusCircle, Trash2, LayoutGrid, List, Eye, Download, Loader } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import LoadingOverlay from '@/components/loading-overlay';
@@ -43,35 +43,104 @@ export default function AdminDashboard() {
   
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
 
+  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
 
   useEffect(() => {
     if (!loading) {
       if (!user || user.email !== 'quizpankaj@gmail.com') {
         router.replace('/');
       } else {
-        fetchResources();
+        fetchInitialResources();
+         const classKeys = Object.keys(syllabus);
+         setClasses(classKeys.sort((a, b) => parseInt(a) - parseInt(b)));
       }
     }
   }, [user, loading, router]);
   
-  const fetchResources = async () => {
+  const fetchInitialResources = async () => {
     setIsLoadingData(true);
-    const querySnapshot = await getDocs(collection(db, 'resources'));
-    const resourcesList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    setAllResources(resourcesList);
-    setResources(resourcesList);
+    setHasMore(true);
     
-    const classKeys = Object.keys(syllabus);
-    setClasses(classKeys.sort((a, b) => parseInt(a) - parseInt(b)));
-    
-    setIsLoadingData(false);
+    try {
+        const first = query(collection(db, 'resources'), orderBy('createdAt', 'desc'), limit(20));
+        const documentSnapshots = await getDocs(first);
+
+        const resourcesList = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setAllResources(resourcesList); // This will hold all loaded resources
+        setResources(resourcesList); // This will be the initially displayed list
+        
+        const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+        setLastVisible(lastDoc);
+
+        if (documentSnapshots.docs.length < 20) {
+            setHasMore(false);
+        }
+    } catch (error) {
+        console.error("Error fetching initial resources: ", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch resources.'});
+    } finally {
+        setIsLoadingData(false);
+    }
   };
+  
+   const fetchMoreResources = useCallback(async () => {
+    if (isFetchingMore || !hasMore || !lastVisible) return;
+    setIsFetchingMore(true);
+
+    try {
+        const next = query(collection(db, 'resources'), orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(20));
+        const documentSnapshots = await getDocs(next);
+
+        const newResources = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        setAllResources(prev => [...prev, ...newResources]);
+        
+        const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+        setLastVisible(lastDoc);
+
+        if (documentSnapshots.docs.length < 20) {
+            setHasMore(false);
+        }
+    } catch (error) {
+        console.error("Error fetching more resources: ", error);
+    } finally {
+        setIsFetchingMore(false);
+    }
+  }, [lastVisible, hasMore, isFetchingMore]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isFetchingMore && !isLoadingData) {
+          fetchMoreResources();
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+    
+    return () => {
+      if (loadMoreRef.current) {
+        observer.unobserve(loadMoreRef.current);
+      }
+    };
+  }, [fetchMoreResources, hasMore, isFetchingMore, isLoadingData]);
+
 
   const handleDelete = async (resourceId: string) => {
     setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'resources', resourceId));
-      await fetchResources();
+      // Instead of refetching all, just remove the item from the local state
+      setAllResources(prev => prev.filter(r => r.id !== resourceId));
       toast({
         title: 'Success',
         description: 'Resource deleted successfully.',
@@ -137,8 +206,13 @@ export default function AdminDashboard() {
         filtered = filtered.filter(r => r.type === selectedType);
     }
 
-
     setResources(filtered);
+    
+    // If filters are active, we can't reliably use infinite scroll.
+    // So we disable it when any filter is selected.
+    const filtersActive = !!selectedClass || !!selectedSubject || !!selectedChapter || !!selectedType;
+    setHasMore(!filtersActive && lastVisible !== null && allResources.length % 20 === 0);
+
   }, [selectedClass, selectedSubject, selectedChapter, selectedType, allResources]);
 
   if (loading || !user) {
@@ -364,6 +438,19 @@ export default function AdminDashboard() {
             </Table>
           </Card>
         )}
+
+        <div ref={loadMoreRef} className="col-span-full py-6 text-center">
+            {isFetchingMore && (
+                <div className="flex justify-center items-center gap-2 text-muted-foreground">
+                    <Loader className="h-5 w-5 animate-spin" />
+                    <span>Loading more...</span>
+                </div>
+            )}
+            {!hasMore && resources.length > 0 && (
+                <p className="text-muted-foreground">You've reached the end.</p>
+            )}
+        </div>
+        
         {!isLoadingData && resources.length === 0 && (
             <div className="text-center py-16 col-span-full">
                 <p className="text-lg text-muted-foreground">No resources found for the selected filters.</p>
@@ -377,6 +464,10 @@ export default function AdminDashboard() {
             >
                 <DialogHeader className="p-4 border-b">
                     <DialogTitle>{selectedResource?.title}</DialogTitle>
+                     <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+                        <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        <span className="sr-only">Close</span>
+                    </DialogClose>
                 </DialogHeader>
                 <div className="flex-1 w-full h-full overflow-auto">
                   {selectedResource && renderDialogContent()}
@@ -387,5 +478,3 @@ export default function AdminDashboard() {
     </div>
   );
 }
-
-    

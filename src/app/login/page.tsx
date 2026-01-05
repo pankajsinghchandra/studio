@@ -177,15 +177,17 @@ export default function LoginPage() {
     setIsResetting(true);
     try {
         await sendPasswordResetEmail(auth, resetEmail);
-        toast({ title: 'Password Reset Email Sent', description: 'Please check your inbox (and spam folder) for the reset link.' });
+        toast({ 
+            title: 'Request Sent', 
+            description: 'If an account exists for this email, a password reset link has been sent. Please check your inbox (and spam folder).' 
+        });
         setShowResetDialog(false);
         setResetEmail('');
     } catch (error: any) {
-        let description = "An unexpected error occurred.";
-        if (error.code === 'auth/user-not-found') {
-            description = "No account found with this email address.";
-        }
-        toast({ variant: 'destructive', title: 'Error', description });
+        toast({ 
+            title: 'Request Sent', 
+            description: 'If an account exists for this email, a password reset link has been sent. Please check your inbox (and spam folder).' 
+        });
     } finally {
         setIsResetting(false);
     }

@@ -42,6 +42,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const auth = getAuth(app);
 
   const fetchUserDetails = useCallback(async (uid: string) => {
+    // This check is crucial. Don't try to fetch details if the user object from state isn't verified.
+    if (!auth.currentUser || !auth.currentUser.emailVerified) {
+      setUserDetails(null);
+      return;
+    }
+    
     const userDocRef = doc(db, "users", uid);
     try {
       const userDoc = await getDoc(userDocRef);
@@ -64,16 +70,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       errorEmitter.emit('permission-error', permissionError);
       setUserDetails(null);
     }
-  }, []);
+  }, [auth.currentUser]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
-      if (user) {
+      if (user && user.emailVerified) {
         setUser(user);
         await fetchUserDetails(user.uid);
       } else {
-        setUser(null);
+        setUser(user); // Set user even if not verified, so app knows someone is "in progress"
         setUserDetails(null);
         setShowTermsPrompt(false);
       }

@@ -45,15 +45,15 @@ export default function RegisterPage() {
     const router = useRouter();
     const auth = getAuth(app);
     const { toast } = useToast();
-    const [termsAcceptedDialog, setTermsAcceptedDialog] = useState(false);
-
-    const [isLoading, setIsLoading] = useState(false);
-    const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     
+    const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+
     const [showRoleDialog, setShowRoleDialog] = useState(false);
     const [showTermsDialog, setShowTermsDialog] = useState(false);
     const [pendingUser, setPendingUser] = useState<User | null>(null);
     const [selectedRole, setSelectedRole] = useState('');
+    const [termsAcceptedDialog, setTermsAcceptedDialog] = useState(false);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -243,7 +243,7 @@ export default function RegisterPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="name@gmail.com" {...field} />
+                        <Input type="email" placeholder="name@gmail.com" {...field} onBlur={field.onBlur} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

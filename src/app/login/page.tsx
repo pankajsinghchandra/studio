@@ -70,11 +70,23 @@ export default function LoginPage() {
         });
       })
       .catch((error) => {
-        const errorMessage = error.message;
+        let description = "An unexpected error occurred. Please try again.";
+        switch (error.code) {
+            case 'auth/invalid-credential':
+            case 'auth/wrong-password':
+            case 'auth/user-not-found':
+                 description = "Incorrect email or password. Please try again.";
+                 break;
+            case 'auth/user-disabled':
+                description = "This account has been disabled.";
+                break;
+            default:
+                 description = "An unexpected error occurred. Please try again.";
+        }
         toast({
             variant: "destructive",
             title: "Login Failed",
-            description: errorMessage,
+            description: description,
         });
       })
       .finally(() => setIsLoading(false));

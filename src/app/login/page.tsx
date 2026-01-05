@@ -70,6 +70,7 @@ export default function LoginPage() {
         toast({
             title: "Login Successful!",
             description: "Welcome back!",
+            duration: 1500,
         });
       })
       .catch((error) => {
@@ -111,6 +112,7 @@ export default function LoginPage() {
          toast({
             title: "Login Successful!",
             description: "Welcome back!",
+            duration: 1500,
         });
       } else {
         setPendingUser(user);
@@ -156,6 +158,7 @@ export default function LoginPage() {
        toast({
             title: "Registration Complete!",
             description: "Welcome! You're all set up.",
+            duration: 1500,
         });
     } catch (error: any) {
         console.error("Error setting role: ", error);
@@ -184,6 +187,7 @@ export default function LoginPage() {
         setShowResetDialog(false);
         setResetEmail('');
     } catch (error: any) {
+        // We show the same message on error to prevent user enumeration.
         toast({ 
             title: 'Request Sent', 
             description: 'If an account exists for this email, a password reset link has been sent. Please check your inbox (and spam folder).' 

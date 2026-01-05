@@ -72,9 +72,11 @@ export default function LoginPage() {
       .catch((error) => {
         let description = "An unexpected error occurred. Please try again.";
         switch (error.code) {
-            case 'auth/invalid-credential':
-            case 'auth/wrong-password':
             case 'auth/user-not-found':
+                 description = "No account found with this email. Please register first.";
+                 break;
+            case 'auth/wrong-password':
+            case 'auth/invalid-credential':
                  description = "Incorrect email or password. Please try again.";
                  break;
             case 'auth/user-disabled':
@@ -198,7 +200,7 @@ export default function LoginPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="name@example.com" required value={email} onChange={e => setEmail(e.target.value)} />
+                <Input id="email" type="email" placeholder="name@example.com" required value={email} onChange={e => setEmail(e.target.value)} onBlur={e => setEmail(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>

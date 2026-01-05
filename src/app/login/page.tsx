@@ -228,8 +228,9 @@ export default function LoginPage() {
                 <Input id="email" type="email" placeholder="name@example.com" required value={email} onChange={e => setEmail(e.target.value)} onBlur={e => setEmail(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Password</Label>
+                <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
+                <div className="flex items-center justify-end">
                     <button
                         type="button"
                         onClick={() => setShowResetDialog(true)}
@@ -238,7 +239,6 @@ export default function LoginPage() {
                         Forgot Password?
                     </button>
                 </div>
-                <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">

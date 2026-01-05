@@ -1,13 +1,13 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged, User, sendEmailVerification } from 'firebase/auth';
+import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 interface UserDetails {
   name: string;
@@ -42,8 +42,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const auth = getAuth(app);
 
   const fetchUserDetails = useCallback(async (uid: string) => {
+    const userDocRef = doc(db, "users", uid);
     try {
-      const userDocRef = doc(db, "users", uid);
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
         const details = userDoc.data() as UserDetails;
@@ -57,6 +57,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Error fetching user details:", error);
+      const permissionError = new FirestorePermissionError({
+        path: userDocRef.path,
+        operation: 'get',
+      });
+      errorEmitter.emit('permission-error', permissionError);
       setUserDetails(null);
     }
   }, []);
@@ -89,6 +94,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setShowTermsPrompt(false);
       } catch (error) {
           console.error("Error accepting terms: ", error);
+          const permissionError = new FirestorePermissionError({
+            path: userDocRef.path,
+            operation: 'update',
+            requestResourceData: { termsAccepted: true }
+          });
+          errorEmitter.emit('permission-error', permissionError);
       } finally {
           setIsAcceptingTerms(false);
       }

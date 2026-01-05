@@ -227,11 +227,11 @@ export default function LoginPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="name@example.com" required value={email} onChange={e => setEmail(e.target.value)} onBlur={e => setEmail(e.target.value)} />
+                <Input id="email" type="email" placeholder="name@example.com" required value={email} onChange={e => setEmail(e.target.value)} onBlur={e => setEmail(e.target.value)} autoComplete="email" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
+                <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
                 <div className="flex items-center justify-end">
                     <button
                         type="button"
@@ -298,7 +298,7 @@ export default function LoginPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <Label htmlFor="reset-email">Email</Label>
-            <Input id="reset-email" type="email" placeholder="name@example.com" value={resetEmail} onChange={e => setResetEmail(e.target.value)} />
+            <Input id="reset-email" type="email" placeholder="name@example.com" value={resetEmail} onChange={e => setResetEmail(e.target.value)} autoComplete="email" />
           </div>
           <DialogFooter>
             <Button onClick={handlePasswordReset} disabled={isResetting}>

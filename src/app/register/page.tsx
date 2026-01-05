@@ -229,7 +229,7 @@ export default function RegisterPage() {
                     <FormItem>
                       <FormLabel>Full Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="John Doe" {...field} />
+                        <Input placeholder="John Doe" {...field} autoComplete="name" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -243,7 +243,7 @@ export default function RegisterPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="name@gmail.com" {...field} onBlur={field.onBlur} />
+                        <Input type="email" placeholder="name@gmail.com" {...field} onBlur={field.onBlur} autoComplete="email" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -257,7 +257,7 @@ export default function RegisterPage() {
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input type="password" {...field} />
+                        <Input type="password" {...field} autoComplete="new-password" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

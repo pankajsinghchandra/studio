@@ -27,8 +27,8 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [resources, setResources] = useState<any[]>([]);
   const { toast } = useToast();
-  const [isDeleting, setIsDeleting = useState(false);
-  const [isLoadingData, setIsLoadingData = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   
   const [allResources, setAllResources] = useState<any[]>([]);
   const [classes, setClasses] = useState<string[]>([]);
@@ -40,7 +40,7 @@ export default function AdminDashboard() {
   const [selectedChapter, setSelectedChapter] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [sortOrder, setSortOrder] = useState('newest');
-  const [viewMode, setViewMode<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
 
@@ -304,7 +304,7 @@ export default function AdminDashboard() {
       <section>
         {viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sortedAndFilteredResources.map((resource: Resource &amp; { id: string }) => (
+              {sortedAndFilteredResources.map((resource: Resource & { id: string }) => (
                 <Card key={resource.id} className="bg-card flex flex-col">
                   <CardHeader>
                     <CardTitle>{resource.title}</CardTitle>
@@ -366,7 +366,7 @@ export default function AdminDashboard() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {sortedAndFilteredResources.map((resource: Resource &amp; { id: string }) => (
+                    {sortedAndFilteredResources.map((resource: Resource & { id: string }) => (
                          <TableRow key={resource.id}>
                             <TableCell className="font-medium">{resource.title}</TableCell>
                             <TableCell><Badge variant="secondary">{resource.subject}</Badge></TableCell>
@@ -445,5 +445,4 @@ export default function AdminDashboard() {
 
     </div>
   );
-
-    
+}

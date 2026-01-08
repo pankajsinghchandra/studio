@@ -2,13 +2,13 @@
 
 import { useAuth } from '@/app/providers';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { collection, getDocs, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import Link from 'next/link';
-import { PlusCircle, Trash2, LayoutGrid, List, Eye, Download, Loader, X, ArrowLeft } from 'lucide-react';
+import { PlusCircle, Trash2, LayoutGrid, List, Eye, Download, Loader, X, ArrowLeft, ArrowDownUp } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import LoadingOverlay from '@/components/loading-overlay';
@@ -27,8 +27,8 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [resources, setResources] = useState<any[]>([]);
   const { toast } = useToast();
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [isDeleting, setIsDeleting = useState(false);
+  const [isLoadingData, setIsLoadingData = useState(true);
   
   const [allResources, setAllResources] = useState<any[]>([]);
   const [classes, setClasses] = useState<string[]>([]);
@@ -39,7 +39,8 @@ export default function AdminDashboard() {
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedChapter, setSelectedChapter] = useState('');
   const [selectedType, setSelectedType] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortOrder, setSortOrder] = useState('newest');
+  const [viewMode, setViewMode<'grid' | 'list'>('grid');
   
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
 
@@ -58,7 +59,7 @@ export default function AdminDashboard() {
   const fetchAllResources = async () => {
     setIsLoadingData(true);
     try {
-        const resourcesQuery = query(collection(db, 'resources'), orderBy('createdAt', 'desc'));
+        const resourcesQuery = query(collection(db, 'resources'));
         const documentSnapshots = await getDocs(resourcesQuery);
 
         const resourcesList = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -114,26 +115,15 @@ export default function AdminDashboard() {
     URL.revokeObjectURL(url);
   };
 
-  useEffect(() => {
+  const sortedAndFilteredResources = useMemo(() => {
     let filtered = allResources;
 
     if (selectedClass) {
         filtered = filtered.filter(r => r.class === selectedClass);
-        const subjectKeys = Object.keys(syllabus[selectedClass as keyof typeof syllabus] || {});
-        setSubjects(subjectKeys.sort());
-    } else {
-        setSubjects([]);
-        setChapters([]);
     }
 
     if (selectedSubject) {
         filtered = filtered.filter(r => r.subject === selectedSubject);
-        const classSyllabus = syllabus[selectedClass as keyof typeof syllabus];
-        const subjectSyllabus = classSyllabus ? (classSyllabus as any)[selectedSubject] : [];
-        const chapterKeys = Array.isArray(subjectSyllabus) ? subjectSyllabus : Object.keys(subjectSyllabus || {});
-        setChapters(chapterKeys.sort());
-    } else {
-        setChapters([]);
     }
     
     if (selectedChapter) {
@@ -144,9 +134,47 @@ export default function AdminDashboard() {
         filtered = filtered.filter(r => r.type === selectedType);
     }
 
-    setResources(filtered);
+    // Apply sorting
+    const sorted = [...filtered].sort((a, b) => {
+        switch (sortOrder) {
+            case 'newest':
+                return (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0);
+            case 'oldest':
+                return (a.createdAt?.toDate() || 0) - (b.createdAt?.toDate() || 0);
+            case 'subject':
+                return a.subject.localeCompare(b.subject) || a.chapter.localeCompare(b.chapter);
+            case 'type':
+                return a.type.localeCompare(b.type) || a.subject.localeCompare(b.subject);
+             case 'chapter':
+                return a.class.localeCompare(b.class) || a.subject.localeCompare(b.subject) || a.chapter.localeCompare(b.chapter) || a.title.localeCompare(b.title);
+            default:
+                return 0;
+        }
+    });
 
-  }, [selectedClass, selectedSubject, selectedChapter, selectedType, allResources]);
+    return sorted;
+  }, [selectedClass, selectedSubject, selectedChapter, selectedType, allResources, sortOrder]);
+
+
+  useEffect(() => {
+    // This effect now only manages the dependent dropdowns
+    if (selectedClass) {
+        const subjectKeys = Object.keys(syllabus[selectedClass as keyof typeof syllabus] || {});
+        setSubjects(subjectKeys.sort());
+    } else {
+        setSubjects([]);
+        setChapters([]);
+    }
+
+    if (selectedSubject) {
+        const classSyllabus = syllabus[selectedClass as keyof typeof syllabus];
+        const subjectSyllabus = classSyllabus ? (classSyllabus as any)[selectedSubject] : [];
+        const chapterKeys = Array.isArray(subjectSyllabus) ? subjectSyllabus : Object.keys(subjectSyllabus || {});
+        setChapters(chapterKeys.sort());
+    } else {
+        setChapters([]);
+    }
+  }, [selectedClass, selectedSubject]);
 
   if (loading || !user) {
     return <LoadingOverlay isLoading={true} />;
@@ -206,7 +234,7 @@ export default function AdminDashboard() {
       <section className="mb-8">
         <h2 className="font-headline text-3xl font-semibold mb-4">All Resources</h2>
         <Card className="bg-card p-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div>
                     <Label htmlFor="class-filter">Class</Label>
                     <Select value={selectedClass || 'all'} onValueChange={value => { setSelectedClass(value === 'all' ? '' : value); setSelectedSubject(''); setSelectedChapter(''); }}>
@@ -254,6 +282,21 @@ export default function AdminDashboard() {
                         </SelectContent>
                     </Select>
                 </div>
+                <div>
+                  <Label htmlFor="sort-order">Sort by</Label>
+                   <Select value={sortOrder} onValueChange={setSortOrder}>
+                        <SelectTrigger id="sort-order" className="w-full">
+                            <SelectValue placeholder="Sort by" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="newest">Newest First</SelectItem>
+                            <SelectItem value="oldest">Oldest First</SelectItem>
+                            <SelectItem value="subject">Subject</SelectItem>
+                            <SelectItem value="type">Type</SelectItem>
+                            <SelectItem value="chapter">Chapter</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
         </Card>
       </section>
@@ -261,7 +304,7 @@ export default function AdminDashboard() {
       <section>
         {viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {resources.map((resource: Resource & { id: string }) => (
+              {sortedAndFilteredResources.map((resource: Resource &amp; { id: string }) => (
                 <Card key={resource.id} className="bg-card flex flex-col">
                   <CardHeader>
                     <CardTitle>{resource.title}</CardTitle>
@@ -323,7 +366,7 @@ export default function AdminDashboard() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {resources.map((resource: Resource & { id: string }) => (
+                    {sortedAndFilteredResources.map((resource: Resource &amp; { id: string }) => (
                          <TableRow key={resource.id}>
                             <TableCell className="font-medium">{resource.title}</TableCell>
                             <TableCell><Badge variant="secondary">{resource.subject}</Badge></TableCell>
@@ -379,7 +422,7 @@ export default function AdminDashboard() {
             </div>
         )}
         
-        {!isLoadingData && resources.length === 0 && (
+        {!isLoadingData && sortedAndFilteredResources.length === 0 && (
             <div className="text-center py-16 col-span-full">
                 <p className="text-lg text-muted-foreground">No resources found for the selected filters.</p>
             </div>
@@ -402,4 +445,5 @@ export default function AdminDashboard() {
 
     </div>
   );
-}
+
+    

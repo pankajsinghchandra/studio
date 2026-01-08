@@ -3,7 +3,7 @@
 import { useAuth } from '@/app/providers';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { collection, getDocs, deleteDoc, doc, query, orderBy, limit, startAfter, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -43,95 +43,34 @@ export default function AdminDashboard() {
   
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
 
-  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const [hasMore, setHasMore] = useState(true);
-  const [isFetchingMore, setIsFetchingMore] = useState(false);
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
-
   useEffect(() => {
     if (!loading) {
       if (!user || userDetails?.email !== 'quizpankaj@gmail.com') {
         router.replace('/');
       } else {
-        fetchInitialResources();
+        fetchAllResources();
          const classKeys = Object.keys(syllabus);
          setClasses(classKeys.sort((a, b) => parseInt(a) - parseInt(b)));
       }
     }
   }, [user, loading, router, userDetails]);
   
-  const fetchInitialResources = async () => {
+  const fetchAllResources = async () => {
     setIsLoadingData(true);
-    setHasMore(true);
-    
     try {
-        const first = query(collection(db, 'resources'), orderBy('createdAt', 'desc'), limit(20));
-        const documentSnapshots = await getDocs(first);
+        const resourcesQuery = query(collection(db, 'resources'), orderBy('createdAt', 'desc'));
+        const documentSnapshots = await getDocs(resourcesQuery);
 
         const resourcesList = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setAllResources(resourcesList); // This will hold all loaded resources
-        setResources(resourcesList); // This will be the initially displayed list
-        
-        const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-        setLastVisible(lastDoc);
-
-        if (documentSnapshots.docs.length < 20) {
-            setHasMore(false);
-        }
+        setAllResources(resourcesList);
+        setResources(resourcesList);
     } catch (error) {
-        console.error("Error fetching initial resources: ", error);
+        console.error("Error fetching all resources: ", error);
         toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch resources.'});
     } finally {
         setIsLoadingData(false);
     }
   };
-  
-   const fetchMoreResources = useCallback(async () => {
-    if (isFetchingMore || !hasMore || !lastVisible) return;
-    setIsFetchingMore(true);
-
-    try {
-        const next = query(collection(db, 'resources'), orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(20));
-        const documentSnapshots = await getDocs(next);
-
-        const newResources = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        setAllResources(prev => [...prev, ...newResources]);
-        
-        const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-        setLastVisible(lastDoc);
-
-        if (documentSnapshots.docs.length < 20) {
-            setHasMore(false);
-        }
-    } catch (error) {
-        console.error("Error fetching more resources: ", error);
-    } finally {
-        setIsFetchingMore(false);
-    }
-  }, [lastVisible, hasMore, isFetchingMore]);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isFetchingMore && !isLoadingData) {
-          fetchMoreResources();
-        }
-      },
-      { threshold: 1.0 }
-    );
-
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
-    }
-    
-    return () => {
-      if (loadMoreRef.current) {
-        observer.unobserve(loadMoreRef.current);
-      }
-    };
-  }, [fetchMoreResources, hasMore, isFetchingMore, isLoadingData]);
 
 
   const handleDelete = async (resourceId: string) => {
@@ -206,13 +145,8 @@ export default function AdminDashboard() {
     }
 
     setResources(filtered);
-    
-    // If filters are active, we can't reliably use infinite scroll.
-    // So we disable it when any filter is selected.
-    const filtersActive = !!selectedClass || !!selectedSubject || !!selectedChapter || !!selectedType;
-    setHasMore(!filtersActive && lastVisible !== null && allResources.length % 20 === 0);
 
-  }, [selectedClass, selectedSubject, selectedChapter, selectedType, allResources, lastVisible]);
+  }, [selectedClass, selectedSubject, selectedChapter, selectedType, allResources]);
 
   if (loading || !user) {
     return <LoadingOverlay isLoading={true} />;
@@ -438,17 +372,12 @@ export default function AdminDashboard() {
           </Card>
         )}
 
-        <div ref={loadMoreRef} className="col-span-full py-6 text-center">
-            {isFetchingMore && (
-                <div className="flex justify-center items-center gap-2 text-muted-foreground">
-                    <Loader className="h-5 w-5 animate-spin" />
-                    <span>Loading more...</span>
-                </div>
-            )}
-            {!hasMore && resources.length > 0 && (
-                <p className="text-muted-foreground">You've reached the end.</p>
-            )}
-        </div>
+        {isLoadingData && (
+             <div className="flex justify-center items-center gap-2 text-muted-foreground py-8">
+                <Loader className="h-5 w-5 animate-spin" />
+                <span>Loading all resources...</span>
+            </div>
+        )}
         
         {!isLoadingData && resources.length === 0 && (
             <div className="text-center py-16 col-span-full">
@@ -474,5 +403,3 @@ export default function AdminDashboard() {
     </div>
   );
 }
-
-    

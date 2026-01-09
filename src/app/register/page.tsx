@@ -20,6 +20,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useAuth } from "@/app/providers";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -45,6 +46,7 @@ export default function RegisterPage() {
     const router = useRouter();
     const auth = getAuth(app);
     const { toast } = useToast();
+    const { fetchUserDetails } = useAuth();
     
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -85,6 +87,7 @@ export default function RegisterPage() {
                 title: "Login Successful!",
                 description: "Welcome back!",
             });
+            await fetchUserDetails(user.uid);
             router.push('/');
           } else {
             setPendingUser(user);
@@ -123,16 +126,20 @@ export default function RegisterPage() {
             email: pendingUser.email,
             role: selectedRole,
             termsAccepted: true,
+            createdAt: new Date(),
         };
 
         try {
             if (userDoc.exists()) {
-                await updateDoc(userDocRef, { role: selectedRole, termsAccepted: true });
+                await updateDoc(userDocRef, { role: selectedRole, termsAccepted: true, name: pendingUser.displayName });
             } else {
-                await setDoc(userDocRef, { ...userData, createdAt: new Date() });
+                await setDoc(userDocRef, userData);
             }
             setShowRoleDialog(false);
+            
+            // Sign out to force re-login and proper state update
             await auth.signOut(); 
+            
             toast({
                 title: "Registration Successful!",
                 description: "Please log in to continue.",

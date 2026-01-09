@@ -10,12 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User, sendEmailVerification, sendPasswordResetEmail } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User, sendPasswordResetEmail } from "firebase/auth";
 import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { app, db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
 import { useAuth } from "@/app/providers";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48">
@@ -29,7 +30,7 @@ const GoogleIcon = () => (
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loading: authLoading, userDetails } = useAuth();
+  const { user, loading: authLoading, userDetails, fetchUserDetails } = useAuth();
   const auth = getAuth(app);
   const { toast } = useToast();
   const [email, setEmail] = useState('');
@@ -42,6 +43,8 @@ export default function LoginPage() {
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [isResetting, setIsResetting] = useState(false);
+  const [termsAcceptedDialog, setTermsAcceptedDialog] = useState(false);
+  const [showTermsDialog, setShowTermsDialog] = useState(false);
   
   useEffect(() => {
     if (!authLoading && user) {
@@ -114,6 +117,8 @@ export default function LoginPage() {
             description: "Welcome back!",
             duration: 1500,
         });
+        // Manually fetch details to ensure context is updated
+        await fetchUserDetails(user.uid);
       } else {
         setPendingUser(user);
         setShowRoleDialog(true);
@@ -136,6 +141,10 @@ export default function LoginPage() {
       toast({ variant: "destructive", title: "Please select a role." });
       return;
     }
+     if (!termsAcceptedDialog) {
+        toast({ variant: "destructive", title: "Please accept the terms and conditions." });
+        return;
+    }
     
     setIsLoading(true);
     const userDocRef = doc(db, "users", pendingUser.uid);
@@ -146,13 +155,15 @@ export default function LoginPage() {
         name: pendingUser.displayName,
         email: pendingUser.email,
         role: selectedRole,
+        termsAccepted: true,
+        createdAt: new Date(),
     };
 
     try {
       if (userDoc.exists()) {
-        await updateDoc(userDocRef, { role: selectedRole });
+        await updateDoc(userDocRef, { role: selectedRole, termsAccepted: true });
       } else {
-        await setDoc(userDocRef, { ...userData, createdAt: new Date() });
+        await setDoc(userDocRef, userData);
       }
        setShowRoleDialog(false);
        toast({
@@ -160,6 +171,9 @@ export default function LoginPage() {
             description: "Welcome! You're all set up.",
             duration: 1500,
         });
+        // Manually fetch details to ensure context is updated before redirect
+        await fetchUserDetails(pendingUser.uid);
+        router.push('/');
     } catch (error: any) {
         console.error("Error setting role: ", error);
         toast({
@@ -282,9 +296,22 @@ export default function LoginPage() {
                 <SelectItem value="teacher">Teacher</SelectItem>
               </SelectContent>
             </Select>
+             <div className="flex items-center space-x-2 pt-2">
+                    <Checkbox id="google-terms" checked={termsAcceptedDialog} onCheckedChange={(checked) => setTermsAcceptedDialog(checked as boolean)} />
+                    <Label htmlFor="google-terms" className="text-sm text-muted-foreground">
+                        I agree to the{' '}
+                        <button
+                            type="button"
+                            onClick={() => setShowTermsDialog(true)}
+                            className="text-primary hover:underline"
+                        >
+                            Terms & Conditions
+                        </button>
+                    </Label>
+                </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleRoleSubmit} disabled={!selectedRole || isLoading}>
+            <Button onClick={handleRoleSubmit} disabled={!selectedRole || isLoading || !termsAcceptedDialog}>
               {isLoading && <Loader className="animate-spin mr-2"/>}
               Complete Sign-In
             </Button>
@@ -312,6 +339,27 @@ export default function LoginPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+        <Dialog open={showTermsDialog} onOpenChange={setShowTermsDialog}>
+            <DialogContent className="sm:max-w-md">
+                 <DialogHeader>
+                    <DialogTitle>नियम एवं शर्तें (Terms & Conditions)</DialogTitle>
+                </DialogHeader>
+                <div className="prose prose-sm max-h-60 overflow-y-auto pr-4 text-sm text-muted-foreground">
+                    <p>इस ऐप का उपयोग करने से पहले कृपया निम्नलिखित शर्तों को ध्यान से पढ़ें:</p>
+                    <ul className="list-disc space-y-2">
+                        <li><strong>उपयोग की अनुमति:</strong> यह ऐप केवल शैक्षणिक उद्देश्यों के लिए है। उपयोगकर्ता इसका उपयोग सीखने और अभ्यास के लिए कर सकते हैं।</li>
+                        <li><strong>डेटा सुरक्षा:</strong> हम उपयोगकर्ता की गोपनीयता का सम्मान करते हैं। ऐप के सुचारू संचालन के लिए केवल आवश्यक तकनीकी डेटा का ही उपयोग किया जाता है।</li>
+                        <li><strong>सेवाओं का विस्तार और रखरखाव:</strong> भविष्य में ऐप की गुणवत्ता बनाए रखने, सर्वर के खर्चों और नई सुविधाओं (जैसे AI मोड, ऑफलाइन टेस्ट) को जोड़ने के लिए, ऐप में तृतीय-पक्ष सेवाओं (Third-party services) या प्रमोशनल कंटेंट का समावेश किया जा सकता है। यह उपयोगकर्ताओं के लिए ऐप को 'फ्री' रखने में सहायक होगा।</li>
+                        <li><strong>अस्वीकरण (Disclaimer):</strong> यह एक स्वतंत्र पहल है और इसका किसी भी सरकारी विभाग के साथ आधिकारिक वित्तीय संबंध नहीं है। यह ऐप केवल सहायता के उद्देश्य से है। यह किसी भी सरकारी विभाग का आधिकारिक ऐप नहीं है। इस ऐप का उपयोग पूरी तरह से स्वैच्छिक है।</li>
+                        <li><strong>सहमति:</strong> ऐप का उपयोग जारी रखकर, आप इन शर्तों से अपनी सहमति प्रदान करते हैं।</li>
+                    </ul>
+                </div>
+                <DialogFooter>
+                    <Button onClick={() => setShowTermsDialog(false)}>Close</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </>
   );
 }

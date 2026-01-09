@@ -1,8 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
-import { getAuth, onAuthStateChanged, User, sendEmailVerification } from 'firebase/auth';
-import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -42,19 +42,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const auth = getAuth(app);
 
   const fetchUserDetails = useCallback(async (uid: string) => {
-    // This check is crucial. Don't try to fetch details if the user object from state isn't verified.
-    if (!auth.currentUser || !auth.currentUser.emailVerified) {
-      setUserDetails(null);
-      return;
-    }
-    
     const userDocRef = doc(db, "users", uid);
     try {
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
         const details = userDoc.data() as UserDetails;
         setUserDetails(details);
-        if (!details.termsAccepted) {
+        // Only show terms prompt if user is verified and hasn't accepted
+        if (auth.currentUser?.emailVerified && !details.termsAccepted) {
             setShowTermsPrompt(true);
         }
       } else {
@@ -75,11 +70,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
-      if (user && user.emailVerified) {
+      if (user) {
         setUser(user);
         await fetchUserDetails(user.uid);
       } else {
-        setUser(user); // Set user even if not verified, so app knows someone is "in progress"
+        setUser(null);
         setUserDetails(null);
         setShowTermsPrompt(false);
       }

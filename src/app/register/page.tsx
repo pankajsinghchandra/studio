@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getAuth, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User, sendEmailVerification } from "firebase/auth";
-import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { app, db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -20,7 +20,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useAuth } from "@/app/providers";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -46,16 +45,10 @@ export default function RegisterPage() {
     const router = useRouter();
     const auth = getAuth(app);
     const { toast } = useToast();
-    const { fetchUserDetails } = useAuth();
     
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-
-    const [showRoleDialog, setShowRoleDialog] = useState(false);
     const [showTermsDialog, setShowTermsDialog] = useState(false);
-    const [pendingUser, setPendingUser] = useState<User | null>(null);
-    const [selectedRole, setSelectedRole] = useState('');
-    const [termsAcceptedDialog, setTermsAcceptedDialog] = useState(false);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -76,23 +69,13 @@ export default function RegisterPage() {
         setIsGoogleLoading(true);
         const provider = new GoogleAuthProvider();
         try {
-          const result = await signInWithPopup(auth, provider);
-          const user = result.user;
-    
-          const userDocRef = doc(db, "users", user.uid);
-          const userDoc = await getDoc(userDocRef);
-    
-          if (userDoc.exists() && userDoc.data()?.role) {
-             toast({
-                title: "Login Successful!",
-                description: "Welcome back!",
-            });
-            await fetchUserDetails(user.uid);
-            router.push('/');
-          } else {
-            setPendingUser(user);
-            setShowRoleDialog(true);
-          }
+          await signInWithPopup(auth, provider);
+           // AuthProvider will now handle user creation/update, role, and terms
+           toast({
+              title: "Sign-up successful!",
+              description: "Redirecting...",
+          });
+          router.push('/');
         } catch (error: any) {
            if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/unauthorized-domain') {
                 toast({
@@ -105,58 +88,6 @@ export default function RegisterPage() {
           setIsGoogleLoading(false);
         }
     };
-    
-    const handleRoleSubmit = async () => {
-        if (!pendingUser || !selectedRole) {
-          toast({ variant: "destructive", title: "Please select a role." });
-          return;
-        }
-        if (!termsAcceptedDialog) {
-            toast({ variant: "destructive", title: "Please accept the terms and conditions." });
-            return;
-        }
-        
-        setIsLoading(true);
-        const userDocRef = doc(db, "users", pendingUser.uid);
-        const userDoc = await getDoc(userDocRef);
-
-        const userData = {
-            uid: pendingUser.uid,
-            name: pendingUser.displayName,
-            email: pendingUser.email,
-            role: selectedRole,
-            termsAccepted: true,
-            createdAt: new Date(),
-        };
-
-        try {
-            if (userDoc.exists()) {
-                await updateDoc(userDocRef, { role: selectedRole, termsAccepted: true, name: pendingUser.displayName });
-            } else {
-                await setDoc(userDocRef, userData);
-            }
-            setShowRoleDialog(false);
-            
-            // Sign out to force re-login and proper state update
-            await auth.signOut(); 
-            
-            toast({
-                title: "Registration Successful!",
-                description: "Please log in to continue.",
-            });
-            router.push('/login');
-        } catch (error: any) {
-             console.error("Error setting role: ", error);
-             toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Could not save your role. Please try again.",
-             });
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
 
     const handleSubmit = async (values: z.infer<typeof formSchema>) => {
         setIsLoading(true);
@@ -390,48 +321,6 @@ export default function RegisterPage() {
           </Form>
         </Card>
       </div>
-
-      <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>One Last Step</DialogTitle>
-              <DialogDescription>
-                Please select your role and accept the terms to complete your registration.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <Label htmlFor="role-select">You are a...</Label>
-              <Select onValueChange={setSelectedRole} required>
-                <SelectTrigger id="role-select">
-                  <SelectValue placeholder="Select Role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="student">Student</SelectItem>
-                  <SelectItem value="teacher">Teacher</SelectItem>
-                </SelectContent>
-              </Select>
-               <div className="flex items-center space-x-2 pt-2">
-                    <Checkbox id="google-terms" checked={termsAcceptedDialog} onCheckedChange={(checked) => setTermsAcceptedDialog(checked as boolean)} />
-                    <Label htmlFor="google-terms" className="text-sm text-muted-foreground">
-                        I agree to the{' '}
-                        <button
-                            type="button"
-                            onClick={() => setShowTermsDialog(true)}
-                            className="text-primary hover:underline"
-                        >
-                            Terms & Conditions
-                        </button>
-                    </Label>
-                </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={handleRoleSubmit} disabled={!selectedRole || isLoading || !termsAcceptedDialog}>
-                {isLoading && <Loader className="animate-spin mr-2"/>}
-                Complete Sign-Up
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
         
         <Dialog open={showTermsDialog} onOpenChange={setShowTermsDialog}>
             <DialogContent className="sm:max-w-md">

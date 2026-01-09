@@ -5,18 +5,16 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User, sendPasswordResetEmail } from "firebase/auth";
-import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
-import { app, db } from "@/lib/firebase";
+import { app } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
 import { useAuth } from "@/app/providers";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+
 
 const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48">
@@ -30,21 +28,16 @@ const GoogleIcon = () => (
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loading: authLoading, userDetails, fetchUserDetails } = useAuth();
+  const { user, loading: authLoading, userDetails } = useAuth();
   const auth = getAuth(app);
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showRoleDialog, setShowRoleDialog] = useState(false);
-  const [pendingUser, setPendingUser] = useState<User | null>(null);
-  const [selectedRole, setSelectedRole] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [isResetting, setIsResetting] = useState(false);
-  const [termsAcceptedDialog, setTermsAcceptedDialog] = useState(false);
-  const [showTermsDialog, setShowTermsDialog] = useState(false);
   
   useEffect(() => {
     if (!authLoading && user) {
@@ -105,24 +98,13 @@ export default function LoginPage() {
     setIsGoogleLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      const userDocRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userDocRef);
-
-      if (userDoc.exists() && userDoc.data()?.role) {
-         toast({
-            title: "Login Successful!",
-            description: "Welcome back!",
-            duration: 1500,
-        });
-        // Manually fetch details to ensure context is updated
-        await fetchUserDetails(user.uid);
-      } else {
-        setPendingUser(user);
-        setShowRoleDialog(true);
-      }
+      await signInWithPopup(auth, provider);
+      // AuthProvider will handle the rest: user creation, terms, role selection
+      toast({
+          title: "Login Successful!",
+          description: "Welcome!",
+          duration: 1500,
+      });
     } catch (error: any) {
       if (error.code !== 'auth/popup-closed-by-user') {
         toast({
@@ -133,56 +115,6 @@ export default function LoginPage() {
       }
     } finally {
       setIsGoogleLoading(false);
-    }
-  };
-
-  const handleRoleSubmit = async () => {
-    if (!pendingUser || !selectedRole) {
-      toast({ variant: "destructive", title: "Please select a role." });
-      return;
-    }
-     if (!termsAcceptedDialog) {
-        toast({ variant: "destructive", title: "Please accept the terms and conditions." });
-        return;
-    }
-    
-    setIsLoading(true);
-    const userDocRef = doc(db, "users", pendingUser.uid);
-    const userDoc = await getDoc(userDocRef);
-
-    const userData = {
-        uid: pendingUser.uid,
-        name: pendingUser.displayName,
-        email: pendingUser.email,
-        role: selectedRole,
-        termsAccepted: true,
-        createdAt: new Date(),
-    };
-
-    try {
-      if (userDoc.exists()) {
-        await updateDoc(userDocRef, { role: selectedRole, termsAccepted: true });
-      } else {
-        await setDoc(userDocRef, userData);
-      }
-       setShowRoleDialog(false);
-       toast({
-            title: "Registration Complete!",
-            description: "Welcome! You're all set up.",
-            duration: 1500,
-        });
-        // Manually fetch details to ensure context is updated before redirect
-        await fetchUserDetails(pendingUser.uid);
-        router.push('/');
-    } catch (error: any) {
-        console.error("Error setting role: ", error);
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not save your role. Please try again.",
-        });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -277,48 +209,6 @@ export default function LoginPage() {
         </Card>
       </div>
       
-      <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>One Last Step</DialogTitle>
-            <DialogDescription>
-              Please select your role to complete your registration.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <Label htmlFor="role-select">You are a...</Label>
-            <Select onValueChange={setSelectedRole} required>
-              <SelectTrigger id="role-select">
-                <SelectValue placeholder="Select Role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="student">Student</SelectItem>
-                <SelectItem value="teacher">Teacher</SelectItem>
-              </SelectContent>
-            </Select>
-             <div className="flex items-center space-x-2 pt-2">
-                    <Checkbox id="google-terms" checked={termsAcceptedDialog} onCheckedChange={(checked) => setTermsAcceptedDialog(checked as boolean)} />
-                    <Label htmlFor="google-terms" className="text-sm text-muted-foreground">
-                        I agree to the{' '}
-                        <button
-                            type="button"
-                            onClick={() => setShowTermsDialog(true)}
-                            className="text-primary hover:underline"
-                        >
-                            Terms & Conditions
-                        </button>
-                    </Label>
-                </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={handleRoleSubmit} disabled={!selectedRole || isLoading || !termsAcceptedDialog}>
-              {isLoading && <Loader className="animate-spin mr-2"/>}
-              Complete Sign-In
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
       <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
         <DialogContent>
           <DialogHeader>
@@ -339,27 +229,6 @@ export default function LoginPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
-        <Dialog open={showTermsDialog} onOpenChange={setShowTermsDialog}>
-            <DialogContent className="sm:max-w-md">
-                 <DialogHeader>
-                    <DialogTitle>नियम एवं शर्तें (Terms & Conditions)</DialogTitle>
-                </DialogHeader>
-                <div className="prose prose-sm max-h-60 overflow-y-auto pr-4 text-sm text-muted-foreground">
-                    <p>इस ऐप का उपयोग करने से पहले कृपया निम्नलिखित शर्तों को ध्यान से पढ़ें:</p>
-                    <ul className="list-disc space-y-2">
-                        <li><strong>उपयोग की अनुमति:</strong> यह ऐप केवल शैक्षणिक उद्देश्यों के लिए है। उपयोगकर्ता इसका उपयोग सीखने और अभ्यास के लिए कर सकते हैं।</li>
-                        <li><strong>डेटा सुरक्षा:</strong> हम उपयोगकर्ता की गोपनीयता का सम्मान करते हैं। ऐप के सुचारू संचालन के लिए केवल आवश्यक तकनीकी डेटा का ही उपयोग किया जाता है।</li>
-                        <li><strong>सेवाओं का विस्तार और रखरखाव:</strong> भविष्य में ऐप की गुणवत्ता बनाए रखने, सर्वर के खर्चों और नई सुविधाओं (जैसे AI मोड, ऑफलाइन टेस्ट) को जोड़ने के लिए, ऐप में तृतीय-पक्ष सेवाओं (Third-party services) या प्रमोशनल कंटेंट का समावेश किया जा सकता है। यह उपयोगकर्ताओं के लिए ऐप को 'फ्री' रखने में सहायक होगा।</li>
-                        <li><strong>अस्वीकरण (Disclaimer):</strong> यह एक स्वतंत्र पहल है और इसका किसी भी सरकारी विभाग के साथ आधिकारिक वित्तीय संबंध नहीं है। यह ऐप केवल सहायता के उद्देश्य से है। यह किसी भी सरकारी विभाग का आधिकारिक ऐप नहीं है। इस ऐप का उपयोग पूरी तरह से स्वैच्छिक है।</li>
-                        <li><strong>सहमति:</strong> ऐप का उपयोग जारी रखकर, आप इन शर्तों से अपनी सहमति प्रदान करते हैं।</li>
-                    </ul>
-                </div>
-                <DialogFooter>
-                    <Button onClick={() => setShowTermsDialog(false)}>Close</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
     </>
   );
 }

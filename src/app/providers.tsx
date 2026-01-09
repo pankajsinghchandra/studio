@@ -2,21 +2,24 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Loader } from 'lucide-react';
 
 interface UserDetails {
+  uid: string;
   name: string;
-  mobile: string;
-  userClass: string;
-  gender: string;
+  email: string | null;
   role: 'student' | 'teacher' | 'admin';
-  email: string;
-  termsAccepted?: boolean;
+  termsAccepted: boolean;
+  createdAt: any;
+  userClass?: string;
+  gender?: string;
 }
 
 interface AuthContextType {
@@ -37,102 +40,119 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showTermsPrompt, setShowTermsPrompt] = useState(false);
-  const [isAcceptingTerms, setIsAcceptingTerms] = useState(false);
+  
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [selectedRole, setSelectedRole] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
   const auth = getAuth(app);
 
   const fetchUserDetails = useCallback(async (uid: string) => {
     const userDocRef = doc(db, "users", uid);
-    try {
-      const userDoc = await getDoc(userDocRef);
-      if (userDoc.exists()) {
-        const details = userDoc.data() as UserDetails;
-        setUserDetails(details);
-        // Only show terms prompt if user is verified and hasn't accepted
-        if (auth.currentUser?.emailVerified && !details.termsAccepted) {
-            setShowTermsPrompt(true);
-        }
-      } else {
-        console.log("No such user document!");
-        setUserDetails(null);
+    const userDoc = await getDoc(userDocRef);
+    if (userDoc.exists()) {
+      const details = userDoc.data() as UserDetails;
+      setUserDetails(details);
+      // If user exists but hasn't accepted terms or selected a role, trigger onboarding
+      if (!details.termsAccepted || !details.role) {
+        setShowOnboarding(true);
       }
-    } catch (error) {
-      console.error("Error fetching user details:", error);
-      const permissionError = new FirestorePermissionError({
-        path: userDocRef.path,
-        operation: 'get',
-      });
-      errorEmitter.emit('permission-error', permissionError);
-      setUserDetails(null);
+      return details;
     }
-  }, [auth.currentUser]);
+    return null;
+  }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
-      if (user) {
-        setUser(user);
-        await fetchUserDetails(user.uid);
+      if (firebaseUser) {
+        setUser(firebaseUser);
+        const details = await fetchUserDetails(firebaseUser.uid);
+        if (!details) {
+          // This is a new user (or existing user without a DB record)
+          setShowOnboarding(true);
+        }
       } else {
         setUser(null);
         setUserDetails(null);
-        setShowTermsPrompt(false);
+        setShowOnboarding(false);
       }
       setLoading(false);
     });
-
     return () => unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth]);
+  }, [auth, fetchUserDetails]);
 
-  const handleAcceptTerms = async () => {
-      if (!user) return;
-      setIsAcceptingTerms(true);
-      try {
-        const userDocRef = doc(db, "users", user.uid);
-        await updateDoc(userDocRef, { termsAccepted: true });
-        setUserDetails(prev => prev ? { ...prev, termsAccepted: true } : null);
-        setShowTermsPrompt(false);
-      } catch (error) {
-          console.error("Error accepting terms: ", error);
-          const permissionError = new FirestorePermissionError({
-            path: userDocRef.path,
-            operation: 'update',
-            requestResourceData: { termsAccepted: true }
-          });
-          errorEmitter.emit('permission-error', permissionError);
-      } finally {
-          setIsAcceptingTerms(false);
-      }
+  const handleOnboardingSubmit = async () => {
+    if (!user) return;
+    if (!selectedRole) {
+      alert('Please select a role.'); // Replace with toast
+      return;
+    }
+     if (!termsAccepted) {
+        alert('Please accept the terms and conditions.'); // Replace with toast
+        return;
+    }
+    
+    setIsSaving(true);
+    const userDocRef = doc(db, "users", user.uid);
+    const userData: UserDetails = {
+      uid: user.uid,
+      name: user.displayName || user.email?.split('@')[0] || 'New User',
+      email: user.email,
+      role: selectedRole as 'student' | 'teacher',
+      termsAccepted: true,
+      createdAt: new Date(),
+    };
+
+    try {
+      // Use setDoc with merge to create or update the user document
+      await setDoc(userDocRef, userData, { merge: true });
+      setUserDetails(userData); // Update local state immediately
+      setShowOnboarding(false);
+    } catch (error) {
+        console.error("Error saving user details: ", error);
+        alert('Failed to save details. Please try again.');
+    } finally {
+        setIsSaving(false);
+    }
   };
-
-
-  const value = { user, userDetails, loading, fetchUserDetails };
+  
+    const value = { user, userDetails, loading, fetchUserDetails };
 
   return (
     <AuthContext.Provider value={value}>
         {children}
-        <Dialog open={showTermsPrompt}>
-            <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
-                <DialogHeader>
-                    <DialogTitle>नियम एवं शर्तें (Terms & Conditions)</DialogTitle>
+        <Dialog open={showOnboarding} onOpenChange={(open) => !open && setShowOnboarding(false)}>
+            <DialogContent onInteractOutside={(e) => e.preventDefault()} className="sm:max-w-md">
+                 <DialogHeader>
+                    <DialogTitle>One Last Step</DialogTitle>
                     <DialogDescription>
-                        इस ऐप का उपयोग जारी रखने के लिए, कृपया हमारी शर्तों को स्वीकार करें।
+                        To continue, please select your role and accept our terms.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="prose prose-sm max-h-60 overflow-y-auto pr-4 text-sm text-muted-foreground">
-                    <p>इस ऐप का उपयोग करने से पहले कृपया निम्नलिखित शर्तों को ध्यान से पढ़ें:</p>
-                    <ul className="list-disc space-y-2">
-                        <li><strong>उपयोग की अनुमति:</strong> यह ऐप केवल शैक्षणिक उद्देश्यों के लिए है। उपयोगकर्ता इसका उपयोग सीखने और अभ्यास के लिए कर सकते हैं।</li>
-                        <li><strong>डेटा सुरक्षा:</strong> हम उपयोगकर्ता की गोपनीयता का सम्मान करते हैं। ऐप के सुचारू संचालन के लिए केवल आवश्यक तकनीकी डेटा का ही उपयोग किया जाता है।</li>
-                        <li><strong>सेवाओं का विस्तार और रखरखाव:</strong> भविष्य में ऐप की गुणवत्ता बनाए रखने, सर्वर के खर्चों और नई सुविधाओं (जैसे AI मोड, ऑफलाइन टेस्ट) को जोड़ने के लिए, ऐप में तृतीय-पक्ष सेवाओं (Third-party services) या प्रमोशनल कंटेंट का समावेश किया जा सकता है। यह उपयोगकर्ताओं के लिए ऐप को 'फ्री' रखने में सहायक होगा।</li>
-                        <li><strong>अस्वीकरण (Disclaimer):</strong> यह एक स्वतंत्र पहल है और इसका किसी भी सरकारी विभाग के साथ आधिकारिक वित्तीय संबंध नहीं है। यह ऐप केवल सहायता के उद्देश्य से है। यह किसी भी सरकारी विभाग का आधिकारिक ऐप नहीं है। इस ऐप का उपयोग पूरी तरह से स्वैच्छिक है।</li>
-                        <li><strong>सहमति:</strong> ऐप का उपयोग जारी रखकर, आप इन शर्तों से अपनी सहमति प्रदान करते हैं।</li>
-                    </ul>
+                <div className="space-y-4 py-4">
+                    <Label htmlFor="role-select">You are a...</Label>
+                    <Select onValueChange={setSelectedRole} required>
+                    <SelectTrigger id="role-select">
+                        <SelectValue placeholder="Select Role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="student">Student</SelectItem>
+                        <SelectItem value="teacher">Teacher</SelectItem>
+                    </SelectContent>
+                    </Select>
+                    <div className="flex items-center space-x-2 pt-2">
+                            <Checkbox id="onboarding-terms" checked={termsAccepted} onCheckedChange={(checked) => setTermsAccepted(checked as boolean)} />
+                            <Label htmlFor="onboarding-terms" className="text-sm text-muted-foreground">
+                                I have read and agree to the Terms & Conditions.
+                            </Label>
+                    </div>
                 </div>
                 <DialogFooter>
-                    <Button onClick={handleAcceptTerms} disabled={isAcceptingTerms}>
-                        {isAcceptingTerms ? "Accepting..." : "I Accept the Terms"}
+                    <Button onClick={handleOnboardingSubmit} disabled={isSaving || !selectedRole || !termsAccepted}>
+                        {isSaving ? <Loader className="animate-spin mr-2"/> : null}
+                        Save and Continue
                     </Button>
                 </DialogFooter>
             </DialogContent>

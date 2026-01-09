@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Loader } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface UserDetails {
   uid: string;
@@ -43,7 +44,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showTermsDialog, setShowTermsDialog] = useState(false);
-  const [selectedRole, setSelectedRole] = useState('');
+  
+  const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | ''>('');
+  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedGender, setSelectedGender] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -70,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(firebaseUser);
         const details = await fetchUserDetails(firebaseUser.uid);
         if (!details) {
+          // This is a new user (or existing user with no db record)
           setShowOnboarding(true);
         }
       } else {
@@ -85,25 +90,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const handleOnboardingSubmit = async () => {
     if (!user) return;
     if (!selectedRole || !termsAccepted) {
-      // This should ideally be a toast message
       alert('Please select a role and accept the terms.');
       return;
     }
     
     setIsSaving(true);
     const userDocRef = doc(db, "users", user.uid);
-    const userData = {
+    const userData: Partial<UserDetails> = {
       uid: user.uid,
       name: user.displayName || user.email?.split('@')[0] || 'New User',
       email: user.email,
       role: selectedRole as 'student' | 'teacher',
       termsAccepted: true,
-      createdAt: new Date(),
     };
+    
+    if (selectedRole === 'student') {
+        userData.userClass = selectedClass;
+        userData.gender = selectedGender;
+    }
 
     try {
-      await setDoc(userDocRef, userData, { merge: true });
-      setUserDetails(userData as UserDetails);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+        await updateDoc(userDocRef, userData);
+      } else {
+        userData.createdAt = new Date();
+        await setDoc(userDocRef, userData);
+      }
+
+      await fetchUserDetails(user.uid);
       setShowOnboarding(false);
     } catch (error) {
         console.error("Error saving user details: ", error);
@@ -127,28 +142,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
-                    <Label htmlFor="role-select">You are a...</Label>
-                    <Select onValueChange={setSelectedRole} required>
-                    <SelectTrigger id="role-select">
-                        <SelectValue placeholder="Select Role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="student">Student</SelectItem>
-                        <SelectItem value="teacher">Teacher</SelectItem>
-                    </SelectContent>
-                    </Select>
+                    <div className="space-y-2">
+                        <Label>You are a...</Label>
+                        <RadioGroup
+                            onValueChange={(value) => setSelectedRole(value as 'student' | 'teacher')}
+                            value={selectedRole}
+                            className="flex space-x-4"
+                        >
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="student" id="student" />
+                                <Label htmlFor="student" className="font-normal">Student</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="teacher" id="teacher" />
+                                <Label htmlFor="teacher" className="font-normal">Teacher</Label>
+                            </div>
+                        </RadioGroup>
+                    </div>
+
+                    {selectedRole === 'student' && (
+                        <div className="grid grid-cols-2 gap-4 pt-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="onboarding-class">Class (Optional)</Label>
+                                <Select onValueChange={setSelectedClass} value={selectedClass}>
+                                    <SelectTrigger id="onboarding-class">
+                                        <SelectValue placeholder="Select Class" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {Array.from({ length: 6 }, (_, i) => i + 3).map(c => (
+                                            <SelectItem key={c} value={c.toString()}>Class {c}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="onboarding-gender">Gender (Optional)</Label>
+                                <Select onValueChange={setSelectedGender} value={selectedGender}>
+                                    <SelectTrigger id="onboarding-gender">
+                                        <SelectValue placeholder="Select Gender" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="male">Male</SelectItem>
+                                        <SelectItem value="female">Female</SelectItem>
+                                        <SelectItem value="other">Other</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="flex items-center space-x-2 pt-2">
-                            <Checkbox id="onboarding-terms" checked={termsAccepted} onCheckedChange={(checked) => setTermsAccepted(checked as boolean)} />
-                            <Label htmlFor="onboarding-terms" className="text-sm text-muted-foreground">
-                                I agree to the{' '}
-                                <button
-                                    type="button"
-                                    onClick={() => setShowTermsDialog(true)}
-                                    className="text-primary hover:underline"
-                                >
-                                    Terms & Conditions
-                                </button>
-                            </Label>
+                        <Checkbox id="onboarding-terms" checked={termsAccepted} onCheckedChange={(checked) => setTermsAccepted(checked as boolean)} />
+                        <Label htmlFor="onboarding-terms" className="text-sm text-muted-foreground">
+                            I agree to the{' '}
+                            <button
+                                type="button"
+                                onClick={() => setShowTermsDialog(true)}
+                                className="text-primary hover:underline"
+                            >
+                                Terms &amp; Conditions
+                            </button>
+                        </Label>
                     </div>
                 </div>
                 <DialogFooter>
@@ -163,14 +217,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         <Dialog open={showTermsDialog} onOpenChange={setShowTermsDialog}>
             <DialogContent className="sm:max-w-md">
                  <DialogHeader>
-                    <DialogTitle>नियम एवं शर्तें (Terms & Conditions)</DialogTitle>
+                    <DialogTitle>नियम एवं शर्तें (Terms &amp; Conditions)</DialogTitle>
                 </DialogHeader>
                 <div className="prose prose-sm max-h-60 overflow-y-auto pr-4 text-sm text-muted-foreground">
                     <p>इस ऐप का उपयोग करने से पहले कृपया निम्नलिखित शर्तों को ध्यान से पढ़ें:</p>
                     <ul className="list-disc space-y-2">
                         <li><strong>उपयोग की अनुमति:</strong> यह ऐप केवल शैक्षणिक उद्देश्यों के लिए है। उपयोगकर्ता इसका उपयोग सीखने और अभ्यास के लिए कर सकते हैं।</li>
                         <li><strong>डेटा सुरक्षा:</strong> हम उपयोगकर्ता की गोपनीयता का सम्मान करते हैं। ऐप के सुचारू संचालन के लिए केवल आवश्यक तकनीकी डेटा का ही उपयोग किया जाता है।</li>
-                        <li><strong>सेवाओं का विस्तार और रखरखाव:</strong> भविष्य में ऐप की गुणवत्ता बनाए रखने, सर्वर के खर्चों और नई सुविधाओं (जैसे AI मोड, ऑफलाइन टेस्ट) को जोड़ने के लिए, ऐप में तृतीय-पक्ष सेवाओं (Third-party services) या प्रमोशनल कंटेंट का समावेश किया जा सकता है। यह उपयोगकर्ताओं के लिए ऐप को 'फ्री' रखने में सहायक होगा।</li>
+                        <li><strong>सेवाओं का विस्तार और रखरखाव:</strong> भविष्य में ऐप की गुणवत्ता बनाए रखने, सर्वर के खर्चों और नई सुविधाओं (जैसे स्मार्ट नोट्स, AI सारांश, और ऑफलाइन एक्सेस) को जोड़ने के लिए, ऐप में तृतीय-पक्ष सेवाओं (Third-party services) या प्रमोशनल कंटेंट का समावेश किया जा सकता है। यह उपयोगकर्ताओं के लिए ऐप को 'फ्री' रखने में सहायक होगा।</li>
                         <li><strong>अस्वीकरण (Disclaimer):</strong> यह एक स्वतंत्र पहल है और इसका किसी भी सरकारी विभाग के साथ आधिकारिक वित्तीय संबंध नहीं है। यह ऐप केवल सहायता के उद्देश्य से है। यह किसी भी सरकारी विभाग का आधिकारिक ऐप नहीं है। इस ऐप का उपयोग पूरी तरह से स्वैच्छिक है।</li>
                         <li><strong>सहमति:</strong> ऐप का उपयोग जारी रखकर, आप इन शर्तों से अपनी सहमति प्रदान करते हैं।</li>
                     </ul>

@@ -42,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showTermsDialog, setShowTermsDialog] = useState(false);
   const [selectedRole, setSelectedRole] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -54,7 +55,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (userDoc.exists()) {
       const details = userDoc.data() as UserDetails;
       setUserDetails(details);
-      // If user exists but hasn't accepted terms or selected a role, trigger onboarding
       if (!details.termsAccepted || !details.role) {
         setShowOnboarding(true);
       }
@@ -70,7 +70,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(firebaseUser);
         const details = await fetchUserDetails(firebaseUser.uid);
         if (!details) {
-          // This is a new user (or existing user without a DB record)
           setShowOnboarding(true);
         }
       } else {
@@ -85,18 +84,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleOnboardingSubmit = async () => {
     if (!user) return;
-    if (!selectedRole) {
-      alert('Please select a role.'); // Replace with toast
+    if (!selectedRole || !termsAccepted) {
+      // This should ideally be a toast message
+      alert('Please select a role and accept the terms.');
       return;
-    }
-     if (!termsAccepted) {
-        alert('Please accept the terms and conditions.'); // Replace with toast
-        return;
     }
     
     setIsSaving(true);
     const userDocRef = doc(db, "users", user.uid);
-    const userData: UserDetails = {
+    const userData = {
       uid: user.uid,
       name: user.displayName || user.email?.split('@')[0] || 'New User',
       email: user.email,
@@ -106,9 +102,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     try {
-      // Use setDoc with merge to create or update the user document
       await setDoc(userDocRef, userData, { merge: true });
-      setUserDetails(userData); // Update local state immediately
+      setUserDetails(userData as UserDetails);
       setShowOnboarding(false);
     } catch (error) {
         console.error("Error saving user details: ", error);
@@ -123,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={value}>
         {children}
-        <Dialog open={showOnboarding} onOpenChange={(open) => !open && setShowOnboarding(false)}>
+        <Dialog open={showOnboarding}>
             <DialogContent onInteractOutside={(e) => e.preventDefault()} className="sm:max-w-md">
                  <DialogHeader>
                     <DialogTitle>One Last Step</DialogTitle>
@@ -145,7 +140,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     <div className="flex items-center space-x-2 pt-2">
                             <Checkbox id="onboarding-terms" checked={termsAccepted} onCheckedChange={(checked) => setTermsAccepted(checked as boolean)} />
                             <Label htmlFor="onboarding-terms" className="text-sm text-muted-foreground">
-                                I have read and agree to the Terms & Conditions.
+                                I agree to the{' '}
+                                <button
+                                    type="button"
+                                    onClick={() => setShowTermsDialog(true)}
+                                    className="text-primary hover:underline"
+                                >
+                                    Terms & Conditions
+                                </button>
                             </Label>
                     </div>
                 </div>
@@ -154,6 +156,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         {isSaving ? <Loader className="animate-spin mr-2"/> : null}
                         Save and Continue
                     </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog open={showTermsDialog} onOpenChange={setShowTermsDialog}>
+            <DialogContent className="sm:max-w-md">
+                 <DialogHeader>
+                    <DialogTitle>नियम एवं शर्तें (Terms & Conditions)</DialogTitle>
+                </DialogHeader>
+                <div className="prose prose-sm max-h-60 overflow-y-auto pr-4 text-sm text-muted-foreground">
+                    <p>इस ऐप का उपयोग करने से पहले कृपया निम्नलिखित शर्तों को ध्यान से पढ़ें:</p>
+                    <ul className="list-disc space-y-2">
+                        <li><strong>उपयोग की अनुमति:</strong> यह ऐप केवल शैक्षणिक उद्देश्यों के लिए है। उपयोगकर्ता इसका उपयोग सीखने और अभ्यास के लिए कर सकते हैं।</li>
+                        <li><strong>डेटा सुरक्षा:</strong> हम उपयोगकर्ता की गोपनीयता का सम्मान करते हैं। ऐप के सुचारू संचालन के लिए केवल आवश्यक तकनीकी डेटा का ही उपयोग किया जाता है।</li>
+                        <li><strong>सेवाओं का विस्तार और रखरखाव:</strong> भविष्य में ऐप की गुणवत्ता बनाए रखने, सर्वर के खर्चों और नई सुविधाओं (जैसे AI मोड, ऑफलाइन टेस्ट) को जोड़ने के लिए, ऐप में तृतीय-पक्ष सेवाओं (Third-party services) या प्रमोशनल कंटेंट का समावेश किया जा सकता है। यह उपयोगकर्ताओं के लिए ऐप को 'फ्री' रखने में सहायक होगा।</li>
+                        <li><strong>अस्वीकरण (Disclaimer):</strong> यह एक स्वतंत्र पहल है और इसका किसी भी सरकारी विभाग के साथ आधिकारिक वित्तीय संबंध नहीं है। यह ऐप केवल सहायता के उद्देश्य से है। यह किसी भी सरकारी विभाग का आधिकारिक ऐप नहीं है। इस ऐप का उपयोग पूरी तरह से स्वैच्छिक है।</li>
+                        <li><strong>सहमति:</strong> ऐप का उपयोग जारी रखकर, आप इन शर्तों से अपनी सहमति प्रदान करते हैं।</li>
+                    </ul>
+                </div>
+                <DialogFooter>
+                    <Button onClick={() => setShowTermsDialog(false)}>Close</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

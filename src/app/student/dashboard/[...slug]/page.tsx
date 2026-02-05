@@ -12,7 +12,7 @@ import LoadingOverlay from '@/components/loading-overlay';
 import { 
     FileText, Video, ImageIcon, BookOpen, ChevronRight, ExternalLink,
     School, Book, FlaskConical, Languages, Landmark, Calculator, Palette, Dna, Atom, 
-    Globe, Scroll, Milestone, Users, Drama, Leaf, Folder, X, Share2, Pencil
+    Globe, Scroll, Milestone, Users, Drama, Leaf, Folder, X, Share2, Pencil, Music
 } from 'lucide-react';
 import { syllabus } from '@/lib/syllabus';
 import { Button } from '@/components/ui/button';
@@ -88,6 +88,10 @@ const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: 
             return <ImageIcon {...resourceIconProps} />;
         case 'mind-map-json':
             return <Share2 {...resourceIconProps} />;
+        case 'translated-chapter':
+            return <Languages {...resourceIconProps} />;
+        case 'song':
+            return <Music {...resourceIconProps} />;
         default:
             return <BookOpen {...resourceIconProps} />;
     }
@@ -233,10 +237,10 @@ setDescription('Select a chapter to start learning.');
         let isGoogleDriveEmbed = false;
         let mindMapData: MindMapNodeType | null = null;
 
-        if (type === 'video') {
+        if (type === 'video' || type === 'song') {
             embedUrl = getYoutubeEmbedUrl(url);
             isDirectEmbeddable = !!embedUrl;
-        } else if (['infographic', 'mind-map', 'lesson-plan-image', 'pdf-note', 'lesson-plan-pdf'].includes(type) && url.includes('drive.google.com')) {
+        } else if (['infographic', 'mind-map', 'lesson-plan-image', 'pdf-note', 'lesson-plan-pdf', 'translated-chapter'].includes(type) && url.includes('drive.google.com')) {
             embedUrl = getGoogleDriveEmbedUrl(url);
             isDirectEmbeddable = true;
             isGoogleDriveEmbed = true;
@@ -326,6 +330,12 @@ setDescription('Select a chapter to start learning.');
     const getResourceTypeLabel = (type: string) => {
         if (type === 'mind-map-json') {
             return 'Mind Map';
+        }
+        if (type === 'translated-chapter') {
+            return 'Translated Chapter';
+        }
+        if (type === 'song') {
+            return 'Song';
         }
         return type.replace(/-/g, ' ');
     };

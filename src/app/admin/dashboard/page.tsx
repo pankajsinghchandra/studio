@@ -281,6 +281,8 @@ export default function AdminDashboard() {
                             <SelectItem value="mind-map">Mind Map (Image)</SelectItem>
                             <SelectItem value="mind-map-json">Mind Map (JSON)</SelectItem>
                             <SelectItem value="pdf-note">PDF Note</SelectItem>
+                            <SelectItem value="translated-chapter">Translated Chapter (PDF)</SelectItem>
+                            <SelectItem value="song">Song</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>

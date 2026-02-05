@@ -66,4 +66,12 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Fix for nested list indentation in markdown */
+  .prose ul ul,
+  .prose ul ol,
+  .prose ol ul,
+  .prose ol ol {
+    @apply pl-4;
+  }
 }

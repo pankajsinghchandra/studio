@@ -136,7 +136,7 @@ export default function Header() {
                 <DropdownMenuSeparator />
                 {isAdmin && (
                   <>
-                    <DropdownMenuItem onClick={() => router.push('/admin/dashboard')}>
+                    <DropdownMenuItem onClick={() => router.push('/admin')}>
                       <Shield className="mr-2 h-4 w-4" />
                       <span>Admin Dashboard</span>
                     </DropdownMenuItem>

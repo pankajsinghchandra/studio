@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@
 import MindMap from '@/components/mind-map';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 
 export default function AdminDashboard() {
   const { user, loading, userDetails } = useAuth();
@@ -200,7 +201,7 @@ export default function AdminDashboard() {
     if (type === 'lesson-plan-text') {
          return (
             <div className="w-full h-full prose prose-sm max-w-none p-6 text-foreground bg-background rounded-lg overflow-y-auto">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{url}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{url}</ReactMarkdown>
             </div>
         )
     }

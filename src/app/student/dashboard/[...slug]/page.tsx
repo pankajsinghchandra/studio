@@ -391,14 +391,6 @@ setDescription('Select a chapter to start learning.');
                     <header className="p-2 bg-card/80 backdrop-blur-sm flex-row justify-between items-center z-10 shrink-0 border-b flex">
                         <h2 className="text-foreground text-lg truncate px-2 font-semibold">{selectedResource.title}</h2>
                         <div className="flex items-center gap-2">
-                             {isAdmin && isTextBased(selectedResource.type) && (
-                                <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground" asChild>
-                                    <Link href={`/admin/edit-content/${selectedResource.id}`}>
-                                        <Pencil className="w-5 h-5" />
-                                        <span className="sr-only">Edit</span>
-                                    </Link>
-                                </Button>
-                            )}
                             {selectedResource.url && !['lesson-plan-text', 'mind-map-json'].includes(selectedResource.type) && (
                                 <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground" asChild>
                                     <a href={selectedResource.url} target="_blank" rel="noopener noreferrer">

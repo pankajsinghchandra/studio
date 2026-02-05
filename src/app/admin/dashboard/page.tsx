@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import Link from 'next/link';
-import { PlusCircle, Trash2, LayoutGrid, List, Eye, Download, Loader, X, ArrowLeft, ArrowDownUp } from 'lucide-react';
+import { PlusCircle, Trash2, LayoutGrid, List, Eye, Download, Loader, X, ArrowLeft, ArrowDownUp, Pencil } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import LoadingOverlay from '@/components/loading-overlay';
@@ -20,7 +20,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import MindMap from '@/components/mind-map';
-
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export default function AdminDashboard() {
   const { user, loading, userDetails } = useAuth();
@@ -199,7 +200,7 @@ export default function AdminDashboard() {
     if (type === 'lesson-plan-text') {
          return (
             <div className="w-full h-full prose prose-sm max-w-none p-6 text-foreground bg-background rounded-lg overflow-y-auto">
-                <div dangerouslySetInnerHTML={{ __html: url.replace(/\n/g, '<br />') }} />
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{url}</ReactMarkdown>
             </div>
         )
     }
@@ -311,20 +312,27 @@ export default function AdminDashboard() {
                     <CardDescription>{resource.type} - Class {resource.class}, {resource.subject}, Chapter {resource.chapter}</CardDescription>
                   </CardHeader>
                   <CardContent className="flex-grow">
-                     {!isTextBased(resource.type) ? (
-                        <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
-                          View Resource
-                        </a>
-                      ) : (
-                         <div className="flex items-center gap-2">
-                             <Button variant="default" size="sm" onClick={() => setSelectedResource(resource)}>
-                                <Eye className="mr-2 h-4 w-4" /> View
-                            </Button>
-                            <Button variant="default" size="sm" onClick={() => handleDownload(resource)}>
-                                <Download className="mr-2 h-4 w-4" /> Download
-                            </Button>
-                         </div>
-                      )}
+                     <div className="flex items-center gap-2">
+                        {!isTextBased(resource.type) ? (
+                            <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                                <Button variant="default" size="sm"><Eye className="mr-2 h-4 w-4" /> View Resource</Button>
+                            </a>
+                        ) : (
+                            <>
+                                <Button variant="default" size="sm" onClick={() => setSelectedResource(resource)}>
+                                    <Eye className="mr-2 h-4 w-4" /> View
+                                </Button>
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link href={`/admin/edit-content/${resource.id}`}>
+                                        <Pencil className="mr-2 h-4 w-4" /> Edit
+                                    </Link>
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => handleDownload(resource)}>
+                                    <Download className="mr-2 h-4 w-4" /> Download
+                                </Button>
+                            </>
+                        )}
+                     </div>
                   </CardContent>
                   <CardFooter>
                     <AlertDialog>
@@ -377,8 +385,9 @@ export default function AdminDashboard() {
                                 <div className="flex items-center justify-end gap-2">
                                      {isTextBased(resource.type) ? (
                                         <>
-                                            <Button variant="default" size="sm" onClick={() => setSelectedResource(resource)}>View</Button>
-                                            <Button variant="default" size="sm" onClick={() => handleDownload(resource)}>Download</Button>
+                                            <Button variant="ghost" size="sm" onClick={() => setSelectedResource(resource)}>View</Button>
+                                            <Button variant="ghost" size="sm" asChild><Link href={`/admin/edit-content/${resource.id}`}>Edit</Link></Button>
+                                            <Button variant="ghost" size="sm" onClick={() => handleDownload(resource)}>Download</Button>
                                         </>
                                       ) : (
                                         <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '@/app/providers';
@@ -11,11 +12,13 @@ import LoadingOverlay from '@/components/loading-overlay';
 import { 
     FileText, Video, ImageIcon, BookOpen, ChevronRight, ExternalLink,
     School, Book, FlaskConical, Languages, Landmark, Calculator, Palette, Dna, Atom, 
-    Globe, Scroll, Milestone, Users, Drama, Leaf, Folder, X, Share2
+    Globe, Scroll, Milestone, Users, Drama, Leaf, Folder, X, Share2, Pencil
 } from 'lucide-react';
 import { syllabus } from '@/lib/syllabus';
 import { Button } from '@/components/ui/button';
 import MindMap, { type MindMapNode as MindMapNodeType } from '@/components/mind-map';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const subjectIcons: { [key: string]: React.ElementType } = {
     'mathematics': Calculator,
@@ -220,6 +223,9 @@ setDescription('Select a chapter to start learning.');
         return <LoadingOverlay isLoading={true} />;
     }
 
+    const isAdmin = userDetails?.email === 'quizpankaj@gmail.com';
+    const isTextBased = (type: string) => type === 'lesson-plan-text' || type === 'mind-map-json';
+
     const renderDialogContent = () => {
         if (!selectedResource) return null;
 
@@ -260,7 +266,9 @@ setDescription('Select a chapter to start learning.');
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
                             <span className="text-7xl font-bold text-muted-foreground/10 rotate-[-30deg]">Vidyalaya Notes</span>
                         </div>
-                        <div className="relative z-10" dangerouslySetInnerHTML={{ __html: url.replace(/\n/g, '<br />') }} />
+                        <div className="relative z-10">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{url}</ReactMarkdown>
+                        </div>
                     </div>
                 )
             }
@@ -383,6 +391,14 @@ setDescription('Select a chapter to start learning.');
                     <header className="p-2 bg-card/80 backdrop-blur-sm flex-row justify-between items-center z-10 shrink-0 border-b flex">
                         <h2 className="text-foreground text-lg truncate px-2 font-semibold">{selectedResource.title}</h2>
                         <div className="flex items-center gap-2">
+                             {isAdmin && isTextBased(selectedResource.type) && (
+                                <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground" asChild>
+                                    <Link href={`/admin/edit-content/${selectedResource.id}`}>
+                                        <Pencil className="w-5 h-5" />
+                                        <span className="sr-only">Edit</span>
+                                    </Link>
+                                </Button>
+                            )}
                             {selectedResource.url && !['lesson-plan-text', 'mind-map-json'].includes(selectedResource.type) && (
                                 <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground" asChild>
                                     <a href={selectedResource.url} target="_blank" rel="noopener noreferrer">

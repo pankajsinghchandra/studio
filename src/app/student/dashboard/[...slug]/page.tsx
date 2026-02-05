@@ -260,12 +260,14 @@ setDescription('Select a chapter to start learning.');
             }
             if (type === 'lesson-plan-text') {
                  return (
-                    <div className="w-full h-full prose prose-sm max-w-none p-6 text-foreground bg-background rounded-lg overflow-y-auto relative">
+                    <div className="w-full h-full bg-background rounded-b-lg relative">
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
                             <span className="text-7xl font-bold text-muted-foreground/10 rotate-[-30deg]">Vidyalaya Notes</span>
                         </div>
-                        <div className="relative z-10">
-                            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{url}</ReactMarkdown>
+                        <div className="relative z-10 w-full h-full overflow-y-auto p-6">
+                            <div className="prose prose-sm max-w-none text-foreground">
+                                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{url}</ReactMarkdown>
+                            </div>
                         </div>
                     </div>
                 )

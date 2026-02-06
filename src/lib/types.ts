@@ -36,3 +36,15 @@ export interface Resource {
   chapter: string;
   authorId: string;
 }
+
+export interface UserActivity {
+  id: string;
+  userId: string;
+  userEmail: string;
+  resourceId: string;
+  resourceTitle: string;
+  resourceClass: string;
+  resourceSubject: string;
+  resourceChapter: string;
+  timestamp: any; // Firestore timestamp object
+}

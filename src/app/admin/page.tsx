@@ -4,7 +4,7 @@ import { useAuth } from '@/app/providers';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { FilePlus, Edit } from 'lucide-react';
+import { FilePlus, Edit, History } from 'lucide-react';
 import Link from 'next/link';
 import LoadingOverlay from '@/components/loading-overlay';
 
@@ -31,7 +31,7 @@ export default function AdminPage() {
         <p className="text-lg text-muted-foreground">Manage your application content from here.</p>
       </header>
 
-      <main className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+      <main className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
         <Link href="/admin/dashboard">
           <Card className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95 group">
             <CardHeader className="flex flex-col items-center justify-center text-center p-8">
@@ -54,9 +54,18 @@ export default function AdminPage() {
             </CardHeader>
           </Card>
         </Link>
+         <Link href="/admin/user-activity">
+          <Card className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95 group">
+            <CardHeader className="flex flex-col items-center justify-center text-center p-8">
+              <div className="p-4 bg-primary/10 rounded-full mb-4 border-2 border-primary/30 group-hover:bg-primary/20 transition-colors">
+                <History className="w-10 h-10 text-primary" />
+              </div>
+              <CardTitle className="font-headline text-2xl text-foreground">User Activity</CardTitle>
+              <CardDescription>Track and analyze user engagement with content.</CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
       </main>
     </div>
   );
 }
-
-    

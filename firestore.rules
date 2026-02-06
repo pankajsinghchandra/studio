@@ -21,6 +21,19 @@ service cloud.firestore {
       allow read, update: if request.auth != null && request.auth.uid == userId;
       allow delete: if false; // Generally, users shouldn't delete their own accounts from the client.
     }
+    
+    /**
+     * @description Controls access to the 'user-activity' collection.
+     * @allow Any authenticated user can log their own activity.
+     * @allow Admin users can read all activity logs for analysis.
+     * @allow Updates and deletions are disallowed to maintain data integrity.
+     */
+    match /user-activity/{activityId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null && request.auth.token.email == 'quizpankaj@gmail.com';
+      allow update, delete: if false;
+    }
+
 
     /**
      * @description Controls access to the 'resources' collection.
@@ -74,5 +87,3 @@ service cloud.firestore {
     }
   }
 }
-
-    

@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { useAuth } from '@/app/providers';
 import type { Resource } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -221,6 +221,20 @@ setDescription('Select a chapter to start learning.');
 
 
     const handleResourceClick = (resource: Resource) => {
+        if (user && userDetails) {
+            addDoc(collection(db, 'user-activity'), {
+                userId: user.uid,
+                userEmail: userDetails.email,
+                resourceId: resource.id,
+                resourceTitle: resource.title,
+                resourceClass: resource.class,
+                resourceSubject: resource.subject,
+                resourceChapter: resource.chapter,
+                timestamp: new Date(),
+            }).catch(error => {
+                console.error("Error logging activity: ", error);
+            });
+        }
         setSelectedResource(resource);
     };
     
@@ -268,7 +282,7 @@ setDescription('Select a chapter to start learning.');
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
                             <span className="text-7xl font-bold text-muted-foreground/10 rotate-[-30deg]">Vidyalaya Notes</span>
                         </div>
-                        <div className="relative z-10 w-full h-full overflow-y-auto p-6">
+                         <div className="relative z-10 w-full h-full overflow-y-auto p-6">
                             <div className="prose prose-sm max-w-none text-foreground">
                                 <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{url}</ReactMarkdown>
                             </div>
@@ -376,7 +390,6 @@ setDescription('Select a chapter to start learning.');
                 {pageType === 'chapter' && (
                     <>
                         {resources
-                         .filter(resource => !(userDetails?.role === 'student' && (resource.type === 'lesson-plan-pdf' || resource.type === 'lesson-plan-image' || resource.type === 'lesson-plan-text')))
                          .map((resource, index) => (
                             <Card key={resource.id} className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95 group" onClick={() => handleResourceClick(resource)}>
                                 <CardHeader className="p-4">
@@ -397,7 +410,7 @@ setDescription('Select a chapter to start learning.');
             </div>
             
              {selectedResource && (
-                <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col animate-in fade-in-0">
+                 <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col animate-in fade-in-0">
                     <header className="p-2 bg-card/80 backdrop-blur-sm flex-row justify-between items-center z-10 shrink-0 border-b flex">
                         <h2 className="text-foreground text-lg truncate px-2 font-semibold">{selectedResource.title}</h2>
                         <div className="flex items-center gap-2">

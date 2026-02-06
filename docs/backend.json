@@ -105,6 +105,22 @@
         "type",
         "url"
       ]
+    },
+    "UserActivity": {
+      "title": "User Activity",
+      "description": "Records a user viewing a resource.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The ID of the user." },
+        "userEmail": { "type": "string", "description": "The email of the user." },
+        "resourceId": { "type": "string", "description": "The ID of the viewed resource." },
+        "resourceTitle": { "type": "string", "description": "The title of the viewed resource." },
+        "resourceClass": { "type": "string", "description": "The class of the viewed resource." },
+        "resourceSubject": { "type": "string", "description": "The subject of the viewed resource." },
+        "resourceChapter": { "type": "string", "description": "The chapter of the viewed resource." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "The time of the activity." }
+      },
+      "required": ["userId", "userEmail", "resourceId", "resourceTitle", "timestamp"]
     }
   },
   "auth": {
@@ -196,8 +212,18 @@
               },
               "description": "Flat collection of all resources for easier querying by admin."
           }
+      },
+      {
+        "path": "/user-activity",
+        "definition": {
+          "entityName": "UserActivity",
+          "schema": {
+            "$ref": "#/backend/entities/UserActivity"
+          },
+          "description": "Logs user interactions with content resources."
+        }
       }
     ],
-    "reasoning": "The structure is mostly hierarchical to represent the educational content. A flat '/resources' collection is added for administrative purposes, allowing easy querying and management of all content without traversing the nested structure."
+    "reasoning": "The structure is mostly hierarchical to represent the educational content. A flat '/resources' collection is added for administrative purposes, allowing easy querying and management of all content without traversing the nested structure. A new '/user-activity' collection is added to log all user interactions with resources for analytics."
   }
 }

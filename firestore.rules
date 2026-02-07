@@ -15,11 +15,14 @@ service cloud.firestore {
      * @description Controls access to user profile documents.
      * @allow Any user can create their own user document.
      * @allow A logged-in user can read or update their own document.
+     * @allow Admin can read and update any user document.
      */
     match /users/{userId} {
       allow create: if true;
-      allow read, update: if request.auth != null && request.auth.uid == userId;
-      allow delete: if false; // Generally, users shouldn't delete their own accounts from the client.
+      allow get: if request.auth != null && (request.auth.uid == userId || request.auth.token.email == 'quizpankaj@gmail.com');
+      allow list: if request.auth != null && request.auth.token.email == 'quizpankaj@gmail.com';
+      allow update: if request.auth != null && (request.auth.uid == userId || request.auth.token.email == 'quizpankaj@gmail.com');
+      allow delete: if false;
     }
     
     /**

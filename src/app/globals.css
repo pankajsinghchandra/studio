@@ -66,11 +66,4 @@
   body {
     @apply bg-background text-foreground;
   }
-  
-  .prose ul ul,
-  .prose ol ol,
-  .prose ul ol,
-  .prose ol ul {
-    @apply my-2 ml-6;
-  }
 }

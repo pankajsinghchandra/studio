@@ -40,6 +40,7 @@ export interface Resource {
 export interface UserActivity {
   id: string;
   userId: string;
+  userName: string;
   userEmail: string;
   resourceId: string;
   resourceTitle: string;

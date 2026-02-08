@@ -22,7 +22,7 @@ service cloud.firestore {
       // A user can get their own document.
       allow get: if request.auth != null && request.auth.uid == userId;
       // An admin can get any user's document and list all users.
-      allow list, get: if request.auth != null && request.auth.token.email == 'quizpankaj@gmail.com';
+      allow list: if request.auth != null && request.auth.token.email == 'quizpankaj@gmail.com';
       allow update: if request.auth != null && (request.auth.uid == userId || request.auth.token.email == 'quizpankaj@gmail.com');
       allow delete: if false;
     }
@@ -34,7 +34,7 @@ service cloud.firestore {
      * @allow Updates and deletions are disallowed to maintain data integrity.
      */
     match /user-activity/{activityId} {
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null;
       // Admin can read and list all activities. Using explicit get/list.
       allow get, list: if request.auth != null && request.auth.token.email == 'quizpankaj@gmail.com';
       allow update, delete: if false;

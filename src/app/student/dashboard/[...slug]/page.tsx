@@ -224,6 +224,7 @@ setDescription('Select a chapter to start learning.');
         if (user && userDetails) {
             addDoc(collection(db, 'user-activity'), {
                 userId: user.uid,
+                userName: userDetails.name,
                 userEmail: userDetails.email,
                 resourceId: resource.id,
                 resourceTitle: resource.title,

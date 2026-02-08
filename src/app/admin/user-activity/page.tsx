@@ -21,6 +21,7 @@ const PAGE_SIZE = 25;
 interface UserForFilter {
     uid: string;
     email: string | null;
+    name: string | null;
 }
 
 export default function UserActivityPage() {
@@ -52,7 +53,11 @@ export default function UserActivityPage() {
 
     const fetchUsers = async () => {
         const usersSnapshot = await getDocs(collection(db, 'users'));
-        const usersList = usersSnapshot.docs.map(doc => ({ uid: doc.id, email: doc.data().email as string | null }));
+        const usersList = usersSnapshot.docs.map(doc => ({ 
+            uid: doc.id, 
+            email: doc.data().email as string | null,
+            name: doc.data().name as string | null 
+        }));
         setUsers(usersList);
     };
 
@@ -154,7 +159,7 @@ export default function UserActivityPage() {
                             <SelectContent>
                                 <SelectItem value="all">All Users</SelectItem>
                                 {users.map(u => (
-                                    <SelectItem key={u.uid} value={u.uid}>{u.email}</SelectItem>
+                                    <SelectItem key={u.uid} value={u.uid}>{u.name || u.email}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
@@ -179,7 +184,7 @@ export default function UserActivityPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>User Email</TableHead>
+                            <TableHead>User</TableHead>
                             <TableHead>Resource Title</TableHead>
                             <TableHead>Context (Class/Subject/Chapter)</TableHead>
                             <TableHead className="text-right">Timestamp</TableHead>
@@ -205,7 +210,10 @@ export default function UserActivityPage() {
                         )}
                         {!isLoading && activities.map(activity => (
                             <TableRow key={activity.id}>
-                                <TableCell className="font-medium">{activity.userEmail}</TableCell>
+                                <TableCell>
+                                    <div className="font-medium">{activity.userName}</div>
+                                    <div className="text-sm text-muted-foreground">{activity.userEmail}</div>
+                                </TableCell>
                                 <TableCell>{activity.resourceTitle}</TableCell>
                                 <TableCell className="text-sm text-muted-foreground">
                                     {`Cl ${activity.resourceClass} > ${activity.resourceSubject} > ${activity.resourceChapter}`}

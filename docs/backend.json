@@ -112,6 +112,7 @@
       "type": "object",
       "properties": {
         "userId": { "type": "string", "description": "The ID of the user." },
+        "userName": { "type": "string", "description": "The name of the user." },
         "userEmail": { "type": "string", "description": "The email of the user." },
         "resourceId": { "type": "string", "description": "The ID of the viewed resource." },
         "resourceTitle": { "type": "string", "description": "The title of the viewed resource." },
@@ -120,7 +121,7 @@
         "resourceChapter": { "type": "string", "description": "The chapter of the viewed resource." },
         "timestamp": { "type": "string", "format": "date-time", "description": "The time of the activity." }
       },
-      "required": ["userId", "userEmail", "resourceId", "resourceTitle", "timestamp"]
+      "required": ["userId", "userEmail", "userName", "resourceId", "resourceTitle", "timestamp"]
     }
   },
   "auth": {

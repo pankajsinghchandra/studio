@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/providers';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy, where, limit, startAfter, DocumentData, DocumentSnapshot } from 'firebase/firestore';
 import { UserActivity } from '@/lib/types';
 import LoadingOverlay from '@/components/loading-overlay';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -37,7 +37,7 @@ export default function UserActivityPage() {
     const [selectedTime, setSelectedTime] = useState('all');
 
     // Pagination states
-    const [lastDoc, setLastDoc] = useState<DocumentSnapshot<DocumentData> | null>(null);
+    const [lastVisible, setLastVisible] = useState<DocumentSnapshot<DocumentData> | null>(null);
     const [isLastPage, setIsLastPage] = useState(false);
     const [page, setPage] = useState(1);
     
@@ -52,102 +52,92 @@ export default function UserActivityPage() {
     }, [user, userDetails, authLoading, router]);
 
     const fetchUsers = async () => {
-        const usersSnapshot = await getDocs(collection(db, 'users'));
-        const usersList = usersSnapshot.docs.map(doc => ({ 
-            uid: doc.id, 
-            email: doc.data().email as string | null,
-            name: doc.data().name as string | null 
-        }));
-        setUsers(usersList);
+        try {
+            const usersSnapshot = await getDocs(collection(db, 'users'));
+            const usersList = usersSnapshot.docs.map(doc => ({ 
+                uid: doc.id, 
+                email: doc.data().email as string | null,
+                name: doc.data().name as string | null 
+            }));
+            setUsers(usersList);
+        } catch (error) {
+            console.error("Error fetching users:", error);
+        }
     };
 
-    const fetchActivities = useCallback(async (nextPage = false) => {
-        setIsLoading(true);
-        setActivities([]);
-
-        try {
-            const activityCollection = collection(db, 'user-activity');
-            let queryConstraints = [];
-
-            // IMPORTANT: To avoid requiring a composite index, we change the query logic.
-            // 1. If a specific user is selected, we CANNOT sort by `timestamp` without an index.
-            //    The results will be ordered by document ID by default.
-            // 2. If 'All Users' is selected, we CAN sort by `timestamp`.
-
-            if (selectedUser !== 'all') {
-                queryConstraints.push(where('userId', '==', selectedUser));
-            } else {
-                queryConstraints.push(orderBy('timestamp', 'desc'));
-            }
-
-            if (selectedTime !== 'all') {
-                const now = new Date();
-                let startDate: Date;
-                if (selectedTime === 'weekly') {
-                    startDate = new Date(now.setDate(now.getDate() - 7));
-                } else { // monthly
-                    startDate = new Date(now.setMonth(now.getMonth() - 1));
-                }
-                queryConstraints.push(where('timestamp', '>=', startDate));
-                
-                // If filtering by time, we must also sort by time for the query to be valid.
-                // If also filtering by user, this will require a composite index, which is what we are avoiding.
-                // This is a known Firestore limitation. The current code prioritizes avoiding the error.
-                if (selectedUser !== 'all' && !queryConstraints.some(c => c.type === 'orderBy')) {
-                    // This query will likely fail without an index. The previous logic is safer. Let's revert to a simpler model.
-                    // For this fix, we will only apply sorting when NO specific user is selected.
-                }
-            }
-
-            let q = query(activityCollection, ...queryConstraints);
-            
-            // Apply pagination
-            if (nextPage && lastDoc) {
-                q = query(q, startAfter(lastDoc));
-            }
-
-            const finalQuery = query(q, limit(PAGE_SIZE));
-            const docSnapshots = await getDocs(finalQuery);
-
-            const fetchedActivities = docSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserActivity));
-
-            setActivities(fetchedActivities);
-
-            // Update pagination state
-            setLastDoc(docSnapshots.docs[docSnapshots.docs.length - 1] || null);
-            setIsLastPage(docSnapshots.docs.length < PAGE_SIZE);
-
-        } catch (error) {
-            console.error("Error fetching user activities:", error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [selectedUser, selectedTime, lastDoc]);
-
-
-    // Effect to refetch data when filters change
+    // This effect will run whenever filters change or pagination state changes
     useEffect(() => {
-        // Reset pagination and fetch
-        setLastDoc(null);
+        const fetchActivities = async () => {
+            setIsLoading(true);
+            try {
+                let q = query(collection(db, "user-activity"));
+
+                // Apply filters
+                if (selectedUser !== 'all') {
+                    q = query(q, where('userId', '==', selectedUser));
+                }
+                if (selectedTime !== 'all') {
+                    const now = new Date();
+                    let startDate;
+                    if (selectedTime === 'weekly') {
+                        startDate = new Date(new Date().setDate(now.getDate() - 7));
+                    } else { // monthly
+                        startDate = new Date(new Date().setMonth(now.getMonth() - 1));
+                    }
+                    q = query(q, where('timestamp', '>=', startDate));
+                }
+                
+                // Apply sorting ONLY if not filtering by a specific user to avoid composite index.
+                if (selectedUser === 'all') {
+                    q = query(q, orderBy('timestamp', 'desc'));
+                }
+
+                // Apply pagination
+                if (page > 1 && lastVisible) {
+                    q = query(q, startAfter(lastVisible));
+                }
+                
+                q = query(q, limit(PAGE_SIZE));
+
+                const docSnapshots = await getDocs(q);
+                const fetchedActivities = docSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserActivity));
+                
+                setActivities(fetchedActivities);
+                setLastVisible(docSnapshots.docs[docSnapshots.docs.length - 1] || null);
+                setIsLastPage(docSnapshots.docs.length < PAGE_SIZE);
+
+            } catch (error) {
+                console.error("Error fetching user activities:", error);
+                setActivities([]); // Clear on error
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        
+        if(user && userDetails?.email === 'quizpankaj@gmail.com') {
+            fetchActivities();
+        }
+
+    }, [selectedUser, selectedTime, page, user, userDetails, lastVisible]);
+
+    // This effect resets pagination when filters change.
+    useEffect(() => {
         setPage(1);
-        setIsLastPage(false);
-        fetchActivities(false);
+        setLastVisible(null);
     }, [selectedUser, selectedTime]);
-    
+
     const handleNextPage = () => {
         if (!isLastPage) {
             setPage(p => p + 1);
-            fetchActivities(true);
         }
     }
 
-    // Since we don't have a reliable 'previous' query in Firestore without complex logic,
-    // we'll just reset to the first page.
     const handlePrevPage = () => {
-         // A simple way to go "back" is to just re-run the initial query for the current filters
-        setLastDoc(null);
-        setPage(1);
-        fetchActivities(false);
+        // A simple way to go "back" is to just re-run the initial query for the current filters on page 1
+        if (page > 1) {
+            setPage(1);
+            setLastVisible(null);
+        }
     }
 
     if (authLoading || !user) {
@@ -224,7 +214,7 @@ export default function UserActivityPage() {
                         {!isLoading && activities.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                                    No activities found for the selected filters.
+                                    No activities found. Once users view content, their activity will appear here.
                                 </TableCell>
                             </TableRow>
                         )}

@@ -96,15 +96,23 @@ export default function EditContentPage() {
 
                     const isText = data.type === 'lesson-plan-text';
                     const isJson = data.type === 'mind-map-json';
+                    const content = data.url || '';
 
                     if (isText) {
-                        setHtmlContent(data.url);
+                        // If content has no HTML tags, it's likely old plain text. Convert it.
+                        if (content && !/<[a-z][\s\S]*>/i.test(content)) {
+                            const html = content
+                                .split('\n')
+                                .map((line: string) => line.trim() === '' ? '<p><br></p>' : `<p>${line}</p>`)
+                                .join('');
+                            setHtmlContent(html);
+                        } else {
+                            setHtmlContent(content);
+                        }
                     } else if (isJson) {
-                        // For editing JSON, we'll still use a textarea-like experience, so we put it in htmlContent for now
-                        // but it will be rendered in a textarea.
-                        setHtmlContent(data.url)
+                        setHtmlContent(content)
                     } else {
-                        setResourceUrl(data.url);
+                        setResourceUrl(content);
                     }
                 } else {
                     toast({ variant: 'destructive', title: 'Error', description: 'Resource not found.' });

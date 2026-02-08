@@ -4,14 +4,20 @@ import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TextStyle from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
+import Table from '@tiptap/extension-table';
+import TableRow from '@tiptap/extension-table-row';
+import TableCell from '@tiptap/extension-table-cell';
+import TableHeader from '@tiptap/extension-table-header';
 import { 
-    Bold, Italic, Strikethrough, Code, List, ListOrdered, 
-    Quote, Redo, Undo, Palette, Pilcrow, Heading1, Heading2, Heading3
+    Bold, Italic, Strikethrough, List, ListOrdered, 
+    Quote, Redo, Undo, Palette, Heading1, Heading2, Heading3,
+    Indent, Outdent, Table as TableIcon, Trash, Minus, CaseUpper
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Toggle } from '@/components/ui/toggle';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Separator } from './ui/separator';
 
 const colors = [
   '#000000', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#9ca3af',
@@ -46,6 +52,9 @@ const Toolbar = ({ editor }: { editor: Editor | null }) => {
       >
         <Strikethrough className="h-4 w-4" />
       </Toggle>
+      
+      <Separator orientation='vertical' className='h-6 mx-1' />
+
       <Toggle
         size="sm"
         pressed={editor.isActive('heading', { level: 1 })}
@@ -88,6 +97,36 @@ const Toolbar = ({ editor }: { editor: Editor | null }) => {
       >
         <Quote className="h-4 w-4" />
       </Toggle>
+
+      <Separator orientation='vertical' className='h-6 mx-1' />
+
+      <Button size="sm" variant="ghost" onClick={() => editor.chain().focus().sinkListItem('listItem').run()} disabled={!editor.can().sinkListItem('listItem')}>
+          <Indent className="h-4 w-4" />
+      </Button>
+      <Button size="sm" variant="ghost" onClick={() => editor.chain().focus().liftListItem('listItem').run()} disabled={!editor.can().liftListItem('listItem')}>
+          <Outdent className="h-4 w-4" />
+      </Button>
+
+      <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="ghost">
+                <TableIcon className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-2">
+            <div className="grid grid-cols-2 gap-1">
+                <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>Insert Table</Button>
+                <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().deleteTable().run()} disabled={!editor.can().deleteTable()}>Delete Table</Button>
+                <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().addColumnBefore().run()} disabled={!editor.can().addColumnBefore()}>Add Col Before</Button>
+                <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().addColumnAfter().run()} disabled={!editor.can().addColumnAfter()}>Add Col After</Button>
+                <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().deleteColumn().run()} disabled={!editor.can().deleteColumn()}>Delete Col</Button>
+                <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().addRowBefore().run()} disabled={!editor.can().addRowBefore()}>Add Row Before</Button>
+                <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().addRowAfter().run()} disabled={!editor.can().addRowAfter()}>Add Row After</Button>
+                <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().deleteRow().run()} disabled={!editor.can().deleteRow()}>Delete Row</Button>
+            </div>
+          </PopoverContent>
+      </Popover>
+
       <Popover>
           <PopoverTrigger asChild>
             <Button size="sm" variant="ghost">
@@ -110,6 +149,8 @@ const Toolbar = ({ editor }: { editor: Editor | null }) => {
             </div>
           </PopoverContent>
       </Popover>
+
+      <Separator orientation='vertical' className='h-6 mx-1' />
 
       <Button size="sm" variant="ghost" onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()}>
           <Undo className="h-4 w-4" />
@@ -141,6 +182,12 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
       }),
       TextStyle,
       Color,
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content: content,
     onUpdate: ({ editor }) => {

@@ -17,6 +17,7 @@ import { syllabus } from '@/lib/syllabus';
 import { Textarea } from '@/components/ui/textarea';
 import { UploadCloud, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import RichTextEditor from '@/components/rich-text-editor';
 
 const isValidUrl = (url: string): boolean => {
     if (!url) return false;
@@ -51,7 +52,7 @@ export default function ManageContentPage() {
   const [chapter, setChapter] = useState('');
   const [type, setType] = useState('');
   const [resourceUrl, setResourceUrl] = useState('');
-  const [textContent, setTextContent] = useState('');
+  const [htmlContent, setHtmlContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [jsonError, setJsonError] = useState('');
 
@@ -69,7 +70,7 @@ export default function ManageContentPage() {
 
   useEffect(() => {
     if (type === 'mind-map-json') {
-      if (!isValidJson(textContent)) {
+      if (!isValidJson(htmlContent)) {
         setJsonError('The content is not valid JSON. Please check the format.');
       } else {
         setJsonError('');
@@ -77,7 +78,7 @@ export default function ManageContentPage() {
     } else {
       setJsonError('');
     }
-  }, [textContent, type]);
+  }, [htmlContent, type]);
 
 
   useEffect(() => {
@@ -101,7 +102,7 @@ export default function ManageContentPage() {
       const reader = new FileReader();
       reader.onload = (e) => {
         const content = e.target?.result as string;
-        setTextContent(content);
+        setHtmlContent(content);
         if (isValidJson(content)) {
           toast({
             title: 'File Uploaded',
@@ -150,7 +151,7 @@ export default function ManageContentPage() {
         return;
     }
 
-    if ((isTextPlan || isMindMap) && !textContent.trim()) {
+    if ((isTextPlan || isMindMap) && !htmlContent.trim()) {
         toast({
             variant: 'destructive',
             title: 'Missing Content',
@@ -159,7 +160,7 @@ export default function ManageContentPage() {
         return;
     }
 
-    if (isMindMap && !isValidJson(textContent)) {
+    if (isMindMap && !isValidJson(htmlContent)) {
         toast({
             variant: 'destructive',
             title: 'Invalid JSON',
@@ -177,7 +178,7 @@ export default function ManageContentPage() {
         subject,
         chapter,
         type,
-        url: isUrlPlan ? resourceUrl : textContent,
+        url: isUrlPlan ? resourceUrl : htmlContent,
         authorId: user.uid,
         createdAt: new Date(),
       });
@@ -200,7 +201,8 @@ export default function ManageContentPage() {
     }
   };
 
-  const isTextOrJsonContent = type === 'lesson-plan-text' || type === 'mind-map-json';
+  const isTextContent = type === 'lesson-plan-text';
+  const isJsonContent = type === 'mind-map-json';
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -216,7 +218,7 @@ export default function ManageContentPage() {
           </Link>
         </Button>
       </header>
-      <Card className="w-full max-w-2xl mx-auto">
+      <Card className="w-full max-w-4xl mx-auto">
         <form onSubmit={handleSubmit}>
           <CardHeader>
             <CardTitle className="text-2xl font-headline">New Resource</CardTitle>
@@ -279,32 +281,35 @@ export default function ManageContentPage() {
               </Select>
             </div>
             
-            {isTextOrJsonContent ? (
+            {isTextContent ? (
+                 <div className="space-y-2">
+                    <Label>Lesson Content</Label>
+                    <RichTextEditor content={htmlContent} onChange={setHtmlContent} />
+                </div>
+            ) : isJsonContent ? (
                 <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                        <Label htmlFor="textContent">{type === 'mind-map-json' ? 'Mind Map JSON Content' : 'Lesson Content'}</Label>
-                        {type === 'mind-map-json' && (
-                            <>
-                                <input 
-                                    type="file" 
-                                    ref={fileInputRef} 
-                                    onChange={handleFileChange} 
-                                    className="hidden" 
-                                    accept=".json"
-                                />
-                                <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                                    <UploadCloud className="mr-2 h-4 w-4" />
-                                    Upload JSON File
-                                </Button>
-                            </>
-                        )}
+                        <Label htmlFor="jsonContent">Mind Map JSON Content</Label>
+                         <>
+                            <input 
+                                type="file" 
+                                ref={fileInputRef} 
+                                onChange={handleFileChange} 
+                                className="hidden" 
+                                accept=".json"
+                            />
+                            <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                                <UploadCloud className="mr-2 h-4 w-4" />
+                                Upload JSON File
+                            </Button>
+                        </>
                     </div>
                     <Textarea 
-                        id="textContent" 
-                        placeholder={type === 'mind-map-json' ? 'Paste your mind map JSON here, or upload a file.' : 'Type your lesson plan content here...'}
+                        id="jsonContent" 
+                        placeholder={'Paste your mind map JSON here, or upload a file.'}
                         required 
-                        value={textContent} 
-                        onChange={(e) => setTextContent(e.target.value)}
+                        value={htmlContent} 
+                        onChange={(e) => setHtmlContent(e.target.value)}
                         className="min-h-[200px] font-mono text-sm"
                     />
                     {jsonError && <p className="text-sm text-destructive mt-1">{jsonError}</p>}
@@ -316,7 +321,7 @@ export default function ManageContentPage() {
                     id="resourceUrl" 
                     type="url" 
                     placeholder="https://example.com/resource" 
-                    required={!isTextOrJsonContent}
+                    required={!isTextContent && !isJsonContent}
                     value={resourceUrl} 
                     onChange={(e) => setResourceUrl(e.target.value)} 
                   />
@@ -324,7 +329,7 @@ export default function ManageContentPage() {
             )}
 
 
-            <Button className="w-full" type="submit" disabled={isSubmitting}>
+            <Button className="w-full mt-6" type="submit" disabled={isSubmitting}>
               {isSubmitting ? 'Submitting...' : 'Add Resource'}
             </Button>
           </CardContent>
@@ -333,5 +338,3 @@ export default function ManageContentPage() {
     </div>
   );
 }
-
-    

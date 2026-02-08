@@ -20,9 +20,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import MindMap from '@/components/mind-map';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkBreaks from 'remark-breaks';
 
 export default function AdminDashboard() {
   const { user, loading, userDetails } = useAuth();
@@ -102,9 +99,19 @@ export default function AdminDashboard() {
   
   const handleDownload = (resource: Resource) => {
     const isJson = resource.type === 'mind-map-json';
-    const fileExtension = isJson ? 'json' : 'txt';
-    const mimeType = isJson ? 'application/json' : 'text/plain';
-    const content = resource.url;
+    const isText = resource.type === 'lesson-plan-text';
+    
+    let fileExtension = 'txt';
+    let mimeType = 'text/plain';
+    let content = resource.url;
+
+    if(isJson) {
+      fileExtension = 'json';
+      mimeType = 'application/json';
+    } else if (isText) {
+      fileExtension = 'html';
+      mimeType = 'text/html';
+    }
 
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
@@ -200,8 +207,11 @@ export default function AdminDashboard() {
 
     if (type === 'lesson-plan-text') {
          return (
-            <div className="w-full h-full prose prose-sm max-w-none p-6 text-foreground bg-background rounded-lg overflow-y-auto">
-                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{url}</ReactMarkdown>
+            <div className="w-full h-full overflow-y-auto p-6 bg-background rounded-lg">
+                <div 
+                    className="prose prose-sm max-w-none text-foreground"
+                    dangerouslySetInnerHTML={{ __html: url }} 
+                />
             </div>
         )
     }

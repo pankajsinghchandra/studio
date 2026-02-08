@@ -17,6 +17,8 @@ import { syllabus } from '@/lib/syllabus';
 import { Textarea } from '@/components/ui/textarea';
 import { UploadCloud, ArrowLeft, Loader } from 'lucide-react';
 import Link from 'next/link';
+import RichTextEditor from '@/components/rich-text-editor';
+
 
 const isValidUrl = (url: string): boolean => {
     if (!url) return false;
@@ -55,7 +57,7 @@ export default function EditContentPage() {
   const [chapter, setChapter] = useState('');
   const [type, setType] = useState('');
   const [resourceUrl, setResourceUrl] = useState('');
-  const [textContent, setTextContent] = useState('');
+  const [htmlContent, setHtmlContent] = useState('');
   const [jsonError, setJsonError] = useState('');
 
   const subjects = useMemo(() => {
@@ -92,9 +94,15 @@ export default function EditContentPage() {
                     setChapter(data.chapter);
                     setType(data.type);
 
-                    const isTextOrJson = data.type === 'lesson-plan-text' || data.type === 'mind-map-json';
-                    if (isTextOrJson) {
-                        setTextContent(data.url);
+                    const isText = data.type === 'lesson-plan-text';
+                    const isJson = data.type === 'mind-map-json';
+
+                    if (isText) {
+                        setHtmlContent(data.url);
+                    } else if (isJson) {
+                        // For editing JSON, we'll still use a textarea-like experience, so we put it in htmlContent for now
+                        // but it will be rendered in a textarea.
+                        setHtmlContent(data.url)
                     } else {
                         setResourceUrl(data.url);
                     }
@@ -116,7 +124,7 @@ export default function EditContentPage() {
   
   useEffect(() => {
     if (type === 'mind-map-json') {
-      if (!isValidJson(textContent)) {
+      if (!isValidJson(htmlContent)) {
         setJsonError('The content is not valid JSON. Please check the format.');
       } else {
         setJsonError('');
@@ -124,7 +132,7 @@ export default function EditContentPage() {
     } else {
       setJsonError('');
     }
-  }, [textContent, type]);
+  }, [htmlContent, type]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -136,7 +144,7 @@ export default function EditContentPage() {
       const reader = new FileReader();
       reader.onload = (e) => {
         const content = e.target?.result as string;
-        setTextContent(content);
+        setHtmlContent(content);
         if (isValidJson(content)) {
           toast({ title: 'File Uploaded', description: 'The JSON content has been loaded.' });
         } else {
@@ -151,14 +159,15 @@ export default function EditContentPage() {
     e.preventDefault();
     if (!user) return;
     
-    const isTextOrJsonContent = type === 'lesson-plan-text' || type === 'mind-map-json';
+    const isTextContent = type === 'lesson-plan-text';
+    const isJsonContent = type === 'mind-map-json';
 
-    if (isTextOrJsonContent && type === 'mind-map-json' && !isValidJson(textContent)) {
+    if (isJsonContent && !isValidJson(htmlContent)) {
         toast({ variant: 'destructive', title: 'Invalid JSON', description: jsonError || 'The mind map content is not valid JSON.' });
         return;
     }
     
-    if (!isTextOrJsonContent && !isValidUrl(resourceUrl)) {
+    if (!(isTextContent || isJsonContent) && !isValidUrl(resourceUrl)) {
         toast({ variant: 'destructive', title: 'Invalid Link', description: 'Please enter a valid URL.' });
         return;
     }
@@ -173,8 +182,7 @@ export default function EditContentPage() {
         subject,
         chapter,
         type,
-        url: isTextOrJsonContent ? textContent : resourceUrl,
-        // Not updating createdAt, authorId
+        url: isTextContent || isJsonContent ? htmlContent : resourceUrl,
       });
 
       toast({
@@ -199,7 +207,8 @@ export default function EditContentPage() {
     return <LoadingOverlay isLoading={true} />;
   }
 
-  const isTextOrJsonContent = type === 'lesson-plan-text' || type === 'mind-map-json';
+  const isTextContent = type === 'lesson-plan-text';
+  const isJsonContent = type === 'mind-map-json';
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -215,7 +224,7 @@ export default function EditContentPage() {
           </Link>
         </Button>
       </header>
-      <Card className="w-full max-w-2xl mx-auto">
+      <Card className="w-full max-w-4xl mx-auto">
         <form onSubmit={handleSubmit}>
           <CardHeader>
             <CardTitle className="text-2xl font-headline">Edit Resource</CardTitle>
@@ -278,25 +287,28 @@ export default function EditContentPage() {
               </Select>
             </div>
             
-            {isTextOrJsonContent ? (
+            {isTextContent ? (
+                <div className="space-y-2">
+                    <Label>Lesson Content</Label>
+                    <RichTextEditor content={htmlContent} onChange={setHtmlContent} />
+                </div>
+            ) : isJsonContent ? (
                 <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                        <Label htmlFor="textContent">{type === 'mind-map-json' ? 'Mind Map JSON Content' : 'Lesson Content (Markdown supported)'}</Label>
-                        {type === 'mind-map-json' && (
-                            <>
-                                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json"/>
-                                <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                                    <UploadCloud className="mr-2 h-4 w-4" /> Upload JSON
-                                </Button>
-                            </>
-                        )}
+                        <Label htmlFor="jsonContent">Mind Map JSON Content</Label>
+                         <>
+                            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json"/>
+                            <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                                <UploadCloud className="mr-2 h-4 w-4" /> Upload JSON
+                            </Button>
+                        </>
                     </div>
                     <Textarea 
-                        id="textContent" 
-                        placeholder={type === 'mind-map-json' ? 'Paste your mind map JSON here, or upload a file.' : 'Type your lesson plan content here...'}
+                        id="jsonContent" 
+                        placeholder={'Paste your mind map JSON here, or upload a file.'}
                         required 
-                        value={textContent} 
-                        onChange={(e) => setTextContent(e.target.value)}
+                        value={htmlContent} 
+                        onChange={(e) => setHtmlContent(e.target.value)}
                         className="min-h-[300px] font-mono text-sm"
                     />
                     {jsonError && <p className="text-sm text-destructive mt-1">{jsonError}</p>}
@@ -308,14 +320,14 @@ export default function EditContentPage() {
                     id="resourceUrl" 
                     type="url" 
                     placeholder="https://example.com/resource" 
-                    required={!isTextOrJsonContent}
+                    required={!isTextContent && !isJsonContent}
                     value={resourceUrl} 
                     onChange={(e) => setResourceUrl(e.target.value)} 
                   />
                 </div>
             )}
 
-            <Button className="w-full" type="submit" disabled={isSubmitting}>
+            <Button className="w-full mt-6" type="submit" disabled={isSubmitting}>
               {isSubmitting ? 'Updating...' : 'Update Resource'}
             </Button>
           </CardContent>

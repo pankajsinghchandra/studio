@@ -17,9 +17,6 @@ import {
 import { syllabus } from '@/lib/syllabus';
 import { Button } from '@/components/ui/button';
 import MindMap, { type MindMapNode as MindMapNodeType } from '@/components/mind-map';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkBreaks from 'remark-breaks';
 
 const subjectIcons: { [key: string]: React.ElementType } = {
     'mathematics': Calculator,
@@ -78,8 +75,9 @@ const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: 
     switch (resourceType) {
         case 'lesson-plan-pdf':
         case 'pdf-note':
-        case 'lesson-plan-text':
             return <FileText {...resourceIconProps} />;
+        case 'lesson-plan-text':
+             return <Pencil {...resourceIconProps} />;
         case 'video':
             return <Video {...resourceIconProps} />;
         case 'infographic':
@@ -284,9 +282,10 @@ setDescription('Select a chapter to start learning.');
                             <span className="text-7xl font-bold text-muted-foreground/10 rotate-[-30deg]">Vidyalaya Notes</span>
                         </div>
                          <div className="relative z-10 w-full h-full overflow-y-auto p-6">
-                            <div className="prose prose-sm max-w-none text-foreground">
-                                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{url}</ReactMarkdown>
-                            </div>
+                            <div
+                                className="prose prose-sm max-w-none text-foreground"
+                                dangerouslySetInnerHTML={{ __html: url }}
+                            />
                         </div>
                     </div>
                 )
@@ -351,6 +350,9 @@ setDescription('Select a chapter to start learning.');
         }
         if (type === 'song') {
             return 'Song';
+        }
+         if (type === 'lesson-plan-text') {
+            return 'Lesson Plan';
         }
         return type.replace(/-/g, ' ');
     };

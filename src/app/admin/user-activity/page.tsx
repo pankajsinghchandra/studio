@@ -118,7 +118,7 @@ export default function UserActivityPage() {
             fetchActivities();
         }
 
-    }, [selectedUser, selectedTime, page, user, userDetails, lastVisible]);
+    }, [selectedUser, selectedTime, page, user, userDetails]);
 
     // This effect resets pagination when filters change.
     useEffect(() => {
@@ -221,7 +221,14 @@ export default function UserActivityPage() {
                         {!isLoading && activities.map(activity => (
                             <TableRow key={activity.id}>
                                 <TableCell>
-                                    <div className="font-medium">{activity.userName}</div>
+                                    <Button
+                                        variant="link"
+                                        className="p-0 h-auto font-medium"
+                                        onClick={() => setSelectedUser(activity.userId)}
+                                        title={`Filter by ${activity.userName}`}
+                                    >
+                                        {activity.userName}
+                                    </Button>
                                     <div className="text-sm text-muted-foreground">{activity.userEmail}</div>
                                 </TableCell>
                                 <TableCell>{activity.resourceTitle}</TableCell>

@@ -283,7 +283,7 @@ setDescription('Select a chapter to start learning.');
                         </div>
                          <div className="relative z-10 w-full h-full overflow-y-auto p-6">
                             <div
-                                className="prose prose-sm max-w-none text-foreground"
+                                className="prose prose-sm max-w-none text-foreground whitespace-pre-wrap"
                                 dangerouslySetInnerHTML={{ __html: url }}
                             />
                         </div>

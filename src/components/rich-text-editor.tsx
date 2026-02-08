@@ -10,7 +10,8 @@ import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
 import { 
     Bold, Italic, Strikethrough, List, ListOrdered, 
-    Quote, Redo, Undo, Palette, Heading1, Heading2, Heading3
+    Quote, Redo, Undo, Palette, Heading1, Heading2, Heading3,
+    Indent as IndentIcon, Outdent
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -89,6 +90,14 @@ const Toolbar = ({ editor }: { editor: Editor | null }) => {
       >
         <ListOrdered className="h-4 w-4" />
       </Toggle>
+      
+      <Button type="button" size="sm" variant="ghost" onClick={() => editor.chain().focus().indent().run()} disabled={!editor.can().indent()}>
+          <IndentIcon className="h-4 w-4" />
+      </Button>
+      <Button type="button" size="sm" variant="ghost" onClick={() => editor.chain().focus().outdent().run()} disabled={!editor.can().outdent()}>
+          <Outdent className="h-4 w-4" />
+      </Button>
+
       <Toggle
         size="sm"
         pressed={editor.isActive('blockquote')}
@@ -101,23 +110,35 @@ const Toolbar = ({ editor }: { editor: Editor | null }) => {
 
       <Popover>
           <PopoverTrigger asChild>
-            <Button size="sm" variant="ghost">
+            <Button size="sm" variant="ghost" type="button">
                 <Palette className="h-4 w-4" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-2">
-            <div className="grid grid-cols-9 gap-1">
-                {colors.map(color => (
-                    <Button
-                        key={color}
-                        variant={editor.getAttributes('textStyle').color === color ? 'outline' : 'ghost'}
-                        size="icon"
-                        className="h-6 w-6 rounded-full p-0"
-                        onClick={() => editor.chain().focus().setColor(color).run()}
-                    >
-                        <div style={{ backgroundColor: color }} className="h-4 w-4 rounded-full border" />
-                    </Button>
-                ))}
+             <div className="flex flex-col gap-2">
+                <div className="grid grid-cols-9 gap-1">
+                    {colors.map(color => (
+                        <Button
+                            key={color}
+                            type="button"
+                            variant={editor.isActive('textStyle', { color }) ? 'outline' : 'ghost'}
+                            size="icon"
+                            className="h-6 w-6 rounded-full p-0"
+                            onClick={() => editor.chain().focus().setColor(color).run()}
+                        >
+                            <div style={{ backgroundColor: color }} className="h-4 w-4 rounded-full border" />
+                        </Button>
+                    ))}
+                </div>
+                <Button 
+                  type="button"
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={() => editor.chain().focus().unsetColor().run()}
+                >
+                  Default Color
+                </Button>
             </div>
           </PopoverContent>
       </Popover>

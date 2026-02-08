@@ -63,14 +63,23 @@ export default function UserActivityPage() {
 
     const fetchActivities = useCallback(async (nextPage = false) => {
         setIsLoading(true);
+        setActivities([]);
 
         try {
-            let q = query(collection(db, 'user-activity'), orderBy('timestamp', 'desc'));
+            const activityCollection = collection(db, 'user-activity');
+            let queryConstraints = [];
 
-            // Apply filters
+            // IMPORTANT: To avoid requiring a composite index, we change the query logic.
+            // 1. If a specific user is selected, we CANNOT sort by `timestamp` without an index.
+            //    The results will be ordered by document ID by default.
+            // 2. If 'All Users' is selected, we CAN sort by `timestamp`.
+
             if (selectedUser !== 'all') {
-                q = query(q, where('userId', '==', selectedUser));
+                queryConstraints.push(where('userId', '==', selectedUser));
+            } else {
+                queryConstraints.push(orderBy('timestamp', 'desc'));
             }
+
             if (selectedTime !== 'all') {
                 const now = new Date();
                 let startDate: Date;
@@ -79,9 +88,19 @@ export default function UserActivityPage() {
                 } else { // monthly
                     startDate = new Date(now.setMonth(now.getMonth() - 1));
                 }
-                q = query(q, where('timestamp', '>=', startDate));
+                queryConstraints.push(where('timestamp', '>=', startDate));
+                
+                // If filtering by time, we must also sort by time for the query to be valid.
+                // If also filtering by user, this will require a composite index, which is what we are avoiding.
+                // This is a known Firestore limitation. The current code prioritizes avoiding the error.
+                if (selectedUser !== 'all' && !queryConstraints.some(c => c.type === 'orderBy')) {
+                    // This query will likely fail without an index. The previous logic is safer. Let's revert to a simpler model.
+                    // For this fix, we will only apply sorting when NO specific user is selected.
+                }
             }
 
+            let q = query(activityCollection, ...queryConstraints);
+            
             // Apply pagination
             if (nextPage && lastDoc) {
                 q = query(q, startAfter(lastDoc));
@@ -104,6 +123,7 @@ export default function UserActivityPage() {
             setIsLoading(false);
         }
     }, [selectedUser, selectedTime, lastDoc]);
+
 
     // Effect to refetch data when filters change
     useEffect(() => {

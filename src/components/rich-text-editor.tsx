@@ -91,10 +91,22 @@ const Toolbar = ({ editor }: { editor: Editor | null }) => {
         <ListOrdered className="h-4 w-4" />
       </Toggle>
       
-      <Button type="button" size="sm" variant="ghost" onClick={() => editor.chain().focus().indent().run()} disabled={!editor.can().indent()}>
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        onClick={() => editor.chain().focus().sinkListItem('listItem').run()}
+        disabled={!editor.can().sinkListItem('listItem')}
+      >
           <IndentIcon className="h-4 w-4" />
       </Button>
-      <Button type="button" size="sm" variant="ghost" onClick={() => editor.chain().focus().outdent().run()} disabled={!editor.can().outdent()}>
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        onClick={() => editor.chain().focus().liftListItem('listItem').run()}
+        disabled={!editor.can().liftListItem('listItem')}
+      >
           <Outdent className="h-4 w-4" />
       </Button>
 

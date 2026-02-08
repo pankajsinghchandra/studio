@@ -10,8 +10,7 @@ import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
 import { 
     Bold, Italic, Strikethrough, List, ListOrdered, 
-    Quote, Redo, Undo, Palette, Heading1, Heading2, Heading3,
-    Indent as IndentIcon, Outdent
+    Quote, Redo, Undo, Palette, Heading1, Heading2, Heading3
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -90,25 +89,6 @@ const Toolbar = ({ editor }: { editor: Editor | null }) => {
       >
         <ListOrdered className="h-4 w-4" />
       </Toggle>
-      
-      <Button
-        type="button"
-        size="sm"
-        variant="ghost"
-        onClick={() => editor.chain().focus().sinkListItem('listItem').run()}
-        disabled={!editor.can().sinkListItem('listItem')}
-      >
-          <IndentIcon className="h-4 w-4" />
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="ghost"
-        onClick={() => editor.chain().focus().liftListItem('listItem').run()}
-        disabled={!editor.can().liftListItem('listItem')}
-      >
-          <Outdent className="h-4 w-4" />
-      </Button>
 
       <Toggle
         size="sm"

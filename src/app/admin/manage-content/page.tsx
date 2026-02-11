@@ -254,7 +254,7 @@ export default function ManageContentPage() {
                     <Select onValueChange={setChapter} required value={chapter} disabled={!subject}>
                         <SelectTrigger id="chapter"><SelectValue placeholder="Select Chapter" /></SelectTrigger>
                         <SelectContent>
-                            {chapters.map(ch => <SelectItem key={ch} value={ch}>{ch}</SelectItem>)}
+                            {chapters.map((ch: string) => <SelectItem key={ch} value={ch}>{ch}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>

@@ -64,7 +64,7 @@ export default function EditContentPage() {
     return resourceClass ? Object.keys(syllabus[resourceClass as keyof typeof syllabus] || {}) : [];
   }, [resourceClass]);
 
-  const chapters = useMemo(() => {
+  const chapters = useMemo<string[]>(() => {
     if (resourceClass && subject) {
       const classSyllabus = syllabus[resourceClass as keyof typeof syllabus];
       return classSyllabus ? (classSyllabus as any)[subject] || [] : [];

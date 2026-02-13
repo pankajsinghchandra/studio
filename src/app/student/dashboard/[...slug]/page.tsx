@@ -146,7 +146,7 @@ export default function DynamicPage() {
 
             try {
                 if (pageType === 'class') {
-                    const classSyllabus = syllabus[className as keyof typeof syllabus];
+                    const classSyllabus = syllabus[className];
                     const subjectNames = classSyllabus ? Object.keys(classSyllabus) : [];
                     
                     setTitle(`Class ${className}`);
@@ -154,16 +154,16 @@ export default function DynamicPage() {
                     setCards(subjectNames.map(subject => ({
                         id: subject,
                         name: subject,
-                        description: `${(classSyllabus as any)[subject]?.length || 0} chapters`,
+                        description: `${classSyllabus?.[subject]?.length || 0} chapters`,
                         path: `/student/dashboard/${className}/${encodeURIComponent(subject)}`
                     })));
                 }
 
                 if (pageType === 'subject') {
-                    const subjectChapters = syllabus[className as keyof typeof syllabus]?.[subjectName as keyof any] || [];
+                    const subjectChapters = syllabus[className]?.[subjectName] || [];
 
                     setTitle(subjectName);
-setDescription('Select a chapter to start learning.');
+                    setDescription('Select a chapter to start learning.');
                     setCards(subjectChapters.map((chapter: string) => ({
                         id: chapter,
                         name: chapter,

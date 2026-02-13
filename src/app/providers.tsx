@@ -27,14 +27,14 @@ interface AuthContextType {
   user: User | null;
   userDetails: UserDetails | null;
   loading: boolean;
-  fetchUserDetails: (uid: string) => Promise<void>;
+  fetchUserDetails: (uid: string) => Promise<UserDetails | null>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   userDetails: null,
   loading: true,
-  fetchUserDetails: async () => {},
+  fetchUserDetails: async () => null,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const auth = getAuth(app);
 
-  const fetchUserDetails = useCallback(async (uid: string) => {
+  const fetchUserDetails = useCallback(async (uid: string): Promise<UserDetails | null> => {
     const userDocRef = doc(db, "users", uid);
     const userDoc = await getDoc(userDocRef);
     if (userDoc.exists()) {

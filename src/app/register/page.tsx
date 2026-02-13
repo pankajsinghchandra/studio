@@ -28,7 +28,9 @@ const formSchema = z.object({
   role: z.enum(['student', 'teacher'], { required_error: "You must select a role." }),
   userClass: z.string().optional(),
   gender: z.string().optional(),
-  termsAccepted: z.literal(true, { errorMap: () => ({ message: "You must accept the terms and conditions." }) }),
+  termsAccepted: z.boolean().refine((val) => val === true, {
+    message: "You must accept the terms and conditions.",
+  }),
 });
 
 

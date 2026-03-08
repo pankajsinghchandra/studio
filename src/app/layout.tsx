@@ -33,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn(inter.variable, spaceGrotesk.variable)}>
       <head>
-        <meta name="theme-color" content="#21a169" />
+        <meta name="theme-color" content="#FF8A65" />
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body>

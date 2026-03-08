@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -16,12 +16,17 @@ interface BeforeInstallPromptEvent extends Event {
 
 const InstallPWA = () => {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [showBanner, setShowBanner] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
       setInstallPrompt(event as BeforeInstallPromptEvent);
+      // Only show banner if not already installed (in standalone mode)
+      if (!window.matchMedia('(display-mode: standalone)').matches) {
+          setShowBanner(true);
+      }
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -43,23 +48,33 @@ const InstallPWA = () => {
         description: 'Vidyalaya Notes has been installed on your device!',
       });
     }
-    setInstallPrompt(null);
+    setShowBanner(false);
+    // Defer clearing the prompt to allow for re-prompting if dismissed.
+    // Some browsers might not allow this, but it's a good practice.
+    setTimeout(() => setInstallPrompt(null), 1000);
   };
 
-  if (!installPrompt) {
+  const handleClose = () => {
+    setShowBanner(false);
+  };
+
+  if (!showBanner || !installPrompt) {
     return null;
   }
 
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={handleInstallClick}
-      aria-label="Install App"
-      title="Install App"
-    >
-      <Download className="h-5 w-5" />
-    </Button>
+    <div className="fixed bottom-4 inset-x-0 z-50 flex justify-center animate-in slide-in-from-bottom-10 duration-500 px-4">
+        <div className="bg-background border rounded-lg shadow-lg flex items-center p-2 space-x-2 w-full max-w-md mx-auto">
+            <Button onClick={handleInstallClick} className="flex-grow h-auto px-4 py-2">
+                <Download className="h-4 w-4 mr-2" />
+                Install App
+            </Button>
+            <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8 shrink-0">
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+            </Button>
+        </div>
+    </div>
   );
 };
 

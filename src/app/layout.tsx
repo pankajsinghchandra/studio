@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/layout/header';
 import Providers from './providers';
+import InstallPWA from '@/components/InstallPWA';
 
 export const metadata: Metadata = {
   title: 'Vidyalaya Notes',
@@ -39,6 +40,7 @@ export default function RootLayout({
           <Header />
           <div className="flex-grow">{children}</div>
           <Toaster />
+          <InstallPWA />
         </Providers>
       </body>
     </html>

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Award, LogOut, Loader, Shield, LayoutDashboard, Settings, Info } from 'lucide-react';
+import { Sparkles, LogOut, Loader, Shield, LayoutDashboard, Settings, Info } from 'lucide-react';
 import SearchBar from '../search-bar';
 import { Button } from '../ui/button';
 import { getAuth, signOut } from 'firebase/auth';
@@ -25,8 +25,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import InstallPWA from '../InstallPWA';
-
 
 export default function Header() {
   const { user, userDetails, loading, fetchUserDetails } = useAuth();
@@ -117,7 +115,6 @@ export default function Header() {
        const initial = userDetails?.name ? userDetails.name.charAt(0).toUpperCase() : (user.email ? user.email.charAt(0).toUpperCase() : 'U');
       return (
         <>
-          <InstallPWA />
           <DropdownMenu>
               <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -189,7 +186,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 max-w-screen-2xl items-center">
         <Link href="/" className="mr-6 flex items-center space-x-2">
-          <Award className="h-6 w-6 text-primary" />
+          <Sparkles className="h-6 w-6 text-primary" />
           <span className="hidden font-bold sm:inline-block font-headline">
             Vidyalaya Notes
           </span>

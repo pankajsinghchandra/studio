@@ -37,7 +37,11 @@ const AuthContext = createContext<AuthContextType>({
   fetchUserDetails: async () => null,
 });
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function useAuth() {
+  return useContext(AuthContext);
+}
+
+export default function Providers({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -128,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
   
-    const value = { user, userDetails, loading, fetchUserDetails };
+  const value = { user, userDetails, loading, fetchUserDetails };
 
   return (
     <AuthContext.Provider value={value}>
@@ -236,12 +240,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         </Dialog>
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
-}
-
-export default function Providers({ children }: { children: ReactNode }) {
-  return <AuthProvider>{children}</AuthProvider>;
 }

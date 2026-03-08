@@ -55,75 +55,85 @@ const Node: React.FC<NodeProps> = ({
     }
   }, [allOpen, hasChildren]);
 
-  React.useEffect(() => {
-    if (isOpen && hasChildren && parentRef.current && childrenContainerRef.current) {
-        const calculatePath = () => {
-            if (!parentRef.current || !childrenContainerRef.current) return;
-
-            const parentRect = parentRef.current.getBoundingClientRect();
-            const containerRect = childrenContainerRef.current.getBoundingClientRect();
-            
-            if (containerRect.height === 0 || parentRect.height === 0) {
-                requestAnimationFrame(calculatePath);
-                return;
-            }
-
-            const childrenElements = Array.from(childrenContainerRef.current.children) as HTMLElement[];
-            if (childrenElements.length === 0) return;
-
-            const svgWidth = 60;
-            const startX = 0;
-            const endX = svgWidth;
-            const smoothness = svgWidth * 0.6;
-            
-            const firstChildRect = childrenElements[0].getBoundingClientRect();
-            const lastChildRect = childrenElements[childrenElements.length - 1].getBoundingClientRect();
-            
-            const parentY = parentRect.top - containerRect.top + (parentRect.height / 2);
-            
-            const firstChildY = firstChildRect.top - containerRect.top + (firstChildRect.height / 2);
-            const lastChildY = lastChildRect.top - containerRect.top + (lastChildRect.height / 2);
-
-            const svgTop = Math.min(parentY, firstChildY);
-            const svgBottom = Math.max(parentY, lastChildY);
-            const svgHeight = svgBottom - svgTop;
-
-
-            const paths: string[] = [];
-            
-            childrenElements.forEach(child => {
-                const childRect = child.getBoundingClientRect();
-                const childY = (childRect.top - containerRect.top) + (childRect.height / 2);
-                
-                const d = `M ${startX},${parentY - svgTop} C ${startX + smoothness},${parentY - svgTop} ${endX - smoothness},${childY - svgTop} ${endX},${childY - svgTop}`;
-                paths.push(d);
-            });
-            
-            setSvgDimensions({ height: svgHeight, width: svgWidth, top: svgTop });
-            setSvgPaths(paths);
-        };
-        
-        const timeoutId = setTimeout(calculatePath, 50);
-        
-        const resizeObserver = new ResizeObserver(calculatePath);
-        if (childrenContainerRef.current) {
-          resizeObserver.observe(childrenContainerRef.current);
-        }
-        Array.from(childrenContainerRef.current.children).forEach(child => resizeObserver.observe(child));
-        if (parentRef.current) {
-          resizeObserver.observe(parentRef.current);
-        }
-
-        return () => {
-          clearTimeout(timeoutId);
-          resizeObserver.disconnect();
-        };
+  React.useLayoutEffect(() => {
+    if (!isOpen || !hasChildren || !parentRef.current || !childrenContainerRef.current) {
+        return;
     }
-  }, [isOpen, hasChildren, node.children]);
+
+    const calculatePath = () => {
+        if (!parentRef.current || !childrenContainerRef.current) return;
+        
+        const svgWrapper = childrenContainerRef.current.parentElement?.parentElement;
+        if (!svgWrapper) return;
+        
+        const wrapperRect = svgWrapper.getBoundingClientRect();
+        const parentTriggerRect = parentRef.current.getBoundingClientRect();
+
+        const childrenElements = Array.from(childrenContainerRef.current.children) as HTMLElement[];
+        
+        const childTriggerRects = childrenElements
+            .map(child => child.children[0] as HTMLElement)
+            .filter(Boolean)
+            .map(triggerWrapper => triggerWrapper.getBoundingClientRect());
+
+        if (childTriggerRects.length === 0 || childTriggerRects.some(r => r.height === 0)) {
+            setSvgPaths([]);
+            return;
+        };
+
+        const parentCenterY = (parentTriggerRect.top - wrapperRect.top) + (parentTriggerRect.height / 2);
+
+        const childCenterYs = childTriggerRects.map(r => (r.top - wrapperRect.top) + (r.height / 2));
+        
+        const firstChildCenterY = childCenterYs[0];
+        const lastChildCenterY = childCenterYs[childCenterYs.length - 1];
+
+        const svgTop = Math.min(parentCenterY, firstChildCenterY);
+        const svgBottom = Math.max(parentCenterY, lastChildCenterY);
+        const svgHeight = Math.max(1, svgBottom - svgTop);
+
+        const svgWidth = 60;
+        const startX = 0;
+        const endX = svgWidth;
+        const smoothness = svgWidth * 0.6;
+
+        const newPaths: string[] = [];
+        childCenterYs.forEach(childCenterY => {
+            const startPointY = parentCenterY - svgTop;
+            const endPointY = childCenterY - svgTop;
+            
+            const d = `M ${startX},${startPointY} C ${startX + smoothness},${startPointY} ${endX - smoothness},${endPointY} ${endX},${endPointY}`;
+            newPaths.push(d);
+        });
+        
+        setSvgDimensions({ height: svgHeight, width: svgWidth, top: svgTop });
+        setSvgPaths(newPaths);
+    };
+    
+    calculatePath();
+
+    const resizeObserver = new ResizeObserver(calculatePath);
+    
+    resizeObserver.observe(parentRef.current);
+    const childrenToObserve = Array.from(childrenContainerRef.current.children) as HTMLElement[];
+    childrenToObserve.forEach(child => {
+        if (child.children[0]) {
+            resizeObserver.observe(child.children[0]);
+        }
+    });
+    if (childrenContainerRef.current.parentElement) {
+        resizeObserver.observe(childrenContainerRef.current.parentElement);
+    }
+
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [isOpen, hasChildren, node.children, allOpen]);
   
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="relative flex items-center">
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="relative flex items-start">
         <div ref={parentRef} className="relative z-10 flex items-center">
             <CollapsibleTrigger
                 disabled={!hasChildren}
@@ -174,7 +184,7 @@ const Node: React.FC<NodeProps> = ({
                     <div
                     ref={childrenContainerRef}
                     className={cn(
-                        'flex flex-col gap-4 pl-24 transition-all duration-300',
+                        'flex flex-col gap-4 pl-24 transition-all duration-300 items-start',
                         !isOpen && 'hidden'
                     )}
                     >

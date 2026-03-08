@@ -33,7 +33,7 @@ export default function AdminPage() {
 
       <main className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
         <Link href="/admin/dashboard">
-          <Card className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95 group">
+          <Card className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95">
             <CardHeader className="flex flex-col items-center justify-center text-center p-8">
               <div className="p-4 bg-primary/10 rounded-full mb-4 border-2 border-primary/30 group-hover:bg-primary/20 transition-colors">
                 <Edit className="w-10 h-10 text-primary" />
@@ -44,7 +44,7 @@ export default function AdminPage() {
           </Card>
         </Link>
         <Link href="/admin/manage-content">
-          <Card className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95 group">
+          <Card className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95">
             <CardHeader className="flex flex-col items-center justify-center text-center p-8">
               <div className="p-4 bg-primary/10 rounded-full mb-4 border-2 border-primary/30 group-hover:bg-primary/20 transition-colors">
                 <FilePlus className="w-10 h-10 text-primary" />
@@ -55,7 +55,7 @@ export default function AdminPage() {
           </Card>
         </Link>
          <Link href="/admin/user-activity">
-          <Card className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95 group">
+          <Card className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/20 h-full cursor-pointer active:scale-95">
             <CardHeader className="flex flex-col items-center justify-center text-center p-8">
               <div className="p-4 bg-primary/10 rounded-full mb-4 border-2 border-primary/30 group-hover:bg-primary/20 transition-colors">
                 <History className="w-10 h-10 text-primary" />

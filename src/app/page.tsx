@@ -83,7 +83,7 @@ export default function Home() {
               {classes.map((c) => (
                   <Card 
                       key={c.id} 
-                      className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 h-full cursor-pointer active:scale-95 group"
+                      className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 h-full cursor-pointer active:scale-95"
                       onClick={() => handleCardClick(`/student/dashboard/${c.id}`)}
                   >
                       <CardHeader className="flex flex-col items-center justify-center text-center p-6">

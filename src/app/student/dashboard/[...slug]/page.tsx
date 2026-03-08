@@ -369,7 +369,7 @@ export default function DynamicPage() {
                             cards.map((card, index) => (
                                 <Card 
                                     key={card.id} 
-                                    className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 h-full cursor-pointer active:scale-95 group"
+                                    className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 h-full cursor-pointer active:scale-95"
                                     onClick={() => handleCardClick(card.path)}
                                 >
                                     <CardHeader className="flex flex-row items-center justify-between p-4">
@@ -391,7 +391,7 @@ export default function DynamicPage() {
                     <>
                         {resources
                          .map((resource, index) => (
-                            <Card key={resource.id} className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 h-full cursor-pointer active:scale-95 group" onClick={() => handleResourceClick(resource)}>
+                            <Card key={resource.id} className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 h-full cursor-pointer active:scale-95" onClick={() => handleResourceClick(resource)}>
                                 <CardHeader className="p-4">
                                     <div className="flex items-start gap-4">
                                         {getIcon('resource', undefined, resource.type, undefined, index)}

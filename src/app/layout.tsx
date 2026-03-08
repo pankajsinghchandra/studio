@@ -9,6 +9,7 @@ import Providers from './providers';
 export const metadata: Metadata = {
   title: 'Vidyalaya Notes',
   description: 'Your digital notebook, accessible anywhere.',
+  manifest: '/manifest.json',
 };
 
 const inter = Inter({
@@ -30,6 +31,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={cn(inter.variable, spaceGrotesk.variable)}>
+      <head>
+        <meta name="theme-color" content="#21a169" />
+      </head>
       <body>
         <Providers>
           <Header />

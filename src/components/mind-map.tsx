@@ -30,6 +30,7 @@ interface NodeProps {
     isRoot?: boolean;
     level?: number;
     allOpen: boolean | null;
+    scale: number;
 }
 
 const Node: React.FC<NodeProps> = ({
@@ -37,6 +38,7 @@ const Node: React.FC<NodeProps> = ({
   isRoot = false,
   level = 0,
   allOpen,
+  scale,
 }) => {
   const [isOpen, setIsOpen] = React.useState(isRoot);
   const hasChildren = node.children && node.children.length > 0;
@@ -110,9 +112,11 @@ const Node: React.FC<NodeProps> = ({
         setSvgPaths(newPaths);
     };
     
-    calculatePath();
-
-    const resizeObserver = new ResizeObserver(calculatePath);
+    const animationFrameId = requestAnimationFrame(calculatePath);
+    
+    const resizeObserver = new ResizeObserver(() => {
+        requestAnimationFrame(calculatePath);
+    });
     
     resizeObserver.observe(parentRef.current);
     const childrenToObserve = Array.from(childrenContainerRef.current.children) as HTMLElement[];
@@ -127,13 +131,14 @@ const Node: React.FC<NodeProps> = ({
 
 
     return () => {
+      cancelAnimationFrame(animationFrameId);
       resizeObserver.disconnect();
     };
-  }, [isOpen, hasChildren, node.children, allOpen]);
+  }, [isOpen, hasChildren, node.children, allOpen, scale]);
   
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="relative flex items-start">
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="relative flex items-center">
         <div ref={parentRef} className="relative z-10 flex items-center">
             <CollapsibleTrigger
                 disabled={!hasChildren}
@@ -189,7 +194,7 @@ const Node: React.FC<NodeProps> = ({
                     )}
                     >
                     {node.children?.map((child, index) => (
-                        <Node key={index} node={child} level={level + 1} allOpen={allOpen} />
+                        <Node key={index} node={child} level={level + 1} allOpen={allOpen} scale={scale}/>
                     ))}
                     </div>
                 </CollapsibleContent>
@@ -251,7 +256,7 @@ const MindMap: React.FC<MindMapProps> = ({ data }) => {
           className="relative p-8 inline-block align-top min-w-full transition-transform duration-200"
           style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
         >
-            <Node node={data} isRoot allOpen={allOpen} />
+            <Node node={data} isRoot allOpen={allOpen} scale={scale} />
         </div>
         <div className="fixed bottom-4 right-4 z-20 flex flex-col items-end gap-2">
             <div className="flex items-center bg-background rounded-lg shadow-lg border p-1">

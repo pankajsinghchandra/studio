@@ -59,6 +59,7 @@ const Node: React.FC<NodeProps> = ({
 
   React.useLayoutEffect(() => {
     if (!isOpen || !hasChildren || !parentRef.current || !childrenContainerRef.current) {
+        setSvgPaths([]);
         return;
     }
 
@@ -87,11 +88,9 @@ const Node: React.FC<NodeProps> = ({
 
         const childCenterYs = childTriggerRects.map(r => (r.top - wrapperRect.top) + (r.height / 2));
         
-        const firstChildCenterY = childCenterYs[0];
-        const lastChildCenterY = childCenterYs[childCenterYs.length - 1];
-
-        const svgTop = Math.min(parentCenterY, firstChildCenterY);
-        const svgBottom = Math.max(parentCenterY, lastChildCenterY);
+        const allYs = [...childCenterYs, parentCenterY];
+        const svgTop = Math.min(...allYs);
+        const svgBottom = Math.max(...allYs);
         const svgHeight = Math.max(1, svgBottom - svgTop);
 
         const svgWidth = 60;
@@ -163,7 +162,7 @@ const Node: React.FC<NodeProps> = ({
         </div>
 
         {hasChildren && (
-            <div className="relative ml-6 flex items-center">
+            <div className="relative ml-6">
                 <svg
                     height={svgDimensions.height}
                     width={svgDimensions.width}

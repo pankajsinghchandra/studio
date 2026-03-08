@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookHeart, LogOut, Loader, Shield, LayoutDashboard, Settings, Info } from 'lucide-react';
+import { GraduationCap, LogOut, Loader, Shield, LayoutDashboard, Settings, Info } from 'lucide-react';
 import SearchBar from '../search-bar';
 import { Button } from '../ui/button';
 import { getAuth, signOut } from 'firebase/auth';
@@ -189,7 +189,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 max-w-screen-2xl items-center">
         <Link href="/" className="mr-6 flex items-center space-x-2">
-          <BookHeart className="h-6 w-6 text-primary" />
+          <GraduationCap className="h-6 w-6 text-primary" />
           <span className="hidden font-bold sm:inline-block font-headline">
             Vidyalaya Notes
           </span>

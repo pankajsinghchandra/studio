@@ -43,10 +43,7 @@ const subjectIcons: { [key: string]: React.ElementType } = {
 const chapterIcons = [Milestone, Scroll, Book, Users, Drama, Leaf, Landmark, Globe, Calculator, FlaskConical, Palette, Dna, Atom];
 
 const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: string, resourceType?: string, subjectNameForChapter?: string, index: number = 0) => {
-    const iconColors = ['text-red-500', 'text-blue-500', 'text-green-500', 'text-yellow-500', 'text-purple-500', 'text-pink-500', 'text-indigo-500', 'text-teal-500'];
-    const randomColor = iconColors[index % iconColors.length];
-
-    const iconProps = { className: `w-8 h-8 ${randomColor} drop-shadow-[0_2px_2px_rgba(0,0,0,0.1)]` };
+    const iconProps = { className: `w-8 h-8 text-primary drop-shadow-[0_2px_2px_rgba(0,0,0,0.1)]` };
     const resourceIconProps = { className: "w-8 h-8 text-primary/80 mt-1 drop-shadow-[0_2px_2px_rgba(0,0,0,0.2)]" };
 
     if (itemType === 'class') return <School {...iconProps} />;

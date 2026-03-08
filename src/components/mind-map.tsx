@@ -6,7 +6,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronRight, PlusSquare, MinusSquare } from 'lucide-react';
+import { ChevronRight, PlusSquare, MinusSquare, ZoomIn, ZoomOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -81,8 +81,13 @@ const Node: React.FC<NodeProps> = ({
             
             const parentY = parentRect.top - containerRect.top + (parentRect.height / 2);
             
-            const svgTop = Math.min(parentY, firstChildRect.top - containerRect.top + (firstChildRect.height/2));
-            const svgHeight = Math.max(parentY, lastChildRect.bottom - containerRect.top - (lastChildRect.height/2)) - svgTop;
+            const firstChildY = firstChildRect.top - containerRect.top + (firstChildRect.height / 2);
+            const lastChildY = lastChildRect.top - containerRect.top + (lastChildRect.height / 2);
+
+            const svgTop = Math.min(parentY, firstChildY);
+            const svgBottom = Math.max(parentY, lastChildY);
+            const svgHeight = svgBottom - svgTop;
+
 
             const paths: string[] = [];
             
@@ -118,7 +123,7 @@ const Node: React.FC<NodeProps> = ({
   
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="relative flex items-start">
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="relative flex items-center">
         <div ref={parentRef} className="relative z-10 flex items-center">
             <CollapsibleTrigger
                 disabled={!hasChildren}
@@ -191,12 +196,10 @@ interface MindMapProps {
 const MindMap: React.FC<MindMapProps> = ({ data }) => {
   const [allOpen, setAllOpen] = React.useState<boolean | null>(null);
   const [isAllOpen, setIsAllOpen] = React.useState(false);
+  const [scale, setScale] = React.useState(1);
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
-  const toggleAll = () => {
-    setAllOpen(!isAllOpen);
-    setIsAllOpen(!isAllOpen);
-  };
-  
+
   const handleExpandAll = () => {
     setAllOpen(true);
     setIsAllOpen(true);
@@ -206,13 +209,52 @@ const MindMap: React.FC<MindMapProps> = ({ data }) => {
     setAllOpen(false);
     setIsAllOpen(false);
   };
+  
+  const handleZoomIn = () => setScale(s => Math.min(2.5, s * 1.2));
+  const handleZoomOut = () => setScale(s => Math.max(0.3, s / 1.2));
+  const handleZoomReset = () => setScale(1);
+
+  React.useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      if (event.ctrlKey) {
+        event.preventDefault();
+        if (event.deltaY < 0) {
+          handleZoomIn();
+        } else {
+          handleZoomOut();
+        }
+      }
+    };
+
+    el.addEventListener('wheel', handleWheel);
+    return () => {
+      el.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
 
   return (
-    <div className="w-full h-full overflow-auto pb-8">
-        <div className="relative p-8 inline-block align-top min-w-full">
+    <div ref={containerRef} className="w-full h-full overflow-auto pb-8" title="Use Ctrl + Scroll to zoom">
+        <div 
+          className="relative p-8 inline-block align-top min-w-full transition-transform duration-200"
+          style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
+        >
             <Node node={data} isRoot allOpen={allOpen} />
         </div>
-        <div className="fixed bottom-4 right-4 z-20 flex gap-2">
+        <div className="fixed bottom-4 right-4 z-20 flex flex-col items-end gap-2">
+            <div className="flex items-center bg-background rounded-lg shadow-lg border p-1">
+                <Button onClick={handleZoomOut} variant="ghost" size="sm" className="shadow-none">
+                    <ZoomOut className="h-4 w-4" />
+                </Button>
+                <Button onClick={handleZoomReset} variant="ghost" size="sm" className="shadow-none text-muted-foreground w-14 tabular-nums">
+                    {`${Math.round(scale * 100)}%`}
+                </Button>
+                <Button onClick={handleZoomIn} variant="ghost" size="sm" className="shadow-none">
+                    <ZoomIn className="h-4 w-4" />
+                </Button>
+            </div>
             {isAllOpen ? (
                 <Button onClick={handleCollapseAll} variant="default" size="sm" className="shadow-lg">
                     <MinusSquare className="h-4 w-4 mr-2" />

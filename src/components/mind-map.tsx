@@ -71,30 +71,27 @@ const Node: React.FC<NodeProps> = ({
             const childrenElements = Array.from(childrenContainerRef.current.children) as HTMLElement[];
             if (childrenElements.length === 0) return;
 
-            const svgWidth = 80;
+            const svgWidth = 60;
             const startX = 0;
+            const endX = svgWidth;
+            const smoothness = svgWidth * 0.6;
             
             const firstChildRect = childrenElements[0].getBoundingClientRect();
             const lastChildRect = childrenElements[childrenElements.length - 1].getBoundingClientRect();
             
-            const startY = parentRect.top - containerRect.top + (parentRect.height / 2);
+            const parentY = parentRect.top - containerRect.top + (parentRect.height / 2);
             
-            const svgTop = Math.min(startY, firstChildRect.top - containerRect.top);
-            const svgHeight = Math.max(startY, lastChildRect.bottom - containerRect.top) - svgTop;
+            const svgTop = Math.min(parentY, firstChildRect.top - containerRect.top + (firstChildRect.height/2));
+            const svgHeight = Math.max(parentY, lastChildRect.bottom - containerRect.top - (lastChildRect.height/2)) - svgTop;
 
             const paths: string[] = [];
-            const endX = svgWidth / 2;
-
+            
             childrenElements.forEach(child => {
                 const childRect = child.getBoundingClientRect();
-                const childY = (childRect.top - containerRect.top) + (childRect.height / 2) - svgTop;
+                const childY = (childRect.top - containerRect.top) + (childRect.height / 2);
                 
-                const controlX1 = startX + (endX - startX) * 0.5;
-                const controlY1 = startY - svgTop;
-                const controlX2 = startX + (endX - startX) * 0.5;
-                const controlY2 = childY;
-                
-                paths.push(`M ${startX},${startY - svgTop} C ${controlX1},${controlY1} ${controlX2},${controlY2} ${endX},${childY} L ${svgWidth},${childY}`);
+                const d = `M ${startX},${parentY - svgTop} C ${startX + smoothness},${parentY - svgTop} ${endX - smoothness},${childY - svgTop} ${endX},${childY - svgTop}`;
+                paths.push(d);
             });
             
             setSvgDimensions({ height: svgHeight, width: svgWidth, top: svgTop });
@@ -107,6 +104,7 @@ const Node: React.FC<NodeProps> = ({
         if (childrenContainerRef.current) {
           resizeObserver.observe(childrenContainerRef.current);
         }
+        Array.from(childrenContainerRef.current.children).forEach(child => resizeObserver.observe(child));
         if (parentRef.current) {
           resizeObserver.observe(parentRef.current);
         }
@@ -125,7 +123,7 @@ const Node: React.FC<NodeProps> = ({
             <CollapsibleTrigger
                 disabled={!hasChildren}
                 className={cn(
-                'flex min-h-[40px] items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-md',
+                'flex min-h-[40px] items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-md whitespace-nowrap',
                 isRoot
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-card text-card-foreground border',
@@ -171,7 +169,7 @@ const Node: React.FC<NodeProps> = ({
                     <div
                     ref={childrenContainerRef}
                     className={cn(
-                        'flex flex-col gap-2 pl-24 transition-all duration-300',
+                        'flex flex-col gap-4 pl-24 transition-all duration-300',
                         !isOpen && 'hidden'
                     )}
                     >
@@ -211,7 +209,7 @@ const MindMap: React.FC<MindMapProps> = ({ data }) => {
 
   return (
     <div className="w-full h-full overflow-auto pb-8">
-        <div className="p-8 inline-block min-w-full">
+        <div className="relative p-8 inline-block align-top min-w-full">
             <Node node={data} isRoot allOpen={allOpen} />
         </div>
         <div className="fixed bottom-4 right-4 z-20 flex gap-2">

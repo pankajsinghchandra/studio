@@ -105,7 +105,7 @@ interface CardData {
 /**
  * Custom Viewer for Images with Zoom Support (Mobile & PC)
  */
-function ZoomableImageViewer({ src, alt }: { src: string, alt: string }) {
+function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, onClose?: () => void }) {
     const [scale, setScale] = useState(1);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -130,18 +130,25 @@ function ZoomableImageViewer({ src, alt }: { src: string, alt: string }) {
     }, []);
 
     return (
-        <div className="relative w-full h-full bg-black/90 overflow-hidden flex flex-col">
-            {/* Zoom Controls */}
+        <div className="relative w-full h-full bg-black overflow-hidden flex flex-col">
+            {/* Zoom Controls & Close Button */}
             <div className="absolute top-4 right-4 z-20 flex gap-2">
-                <Button size="icon" variant="secondary" className="rounded-full shadow-lg" onClick={handleZoomIn}>
-                    <ZoomIn className="w-5 h-5" />
-                </Button>
-                <Button size="icon" variant="secondary" className="rounded-full shadow-lg" onClick={handleZoomOut}>
-                    <ZoomOut className="w-5 h-5" />
-                </Button>
-                <Button size="icon" variant="secondary" className="rounded-full shadow-lg" onClick={handleReset}>
-                    <RotateCcw className="w-5 h-5" />
-                </Button>
+                <div className="flex bg-black/40 backdrop-blur-md rounded-full p-1 border border-white/10">
+                    <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full text-white hover:bg-white/20" onClick={handleZoomIn}>
+                        <ZoomIn className="w-5 h-5" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full text-white hover:bg-white/20" onClick={handleZoomOut}>
+                        <ZoomOut className="w-5 h-5" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full text-white hover:bg-white/20" onClick={handleReset}>
+                        <RotateCcw className="w-5 h-5" />
+                    </Button>
+                </div>
+                {onClose && (
+                    <Button size="icon" variant="destructive" className="h-11 w-11 rounded-full shadow-lg ml-1" onClick={onClose}>
+                        <X className="w-6 h-6" />
+                    </Button>
+                )}
             </div>
 
             {/* Image Container */}
@@ -156,8 +163,9 @@ function ZoomableImageViewer({ src, alt }: { src: string, alt: string }) {
                     className="max-w-none transition-transform duration-200 ease-out origin-center cursor-move"
                     style={{ 
                         transform: `scale(${scale})`,
-                        width: scale === 1 ? '100%' : 'auto',
-                        height: scale === 1 ? 'auto' : 'auto',
+                        width: scale === 1 ? 'auto' : 'auto',
+                        height: scale === 1 ? '90%' : 'auto',
+                        maxWidth: scale === 1 ? '95%' : 'none',
                         objectFit: 'contain'
                     }}
                 />
@@ -294,7 +302,7 @@ export default function DynamicPage() {
      * Converts Google Drive link to a direct high-res image URL (lh3 format)
      */
     const getGoogleDriveDirectImageUrl = (url: string) => {
-        const fileIdMatch = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/);
+        const fileIdMatch = url.match(/(?:drive\.google\.com\/(?:file\/d\/|open\?id=)|docs\.google\.com\/file\/d\/)([a-zA-Z0-9_-]+)/);
         if (fileIdMatch && fileIdMatch[1]) {
             // Using s2000 for high resolution suitable for zooming
             return `https://lh3.googleusercontent.com/d/${fileIdMatch[1]}=s2000`;
@@ -338,14 +346,14 @@ export default function DynamicPage() {
 
         const imageTypes = ['infographic', 'mind-map', 'lesson-plan-image'];
 
-        if (type === 'video' || type === 'song') {
-            embedUrl = getYoutubeEmbedUrl(url);
-            isDirectEmbeddable = !!embedUrl;
-        } else if (imageTypes.includes(type) && url.includes('drive.google.com')) {
-            // Special handling for Infographics/Images from Drive to use Direct Image format
-            embedUrl = getGoogleDriveDirectImageUrl(url);
+        if (imageTypes.includes(type)) {
+            // For images, if it's from Drive, ALWAYS convert to lh3 direct link
+            embedUrl = url.includes('drive.google.com') ? getGoogleDriveDirectImageUrl(url) : url;
             isDirectImage = true;
             isDirectEmbeddable = true;
+        } else if (type === 'video' || type === 'song') {
+            embedUrl = getYoutubeEmbedUrl(url);
+            isDirectEmbeddable = !!embedUrl;
         } else if (['pdf-note', 'lesson-plan-pdf', 'translated-chapter'].includes(type) && url.includes('drive.google.com')) {
             embedUrl = getGoogleDriveEmbedUrl(url);
             isDirectEmbeddable = true;
@@ -359,11 +367,6 @@ export default function DynamicPage() {
                     return <div className="p-6 text-destructive-foreground bg-destructive">Invalid Mind Map JSON format.</div>
                 }
             }
-        } else if (imageTypes.includes(type)) {
-            // Non-drive image URLs
-            embedUrl = url;
-            isDirectImage = true;
-            isDirectEmbeddable = true;
         }
 
         if (isDirectEmbeddable) {
@@ -388,7 +391,7 @@ export default function DynamicPage() {
             
             // Zoomable Image Viewer for Infographics/Mind Maps
             if (isDirectImage) {
-                return <ZoomableImageViewer src={embedUrl || url} alt={title} />;
+                return <ZoomableImageViewer src={embedUrl || url} alt={title} onClose={() => setSelectedResource(null)} />;
             }
 
             if (isGoogleDriveEmbed) {
@@ -447,6 +450,8 @@ export default function DynamicPage() {
         return type.replace(/-/g, ' ');
     };
 
+    const isFullImageMode = selectedResource && ['infographic', 'mind-map', 'lesson-plan-image'].includes(selectedResource.type);
+
     return (
         <>
             <LoadingOverlay isLoading={isNavigating} />
@@ -504,24 +509,26 @@ export default function DynamicPage() {
             
              {selectedResource && (
                  <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col animate-in fade-in-0">
-                    <header className="p-2 bg-card/80 backdrop-blur-sm flex-row justify-between items-center z-10 shrink-0 border-b flex">
-                        <h2 className="text-foreground text-lg truncate px-2 font-semibold">{selectedResource.title}</h2>
-                        <div className="flex items-center gap-2">
-                            {selectedResource.url && !['lesson-plan-text', 'mind-map-json'].includes(selectedResource.type) && (
-                                <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground" asChild>
-                                    <a href={selectedResource.url} target="_blank" rel="noopener noreferrer">
-                                        <ExternalLink className="w-5 h-5" />
-                                        <span className="sr-only">Open in new tab</span>
-                                    </a>
+                    {!isFullImageMode && (
+                        <header className="p-2 bg-card/80 backdrop-blur-sm flex-row justify-between items-center z-10 shrink-0 border-b flex">
+                            <h2 className="text-foreground text-lg truncate px-2 font-semibold">{selectedResource.title}</h2>
+                            <div className="flex items-center gap-2">
+                                {selectedResource.url && !['lesson-plan-text', 'mind-map-json'].includes(selectedResource.type) && (
+                                    <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground" asChild>
+                                        <a href={selectedResource.url} target="_blank" rel="noopener noreferrer">
+                                            <ExternalLink className="w-5 h-5" />
+                                            <span className="sr-only">Open in new tab</span>
+                                        </a>
+                                    </Button>
+                                )}
+                                <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground" onClick={() => setSelectedResource(null)}>
+                                    <X className="w-5 h-5" />
+                                    <span className="sr-only">Close</span>
                                 </Button>
-                            )}
-                            <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground" onClick={() => setSelectedResource(null)}>
-                                <X className="w-5 h-5" />
-                                <span className="sr-only">Close</span>
-                            </Button>
-                        </div>
-                    </header>
-                    <div className="flex-1 w-full min-h-0 bg-muted/40">
+                            </div>
+                        </header>
+                    )}
+                    <div className={cn("flex-1 w-full min-h-0 bg-muted/40", isFullImageMode && "bg-black")}>
                         {renderDialogContent()}
                     </div>
                 </div>

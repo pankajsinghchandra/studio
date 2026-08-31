@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
@@ -12,11 +13,13 @@ import LoadingOverlay from '@/components/loading-overlay';
 import { 
     FileText, Video, ImageIcon, BookOpen, ChevronRight, ExternalLink,
     School, Book, FlaskConical, Languages, Landmark, Calculator, Palette, Dna, Atom, 
-    Globe, Scroll, Milestone, Users, Drama, Leaf, Folder, X, Share2, Pencil, Music
+    Globe, Scroll, Milestone, Users, Drama, Leaf, Folder, X, Share2, Pencil, Music,
+    ZoomIn, ZoomOut, RotateCcw
 } from 'lucide-react';
 import { syllabus } from '@/lib/syllabus';
 import { Button } from '@/components/ui/button';
 import MindMap, { type MindMapNode as MindMapNodeType } from '@/components/mind-map';
+import { cn } from '@/lib/utils';
 
 const subjectIcons: { [key: string]: React.ElementType } = {
     'mathematics': Calculator,
@@ -97,6 +100,79 @@ interface CardData {
     name: string;
     description: string;
     path: string;
+}
+
+/**
+ * Custom Viewer for Images with Zoom Support (Mobile & PC)
+ */
+function ZoomableImageViewer({ src, alt }: { src: string, alt: string }) {
+    const [scale, setScale] = useState(1);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const handleZoomIn = () => setScale(prev => Math.min(prev + 0.5, 5));
+    const handleZoomOut = () => setScale(prev => Math.max(prev - 0.5, 0.5));
+    const handleReset = () => setScale(1);
+
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+
+        const handleWheel = (e: WheelEvent) => {
+            if (e.ctrlKey) {
+                e.preventDefault();
+                if (e.deltaY < 0) handleZoomIn();
+                else handleZoomOut();
+            }
+        };
+
+        el.addEventListener('wheel', handleWheel, { passive: false });
+        return () => el.removeEventListener('wheel', handleWheel);
+    }, []);
+
+    return (
+        <div className="relative w-full h-full bg-black/90 overflow-hidden flex flex-col">
+            {/* Zoom Controls */}
+            <div className="absolute top-4 right-4 z-20 flex gap-2">
+                <Button size="icon" variant="secondary" className="rounded-full shadow-lg" onClick={handleZoomIn}>
+                    <ZoomIn className="w-5 h-5" />
+                </Button>
+                <Button size="icon" variant="secondary" className="rounded-full shadow-lg" onClick={handleZoomOut}>
+                    <ZoomOut className="w-5 h-5" />
+                </Button>
+                <Button size="icon" variant="secondary" className="rounded-full shadow-lg" onClick={handleReset}>
+                    <RotateCcw className="w-5 h-5" />
+                </Button>
+            </div>
+
+            {/* Image Container */}
+            <div 
+                ref={containerRef}
+                className="flex-1 w-full overflow-auto touch-pan-x touch-pan-y flex items-center justify-center p-4"
+            >
+                <img 
+                    src={src} 
+                    alt={alt}
+                    draggable={false}
+                    className="max-w-none transition-transform duration-200 ease-out origin-center cursor-move"
+                    style={{ 
+                        transform: `scale(${scale})`,
+                        width: scale === 1 ? '100%' : 'auto',
+                        height: scale === 1 ? 'auto' : 'auto',
+                        objectFit: 'contain'
+                    }}
+                />
+            </div>
+            
+            {/* Hint Overlay (Mobile) */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-xs text-white/60 pointer-events-none md:hidden">
+                Pinch to zoom • Drag to pan
+            </div>
+            {/* Hint Overlay (PC) */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-xs text-white/60 pointer-events-none hidden md:block">
+                Ctrl + Scroll to zoom • Drag to pan
+            </div>
+        </div>
+    );
 }
 
 export default function DynamicPage() {
@@ -199,7 +275,6 @@ export default function DynamicPage() {
     };
     
     const getYoutubeEmbedUrl = (url: string) => {
-        // Improved regex to support Shorts, embed, watch?v=, and youtu.be links
         const videoIdMatch = url.match(/(?:v=|vi\/|embed\/|youtu.be\/|watch\?v=|shorts\/)([a-zA-Z0-9_-]{11})/);
         if (videoIdMatch && videoIdMatch[1]) {
             return `https://www.youtube-nocookie.com/embed/${videoIdMatch[1]}`;
@@ -211,6 +286,18 @@ export default function DynamicPage() {
         const fileIdMatch = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/);
         if (fileIdMatch && fileIdMatch[1]) {
             return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
+        }
+        return url;
+    };
+
+    /**
+     * Converts Google Drive link to a direct high-res image URL (lh3 format)
+     */
+    const getGoogleDriveDirectImageUrl = (url: string) => {
+        const fileIdMatch = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/);
+        if (fileIdMatch && fileIdMatch[1]) {
+            // Using s2000 for high resolution suitable for zooming
+            return `https://lh3.googleusercontent.com/d/${fileIdMatch[1]}=s2000`;
         }
         return url;
     };
@@ -246,12 +333,20 @@ export default function DynamicPage() {
         let embedUrl: string | null = null;
         let isDirectEmbeddable = false;
         let isGoogleDriveEmbed = false;
+        let isDirectImage = false;
         let mindMapData: MindMapNodeType | null = null;
+
+        const imageTypes = ['infographic', 'mind-map', 'lesson-plan-image'];
 
         if (type === 'video' || type === 'song') {
             embedUrl = getYoutubeEmbedUrl(url);
             isDirectEmbeddable = !!embedUrl;
-        } else if (['infographic', 'mind-map', 'lesson-plan-image', 'pdf-note', 'lesson-plan-pdf', 'translated-chapter'].includes(type) && url.includes('drive.google.com')) {
+        } else if (imageTypes.includes(type) && url.includes('drive.google.com')) {
+            // Special handling for Infographics/Images from Drive to use Direct Image format
+            embedUrl = getGoogleDriveDirectImageUrl(url);
+            isDirectImage = true;
+            isDirectEmbeddable = true;
+        } else if (['pdf-note', 'lesson-plan-pdf', 'translated-chapter'].includes(type) && url.includes('drive.google.com')) {
             embedUrl = getGoogleDriveEmbedUrl(url);
             isDirectEmbeddable = true;
             isGoogleDriveEmbed = true;
@@ -264,8 +359,10 @@ export default function DynamicPage() {
                     return <div className="p-6 text-destructive-foreground bg-destructive">Invalid Mind Map JSON format.</div>
                 }
             }
-        } else if (['infographic', 'mind-map', 'lesson-plan-image'].includes(type)) {
+        } else if (imageTypes.includes(type)) {
+            // Non-drive image URLs
             embedUrl = url;
+            isDirectImage = true;
             isDirectEmbeddable = true;
         }
 
@@ -288,17 +385,12 @@ export default function DynamicPage() {
                     </div>
                 )
             }
-             if (['infographic', 'mind-map', 'lesson-plan-image'].includes(type) && !url.includes('drive.google.com')) {
-                return (
-                    <div className="w-full h-full flex items-center justify-center bg-muted/20">
-                        <img 
-                            src={url} 
-                            alt={title}
-                            className="max-w-full max-h-full object-contain"
-                        />
-                    </div>
-                )
+            
+            // Zoomable Image Viewer for Infographics/Mind Maps
+            if (isDirectImage) {
+                return <ZoomableImageViewer src={embedUrl || url} alt={title} />;
             }
+
             if (isGoogleDriveEmbed) {
                 return (
                     <div className="w-full h-full overflow-hidden">

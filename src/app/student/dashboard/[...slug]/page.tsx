@@ -199,7 +199,8 @@ export default function DynamicPage() {
     };
     
     const getYoutubeEmbedUrl = (url: string) => {
-        const videoIdMatch = url.match(/(?:v=|vi\/|embed\/|youtu.be\/|watch\?v=)([a-zA-Z0-9_-]{11})/);
+        // Improved regex to support Shorts, embed, watch?v=, and youtu.be links
+        const videoIdMatch = url.match(/(?:v=|vi\/|embed\/|youtu.be\/|watch\?v=|shorts\/)([a-zA-Z0-9_-]{11})/);
         if (videoIdMatch && videoIdMatch[1]) {
             return `https://www.youtube-nocookie.com/embed/${videoIdMatch[1]}`;
         }

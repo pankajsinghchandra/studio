@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -157,8 +156,6 @@ export default function UserActivityPage() {
         if (!type) return 'Resource';
         if (type === 'mind-map-json') return 'Mind Map';
         if (type === 'lesson-plan-text') return 'Lesson Plan';
-        if (type === 'lesson-plan-pdf') return 'Lesson Plan (PDF)';
-        if (type === 'lesson-plan-image') return 'Lesson Plan (Image)';
         if (type === 'pdf-note') return 'PDF Note';
         if (type === 'translated-chapter') return 'Translated Chapter';
         return type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -235,7 +232,7 @@ export default function UserActivityPage() {
                         <TableRow>
                             <TableHead className="w-[180px]">Student</TableHead>
                             <TableHead>Resource & Type</TableHead>
-                            <TableHead>Hierarchy (Cl > Sub > Ch)</TableHead>
+                            <TableHead>Hierarchy (Cl &gt; Sub &gt; Ch)</TableHead>
                             <TableHead>Time Spent</TableHead>
                             <TableHead className="text-right">Activity Date</TableHead>
                         </TableRow>

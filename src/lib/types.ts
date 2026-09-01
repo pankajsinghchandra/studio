@@ -48,6 +48,7 @@ export interface UserActivity {
   resourceClass: string;
   resourceSubject: string;
   resourceChapter: string;
+  resourceType: string;
   timestamp: any; // Firestore timestamp object
   durationSeconds?: number;
 }

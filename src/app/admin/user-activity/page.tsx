@@ -13,12 +13,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Loader, ChevronLeft, ChevronRight, Clock, User } from 'lucide-react';
+import { ArrowLeft, Loader, ChevronLeft, ChevronRight, Clock, User, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 
 const PAGE_SIZE = 25;
+const ADMIN_EMAIL = 'quizpankaj@gmail.com';
 
 interface UserForFilter {
     uid: string;
@@ -45,7 +46,7 @@ export default function UserActivityPage() {
     
     useEffect(() => {
         if (!authLoading) {
-            if (!user || userDetails?.email !== 'quizpankaj@gmail.com') {
+            if (!user || userDetails?.email !== ADMIN_EMAIL) {
                 router.replace('/');
             } else {
                 fetchUsers();
@@ -56,11 +57,13 @@ export default function UserActivityPage() {
     const fetchUsers = async () => {
         try {
             const usersSnapshot = await getDocs(collection(db, 'users'));
-            const usersList = usersSnapshot.docs.map(doc => ({ 
-                uid: doc.id, 
-                email: doc.data().email as string | null,
-                name: doc.data().name as string | null 
-            }));
+            const usersList = usersSnapshot.docs
+                .map(doc => ({ 
+                    uid: doc.id, 
+                    email: doc.data().email as string | null,
+                    name: doc.data().name as string | null 
+                }))
+                .filter(u => u.email !== ADMIN_EMAIL); // Exclude admin from filter
             setUsers(usersList);
         } catch (error) {
             console.error("Error fetching users:", error);
@@ -76,15 +79,22 @@ export default function UserActivityPage() {
                 if (selectedUser !== 'all') {
                     q = query(q, where('userId', '==', selectedUser));
                 }
+
                 if (selectedTime !== 'all') {
                     const now = new Date();
                     let startDate;
-                    if (selectedTime === 'weekly') {
-                        startDate = new Date(new Date().setDate(now.getDate() - 7));
-                    } else { // monthly
-                        startDate = new Date(new Date().setMonth(now.getMonth() - 1));
+                    if (selectedTime === '24h') {
+                        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                    } else if (selectedTime === '3d') {
+                        startDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+                    } else if (selectedTime === 'weekly') {
+                        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    } else if (selectedTime === 'monthly') {
+                        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
                     }
-                    q = query(q, where('timestamp', '>=', startDate));
+                    if (startDate) {
+                        q = query(q, where('timestamp', '>=', startDate));
+                    }
                 }
                 
                 // Always try to order by timestamp if no other primary order is conflicting
@@ -99,7 +109,9 @@ export default function UserActivityPage() {
                 q = query(q, limit(PAGE_SIZE));
 
                 const docSnapshots = await getDocs(q);
-                const fetchedActivities = docSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserActivity));
+                const fetchedActivities = docSnapshots.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() } as UserActivity))
+                    .filter(a => a.userEmail !== ADMIN_EMAIL); // Filter out admin activity
                 
                 setActivities(fetchedActivities);
                 setLastVisible(docSnapshots.docs[docSnapshots.docs.length - 1] || null);
@@ -113,7 +125,7 @@ export default function UserActivityPage() {
             }
         };
         
-        if(user && userDetails?.email === 'quizpankaj@gmail.com') {
+        if(user && userDetails?.email === ADMIN_EMAIL) {
             fetchActivities();
         }
     }, [selectedUser, selectedTime, page, user, userDetails]);
@@ -141,6 +153,13 @@ export default function UserActivityPage() {
         }
     }
 
+    const getResourceTypeLabel = (type?: string) => {
+        if (!type) return 'Resource';
+        if (type === 'mind-map-json') return 'Mind Map';
+        if (type === 'lesson-plan-text') return 'Lesson Plan';
+        return type.replace(/-/g, ' ');
+    };
+
     if (authLoading || !user) {
         return <LoadingOverlay isLoading={true} />;
     }
@@ -162,7 +181,7 @@ export default function UserActivityPage() {
                 </Button>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <Card>
                     <CardHeader className="pb-3">
                         <CardTitle className="text-sm font-medium flex items-center">
@@ -196,19 +215,12 @@ export default function UserActivityPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Time</SelectItem>
+                                <SelectItem value="24h">Last 24 Hours</SelectItem>
+                                <SelectItem value="3d">Last 3 Days</SelectItem>
                                 <SelectItem value="weekly">Last 7 Days</SelectItem>
                                 <SelectItem value="monthly">Last 30 Days</SelectItem>
                             </SelectContent>
                         </Select>
-                    </CardContent>
-                </Card>
-                <Card className="bg-primary/5 border-primary/20">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium">Quick Stats</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{activities.length}</div>
-                        <p className="text-xs text-muted-foreground">Activities on this page</p>
                     </CardContent>
                 </Card>
             </div>
@@ -217,9 +229,9 @@ export default function UserActivityPage() {
                 <Table>
                     <TableHeader className="bg-muted/50">
                         <TableRow>
-                            <TableHead className="w-[200px]">Student</TableHead>
-                            <TableHead>Resource Details</TableHead>
-                            <TableHead>Full Context (Cl > Sub > Ch)</TableHead>
+                            <TableHead className="w-[180px]">Student</TableHead>
+                            <TableHead>Resource & Type</TableHead>
+                            <TableHead>Hierarchy (Cl > Sub > Ch)</TableHead>
                             <TableHead>Time Spent</TableHead>
                             <TableHead className="text-right">Activity Date</TableHead>
                         </TableRow>
@@ -246,27 +258,32 @@ export default function UserActivityPage() {
                             <TableRow key={activity.id} className="hover:bg-accent/5 transition-colors">
                                 <TableCell>
                                     <div className="flex flex-col">
-                                        <span className="font-bold text-foreground">{activity.userName}</span>
-                                        <span className="text-xs text-muted-foreground">{activity.userEmail}</span>
+                                        <span className="font-bold text-foreground text-sm">{activity.userName}</span>
+                                        <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">{activity.userEmail}</span>
                                     </div>
                                 </TableCell>
                                 <TableCell>
-                                    <span className="font-medium">{activity.resourceTitle}</span>
+                                    <div className="flex flex-col gap-1">
+                                        <span className="font-medium text-sm line-clamp-1">{activity.resourceTitle}</span>
+                                        <Badge variant="outline" className="w-fit text-[9px] py-0 px-1.5 h-4 uppercase tracking-tighter bg-primary/5 text-primary border-primary/20">
+                                            {getResourceTypeLabel(activity.resourceType)}
+                                        </Badge>
+                                    </div>
                                 </TableCell>
                                 <TableCell>
                                     <div className="flex flex-wrap gap-1">
-                                        <Badge variant="outline" className="text-[10px] py-0">Class {activity.resourceClass}</Badge>
-                                        <Badge variant="secondary" className="text-[10px] py-0">{activity.resourceSubject}</Badge>
-                                        <Badge variant="ghost" className="text-[10px] py-0 border italic">{activity.resourceChapter}</Badge>
+                                        <Badge variant="outline" className="text-[9px] py-0 px-1 h-4">Cl {activity.resourceClass}</Badge>
+                                        <Badge variant="secondary" className="text-[9px] py-0 px-1 h-4">{activity.resourceSubject}</Badge>
+                                        <Badge variant="ghost" className="text-[9px] py-0 px-1 h-4 border italic">{activity.resourceChapter}</Badge>
                                     </div>
                                 </TableCell>
                                 <TableCell>
-                                    <div className="flex items-center gap-1.5 font-mono text-primary font-semibold">
-                                        <Clock className="w-3.5 h-3.5" />
+                                    <div className="flex items-center gap-1 font-mono text-primary font-bold text-xs">
+                                        <Clock className="w-3 h-3" />
                                         {formatDuration(activity.durationSeconds)}
                                     </div>
                                 </TableCell>
-                                <TableCell className="text-right text-xs text-muted-foreground whitespace-nowrap">
+                                <TableCell className="text-right text-[10px] text-muted-foreground whitespace-nowrap">
                                     {activity.timestamp ? format(activity.timestamp.toDate(), 'PPpp') : 'N/A'}
                                 </TableCell>
                             </TableRow>
@@ -276,20 +293,20 @@ export default function UserActivityPage() {
             </Card>
             
             <div className="flex items-center justify-between py-6">
-                <p className="text-sm text-muted-foreground">
-                    Showing {activities.length} of total activities
+                <p className="text-xs text-muted-foreground">
+                    Showing {activities.length} activities on this page
                 </p>
                 <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm" onClick={handlePrevPage} disabled={page <= 1}>
-                        <ChevronLeft className="h-4 w-4 mr-1"/>
-                        First Page
+                    <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handlePrevPage} disabled={page <= 1}>
+                        <ChevronLeft className="h-3 w-3 mr-1"/>
+                        Reset
                     </Button>
-                    <div className="bg-muted px-3 py-1 rounded-md text-sm font-medium">
+                    <div className="bg-muted px-3 py-1 rounded-md text-xs font-medium">
                         Page {page}
                     </div>
-                    <Button variant="outline" size="sm" onClick={handleNextPage} disabled={isLastPage}>
-                        Next Page
-                        <ChevronRight className="h-4 w-4 ml-1"/>
+                    <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleNextPage} disabled={isLastPage}>
+                        Next
+                        <ChevronRight className="h-3 w-3 ml-1"/>
                     </Button>
                 </div>
             </div>

@@ -108,8 +108,8 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
     const pointers = useRef<Map<number, PointerEvent>>(new Map());
     const lastDist = useRef<number | null>(null);
 
-    const handleZoomIn = () => setScale(prev => Math.min(prev + 0.5, 5));
-    const handleZoomOut = () => setScale(prev => Math.max(prev - 0.5, 0.5));
+    const handleZoomIn = () => setScale(prev => Math.min(prev + 0.4, 5));
+    const handleZoomOut = () => setScale(prev => Math.max(prev - 0.4, 0.5));
     const handleReset = () => setScale(1);
 
     useEffect(() => {
@@ -139,9 +139,9 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
 
                 if (lastDist.current !== null) {
                     const delta = dist - lastDist.current;
-                    if (Math.abs(delta) > 2) {
+                    if (Math.abs(delta) > 1.5) {
                         setScale(prev => {
-                            const next = prev + (delta > 0 ? 0.05 : -0.05);
+                            const next = prev + (delta > 0 ? 0.04 : -0.04);
                             return Math.min(Math.max(next, 0.5), 5);
                         });
                     }
@@ -175,20 +175,20 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
     return (
         <div className="relative w-full h-full bg-black overflow-hidden flex flex-col touch-none">
             <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-                <div className="flex bg-black/60 backdrop-blur-md rounded-full p-1 border border-white/20 shadow-xl">
-                    <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full text-white hover:bg-white/20" onClick={handleZoomIn}>
-                        <ZoomIn className="w-5 h-5" />
+                <div className="flex bg-black/30 backdrop-blur-sm rounded-full p-1 border border-white/10 shadow-lg">
+                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-white/90 hover:bg-white/20 transition-colors" onClick={handleZoomIn}>
+                        <ZoomIn className="w-4 h-4" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full text-white hover:bg-white/20" onClick={handleZoomOut}>
-                        <ZoomOut className="w-5 h-5" />
+                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-white/90 hover:bg-white/20 transition-colors" onClick={handleZoomOut}>
+                        <ZoomOut className="w-4 h-4" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full text-white hover:bg-white/20" onClick={handleReset}>
-                        <RotateCcw className="w-5 h-5" />
+                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-white/90 hover:bg-white/20 transition-colors" onClick={handleReset}>
+                        <RotateCcw className="w-4 h-4" />
                     </Button>
                 </div>
                 {onClose && (
-                    <Button size="icon" variant="destructive" className="h-9 w-9 rounded-full shadow-lg border border-white/10" onClick={onClose}>
-                        <X className="w-5 h-5" />
+                    <Button size="icon" variant="destructive" className="h-8 w-8 rounded-full shadow-lg border border-white/10 opacity-90 hover:opacity-100" onClick={onClose}>
+                        <X className="w-4 h-4" />
                     </Button>
                 )}
             </div>
@@ -200,16 +200,17 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
                     src={src} 
                     alt={alt}
                     draggable={false}
-                    className="max-w-none transition-transform duration-100 ease-out origin-center"
+                    className="max-w-none origin-center"
                     style={{ 
                         transform: `scale(${scale})`,
                         height: scale === 1 ? '90%' : 'auto',
                         maxWidth: scale === 1 ? '95%' : 'none',
-                        objectFit: 'contain'
+                        objectFit: 'contain',
+                        transition: pointers.current.size === 2 ? 'none' : 'transform 0.15s ease-out'
                     }}
                 />
             </div>
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-black/40 backdrop-blur-md rounded-full text-xs text-white/80 pointer-events-none border border-white/10">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-black/20 backdrop-blur-sm rounded-full text-[10px] text-white/60 pointer-events-none border border-white/5">
                 <span className="md:hidden">Pinch to zoom • Drag to pan</span>
                 <span className="hidden md:inline">Ctrl + Scroll to zoom • Drag to pan</span>
             </div>
@@ -380,6 +381,7 @@ export default function DynamicPage() {
                 resourceClass: resource.class,
                 resourceSubject: resource.subject,
                 resourceChapter: resource.chapter,
+                resourceType: resource.type,
                 timestamp: serverTimestamp(),
                 durationSeconds: 0
             }).then(docRef => {
@@ -580,7 +582,7 @@ export default function DynamicPage() {
                             </div>
                         </header>
                     )}
-                    <div className={cn("flex-1 w-full min-h-0 bg-muted/40", isFullImageMode && "bg-black")}>
+                    <div className={cn("flex-1 w-full min-0 bg-muted/40", isFullImageMode && "bg-black")}>
                         {renderDialogContent()}
                     </div>
                 </div>

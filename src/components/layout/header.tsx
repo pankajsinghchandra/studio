@@ -24,7 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '../ui/separator';
 
 export default function Header() {
@@ -291,27 +291,27 @@ export default function Header() {
     </Dialog>
     
     <Dialog open={isAboutUsOpen} onOpenChange={setIsAboutUsOpen}>
-        <DialogContent className="max-w-2xl bg-background/80 backdrop-blur-xl border-primary/20 shadow-2xl overflow-hidden p-0 gap-0">
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto bg-background/80 backdrop-blur-xl border-primary/20 shadow-2xl p-0 gap-0">
             <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
                 <Sparkles className="w-32 h-32 text-primary" />
             </div>
             
-            <DialogHeader className="p-8 pb-4">
+            <DialogHeader className="p-6 md:p-8 pb-4">
                 <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 bg-primary/10 rounded-xl">
                         <Sparkles className="w-6 h-6 text-primary" />
                     </div>
-                    <DialogTitle className="font-headline text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600">
+                    <DialogTitle className="font-headline text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600">
                         Vidyalaya Notes
                     </DialogTitle>
                 </div>
-                <DialogDescription className="text-lg font-medium text-foreground/80">
+                <DialogDescription className="text-base md:text-lg font-medium text-foreground/80">
                     आपकी डिजिटल लाइब्रेरी - शिक्षा की नई उमंग
                 </DialogDescription>
             </DialogHeader>
 
-            <div className="px-8 py-4 space-y-6">
-                <div className="relative p-6 rounded-2xl bg-primary/5 border border-primary/10 shadow-inner">
+            <div className="px-6 md:px-8 py-4 space-y-6">
+                <div className="relative p-5 md:p-6 rounded-2xl bg-primary/5 border border-primary/10 shadow-inner text-sm md:text-base">
                     <p className="text-foreground leading-relaxed italic">
                         &quot;Vidyalaya Notes&quot; शिक्षकों और छात्रों के लिए एक आधुनिक सहायक उपकरण (Teaching-Learning Aid) है, जिसे शिक्षा को सुलभ और मज़ेदार बनाने के लिए डिज़ाइन किया गया है।
                     </p>
@@ -367,16 +367,16 @@ export default function Header() {
                         target="_blank"
                         className="group block p-5 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg hover:shadow-blue-500/30 transition-all duration-300 active:scale-[0.98]"
                     >
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center gap-4">
                             <div className="space-y-1">
-                                <h5 className="font-bold text-xl flex items-center gap-2 text-white">
+                                <h5 className="font-bold text-lg md:text-xl flex items-center gap-2 text-white">
                                     My Test
                                     <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Online Exam</span>
                                 </h5>
-                                <p className="text-blue-100 text-sm">परीक्षा की तैयारी के लिए यहाँ क्लिक करें और अभ्यास शुरू करें...</p>
+                                <p className="text-blue-100 text-xs md:text-sm">परीक्षा की तैयारी के लिए यहाँ क्लिक करें और अभ्यास शुरू करें...</p>
                             </div>
-                            <div className="bg-white/10 p-3 rounded-full group-hover:bg-white/20 transition-colors">
-                                <ExternalLink className="w-6 h-6" />
+                            <div className="bg-white/10 p-3 rounded-full group-hover:bg-white/20 transition-colors shrink-0">
+                                <ExternalLink className="w-5 h-5 md:w-6 md:h-6" />
                             </div>
                         </div>
                     </Link>

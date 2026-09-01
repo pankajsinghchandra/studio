@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -45,7 +46,7 @@ export default function EditContentPage() {
   const { user, loading: authLoading, userDetails } = useAuth();
   const router = useRouter();
   const params = useParams();
-  const { id: resourceId } = params as { id: string };
+  const resourceId = params?.id as string;
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -281,12 +282,9 @@ export default function EditContentPage() {
                   <SelectValue placeholder="Select resource type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="lesson-plan-pdf">Lesson Plan (PDF)</SelectItem>
-                  <SelectItem value="lesson-plan-image">Lesson Plan (Image)</SelectItem>
                   <SelectItem value="lesson-plan-text">Lesson Plan (Text)</SelectItem>
                   <SelectItem value="video">Video</SelectItem>
                   <SelectItem value="infographic">Infographic (Image)</SelectItem>
-                  <SelectItem value="mind-map">Mind Map (Image)</SelectItem>
                   <SelectItem value="mind-map-json">Mind Map (JSON)</SelectItem>
                   <SelectItem value="pdf-note">PDF Note</SelectItem>
                   <SelectItem value="translated-chapter">Translated Chapter (PDF)</SelectItem>

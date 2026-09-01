@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -267,12 +268,9 @@ export default function ManageContentPage() {
                   <SelectValue placeholder="Select resource type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="lesson-plan-pdf">Lesson Plan (PDF)</SelectItem>
-                  <SelectItem value="lesson-plan-image">Lesson Plan (Image)</SelectItem>
                   <SelectItem value="lesson-plan-text">Lesson Plan (Text)</SelectItem>
                   <SelectItem value="video">Video</SelectItem>
                   <SelectItem value="infographic">Infographic (Image)</SelectItem>
-                  <SelectItem value="mind-map">Mind Map (Image)</SelectItem>
                   <SelectItem value="mind-map-json">Mind Map (JSON)</SelectItem>
                   <SelectItem value="pdf-note">PDF Note</SelectItem>
                   <SelectItem value="translated-chapter">Translated Chapter (PDF)</SelectItem>

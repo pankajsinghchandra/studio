@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/app/providers';
@@ -77,7 +78,6 @@ export default function AdminDashboard() {
     setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'resources', resourceId));
-      // Instead of refetching all, just remove the item from the local state
       setAllResources(prev => prev.filter(r => r.id !== resourceId));
       toast({
         title: 'Success',
@@ -166,7 +166,6 @@ export default function AdminDashboard() {
 
 
   useEffect(() => {
-    // This effect now only manages the dependent dropdowns
     if (selectedClass) {
         const subjectKeys = Object.keys(syllabus[selectedClass as keyof typeof syllabus] || {});
         setSubjects(subjectKeys.sort());
@@ -217,6 +216,14 @@ export default function AdminDashboard() {
     }
     
     return null;
+  };
+
+  const getResourceTypeLabel = (type: string) => {
+    if (type === 'mind-map-json') return 'Mind Map';
+    if (type === 'translated-chapter') return 'Translated Chapter';
+    if (type === 'song') return 'Song';
+    if (type === 'lesson-plan-text') return 'Lesson Plan';
+    return type.replace(/-/g, ' ');
   };
 
 
@@ -283,12 +290,9 @@ export default function AdminDashboard() {
                         <SelectTrigger id="type-filter"><SelectValue placeholder="Filter by Type" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Types</SelectItem>
-                            <SelectItem value="lesson-plan-pdf">Lesson Plan (PDF)</SelectItem>
-                            <SelectItem value="lesson-plan-image">Lesson Plan (Image)</SelectItem>
                             <SelectItem value="lesson-plan-text">Lesson Plan (Text)</SelectItem>
                             <SelectItem value="video">Video</SelectItem>
                             <SelectItem value="infographic">Infographic (Image)</SelectItem>
-                            <SelectItem value="mind-map">Mind Map (Image)</SelectItem>
                             <SelectItem value="mind-map-json">Mind Map (JSON)</SelectItem>
                             <SelectItem value="pdf-note">PDF Note</SelectItem>
                             <SelectItem value="translated-chapter">Translated Chapter (PDF)</SelectItem>
@@ -322,7 +326,7 @@ export default function AdminDashboard() {
                 <Card key={resource.id} className="bg-card flex flex-col">
                   <CardHeader>
                     <CardTitle>{resource.title}</CardTitle>
-                    <CardDescription>{resource.type} - Class {resource.class}, {resource.subject}, Chapter {resource.chapter}</CardDescription>
+                    <CardDescription>{getResourceTypeLabel(resource.type)} - Class {resource.class}, {resource.subject}, Chapter {resource.chapter}</CardDescription>
                   </CardHeader>
                   <CardContent className="flex-grow">
                      <div className="flex items-center gap-2">
@@ -392,7 +396,7 @@ export default function AdminDashboard() {
                             <TableCell className="font-medium">{resource.title}</TableCell>
                             <TableCell><Badge variant="secondary">{resource.subject}</Badge></TableCell>
                             <TableCell>{resource.chapter}</TableCell>
-                            <TableCell><Badge variant="outline">{resource.type}</Badge></TableCell>
+                            <TableCell><Badge variant="outline">{getResourceTypeLabel(resource.type)}</Badge></TableCell>
                             <TableCell><Badge>{resource.class}</Badge></TableCell>
                             <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-2">

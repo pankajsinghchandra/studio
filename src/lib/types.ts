@@ -29,7 +29,7 @@ export interface ClassData {
 
 export interface Resource {
   id: string;
-  type: 'lesson-plan-pdf' | 'lesson-plan-image' | 'video' | 'infographic' | 'mind-map' | 'pdf-note' | 'lesson-plan-text' | 'mind-map-json' | 'translated-chapter' | 'song';
+  type: 'video' | 'infographic' | 'pdf-note' | 'lesson-plan-text' | 'mind-map-json' | 'translated-chapter' | 'song';
   title: string;
   url: string;
   class: string;

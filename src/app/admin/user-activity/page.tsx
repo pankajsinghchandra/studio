@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,14 +8,15 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy, where, limit, startAfter, DocumentData, DocumentSnapshot } from 'firebase/firestore';
 import { UserActivity } from '@/lib/types';
 import LoadingOverlay from '@/components/loading-overlay';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Loader, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Loader, ChevronLeft, ChevronRight, Clock, User } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 
 const PAGE_SIZE = 25;
 
@@ -65,14 +67,12 @@ export default function UserActivityPage() {
         }
     };
 
-    // This effect will run whenever filters change or pagination state changes
     useEffect(() => {
         const fetchActivities = async () => {
             setIsLoading(true);
             try {
                 let q = query(collection(db, "user-activity"));
 
-                // Apply filters
                 if (selectedUser !== 'all') {
                     q = query(q, where('userId', '==', selectedUser));
                 }
@@ -87,12 +87,11 @@ export default function UserActivityPage() {
                     q = query(q, where('timestamp', '>=', startDate));
                 }
                 
-                // Apply sorting ONLY if not filtering by a specific user to avoid composite index.
-                if (selectedUser === 'all') {
+                // Always try to order by timestamp if no other primary order is conflicting
+                if (selectedUser === 'all' && selectedTime === 'all') {
                     q = query(q, orderBy('timestamp', 'desc'));
                 }
 
-                // Apply pagination
                 if (page > 1 && lastVisible) {
                     q = query(q, startAfter(lastVisible));
                 }
@@ -108,7 +107,7 @@ export default function UserActivityPage() {
 
             } catch (error) {
                 console.error("Error fetching user activities:", error);
-                setActivities([]); // Clear on error
+                setActivities([]); 
             } finally {
                 setIsLoading(false);
             }
@@ -117,23 +116,25 @@ export default function UserActivityPage() {
         if(user && userDetails?.email === 'quizpankaj@gmail.com') {
             fetchActivities();
         }
-
     }, [selectedUser, selectedTime, page, user, userDetails]);
 
-    // This effect resets pagination when filters change.
     useEffect(() => {
         setPage(1);
         setLastVisible(null);
     }, [selectedUser, selectedTime]);
 
+    const formatDuration = (seconds: number = 0) => {
+        if (seconds < 60) return `${seconds}s`;
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}m ${secs}s`;
+    };
+
     const handleNextPage = () => {
-        if (!isLastPage) {
-            setPage(p => p + 1);
-        }
+        if (!isLastPage) setPage(p => p + 1);
     }
 
     const handlePrevPage = () => {
-        // A simple way to go "back" is to just re-run the initial query for the current filters on page 1
         if (page > 1) {
             setPage(1);
             setLastVisible(null);
@@ -146,10 +147,13 @@ export default function UserActivityPage() {
 
     return (
         <div className="container mx-auto px-4 py-8">
-            <header className="flex justify-between items-center mb-8">
-                <h1 className="font-headline text-4xl font-bold text-foreground">
-                    User Activity
-                </h1>
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                <div>
+                    <h1 className="font-headline text-4xl font-bold text-foreground">
+                        User Activity Logs
+                    </h1>
+                    <p className="text-muted-foreground mt-1">Track student engagement and resource usage.</p>
+                </div>
                 <Button asChild variant="outline">
                     <Link href="/admin">
                         <ArrowLeft className="mr-2 h-4 w-4" />
@@ -158,26 +162,36 @@ export default function UserActivityPage() {
                 </Button>
             </header>
 
-            <Card className="mb-8">
-                <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <Label htmlFor="user-filter">Filter by User</Label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <Card>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium flex items-center">
+                            <User className="w-4 h-4 mr-2" /> Filter by Student
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
                         <Select value={selectedUser} onValueChange={setSelectedUser}>
-                            <SelectTrigger id="user-filter">
+                            <SelectTrigger>
                                 <SelectValue placeholder="Select a user" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">All Users</SelectItem>
+                                <SelectItem value="all">All Students</SelectItem>
                                 {users.map(u => (
                                     <SelectItem key={u.uid} value={u.uid}>{u.name || u.email}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
-                    </div>
-                    <div>
-                        <Label htmlFor="time-filter">Filter by Time</Label>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium flex items-center">
+                            <Clock className="w-4 h-4 mr-2" /> Time Range
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
                         <Select value={selectedTime} onValueChange={setSelectedTime}>
-                            <SelectTrigger id="time-filter">
+                            <SelectTrigger>
                                 <SelectValue placeholder="Select time range" />
                             </SelectTrigger>
                             <SelectContent>
@@ -186,56 +200,73 @@ export default function UserActivityPage() {
                                 <SelectItem value="monthly">Last 30 Days</SelectItem>
                             </SelectContent>
                         </Select>
-                    </div>
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
+                <Card className="bg-primary/5 border-primary/20">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium">Quick Stats</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{activities.length}</div>
+                        <p className="text-xs text-muted-foreground">Activities on this page</p>
+                    </CardContent>
+                </Card>
+            </div>
 
-            <Card>
+            <Card className="overflow-hidden">
                 <Table>
-                    <TableHeader>
+                    <TableHeader className="bg-muted/50">
                         <TableRow>
-                            <TableHead>User</TableHead>
-                            <TableHead>Resource Title</TableHead>
-                            <TableHead>Context (Class/Subject/Chapter)</TableHead>
-                            <TableHead className="text-right">Timestamp</TableHead>
+                            <TableHead className="w-[200px]">Student</TableHead>
+                            <TableHead>Resource Details</TableHead>
+                            <TableHead>Full Context (Cl > Sub > Ch)</TableHead>
+                            <TableHead>Time Spent</TableHead>
+                            <TableHead className="text-right">Activity Date</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading && (
                             <TableRow>
-                                <TableCell colSpan={4} className="text-center py-8">
-                                    <div className="flex justify-center items-center gap-2">
-                                        <Loader className="h-5 w-5 animate-spin" />
-                                        <span>Loading activities...</span>
+                                <TableCell colSpan={5} className="text-center py-20">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <Loader className="h-8 w-8 animate-spin text-primary" />
+                                        <span className="text-muted-foreground">Fetching activities...</span>
                                     </div>
                                 </TableCell>
                             </TableRow>
                         )}
                         {!isLoading && activities.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                                    No activities found. Once users view content, their activity will appear here.
+                                <TableCell colSpan={5} className="text-center py-20 text-muted-foreground">
+                                    No activity logs found for the selected filters.
                                 </TableCell>
                             </TableRow>
                         )}
                         {!isLoading && activities.map(activity => (
-                            <TableRow key={activity.id}>
+                            <TableRow key={activity.id} className="hover:bg-accent/5 transition-colors">
                                 <TableCell>
-                                    <Button
-                                        variant="link"
-                                        className="p-0 h-auto font-medium"
-                                        onClick={() => setSelectedUser(activity.userId)}
-                                        title={`Filter by ${activity.userName}`}
-                                    >
-                                        {activity.userName}
-                                    </Button>
-                                    <div className="text-sm text-muted-foreground">{activity.userEmail}</div>
+                                    <div className="flex flex-col">
+                                        <span className="font-bold text-foreground">{activity.userName}</span>
+                                        <span className="text-xs text-muted-foreground">{activity.userEmail}</span>
+                                    </div>
                                 </TableCell>
-                                <TableCell>{activity.resourceTitle}</TableCell>
-                                <TableCell className="text-sm text-muted-foreground">
-                                    {`Cl ${activity.resourceClass} > ${activity.resourceSubject} > ${activity.resourceChapter}`}
+                                <TableCell>
+                                    <span className="font-medium">{activity.resourceTitle}</span>
                                 </TableCell>
-                                <TableCell className="text-right text-sm text-muted-foreground">
+                                <TableCell>
+                                    <div className="flex flex-wrap gap-1">
+                                        <Badge variant="outline" className="text-[10px] py-0">Class {activity.resourceClass}</Badge>
+                                        <Badge variant="secondary" className="text-[10px] py-0">{activity.resourceSubject}</Badge>
+                                        <Badge variant="ghost" className="text-[10px] py-0 border italic">{activity.resourceChapter}</Badge>
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex items-center gap-1.5 font-mono text-primary font-semibold">
+                                        <Clock className="w-3.5 h-3.5" />
+                                        {formatDuration(activity.durationSeconds)}
+                                    </div>
+                                </TableCell>
+                                <TableCell className="text-right text-xs text-muted-foreground whitespace-nowrap">
                                     {activity.timestamp ? format(activity.timestamp.toDate(), 'PPpp') : 'N/A'}
                                 </TableCell>
                             </TableRow>
@@ -244,18 +275,24 @@ export default function UserActivityPage() {
                 </Table>
             </Card>
             
-            <div className="flex items-center justify-end space-x-2 py-4">
-                <Button variant="outline" size="sm" onClick={handlePrevPage} disabled={page <= 1}>
-                    <ChevronLeft className="h-4 w-4 mr-1"/>
-                    First Page
-                </Button>
-                <span className="text-sm text-muted-foreground">Page {page}</span>
-                <Button variant="outline" size="sm" onClick={handleNextPage} disabled={isLastPage}>
-                    Next Page
-                    <ChevronRight className="h-4 w-4 ml-1"/>
-                </Button>
+            <div className="flex items-center justify-between py-6">
+                <p className="text-sm text-muted-foreground">
+                    Showing {activities.length} of total activities
+                </p>
+                <div className="flex items-center space-x-2">
+                    <Button variant="outline" size="sm" onClick={handlePrevPage} disabled={page <= 1}>
+                        <ChevronLeft className="h-4 w-4 mr-1"/>
+                        First Page
+                    </Button>
+                    <div className="bg-muted px-3 py-1 rounded-md text-sm font-medium">
+                        Page {page}
+                    </div>
+                    <Button variant="outline" size="sm" onClick={handleNextPage} disabled={isLastPage}>
+                        Next Page
+                        <ChevronRight className="h-4 w-4 ml-1"/>
+                    </Button>
+                </div>
             </div>
-
         </div>
     );
 }

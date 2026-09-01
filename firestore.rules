@@ -1,27 +1,14 @@
-/**
- * @file firestore.rules
- * @description Firestore Security Rules for an educational content platform.
- *
- * @section Core Philosophy
- * This ruleset establishes a "Public Read, User-Specific Write" security model.
- * Educational content is public, while user profiles can only be created by their respective owners.
- * Admin users have full access to content management.
- */
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
      * @description Controls access to user profile documents.
-     * @allow Any user can create their own user document.
-     * @allow A logged-in user can read or update their own document.
-     * @allow Admin can read and update any user document.
      */
     match /users/{userId} {
       allow create: if true;
-      // A user can get their own document.
       allow get: if request.auth != null && request.auth.uid == userId;
-      // An admin can get any user's document and list all users.
       allow list: if request.auth != null && request.auth.token.email == 'quizpankaj@gmail.com';
       allow update: if request.auth != null && (request.auth.uid == userId || request.auth.token.email == 'quizpankaj@gmail.com');
       allow delete: if false;
@@ -29,67 +16,41 @@ service cloud.firestore {
     
     /**
      * @description Controls access to the 'user-activity' collection.
-     * @allow Any authenticated user can log their own activity.
-     * @allow Admin users can read all activity logs for analysis.
-     * @allow Updates and deletions are disallowed to maintain data integrity.
+     * @allow Any authenticated user can create their own logs and update duration.
+     * @allow Admin users can read all logs.
      */
     match /user-activity/{activityId} {
       allow create: if request.auth != null;
-      // Admin can read and list all activities. Using explicit get/list.
-      allow get, list: if request.auth != null && request.auth.token.email == 'quizpankaj@gmail.com';
-      allow update, delete: if false;
+      // Allow users to update their own duration tracking records
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null && request.auth.token.email == 'quizpankaj@gmail.com';
+      allow delete: if false;
     }
-
 
     /**
      * @description Controls access to the 'resources' collection.
-     * @allow Any user can read resources.
-     * @allow Admin users can create, update, and delete resources.
      */
     match /resources/{resourceId} {
         allow read: if true;
         allow write: if request.auth != null && request.auth.token.email == 'quizpankaj@gmail.com';
     }
 
-
     /**
-     * @description Controls access to the top-level 'classes' collection.
-     * @path /classes/{classId}
-     * @allow Any user can read classes. Writes are disallowed.
+     * @description Public read access for educational content structure.
      */
     match /classes/{classId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
+      allow read: if true;
+      allow write: if false;
     }
 
-    /**
-     * @description Controls access to the 'subjects' subcollection.
-     * @path /classes/{classId}/subjects/{subjectId}
-     * @allow Any user can read subjects. Writes are disallowed.
-     */
     match /classes/{classId}/subjects/{subjectId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
+      allow read: if true;
+      allow write: if false;
     }
 
-    /**
-     * @description Controls access to the 'lessons' subcollection.
-     * @path /classes/{classId}/subjects/{subjectId}/lessons/{lessonId}
-     * @allow Any user can read lessons. Writes are disallowed.
-     */
-    match /classes/{classId}/subjects/{subjectId}/lessons/{lessonId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
-    }
-
-    /**
-     * @description Controls access to the 'contents' subcollection.
-     * @path /classes/{classId}/subjects/{subjectId}/lessons/{lessonId}/contents/{contentId}
-     * @allow Any user can read content. Writes are disallowed.
-     */
-    match /classes/{classId}/subjects/{subjectId}/lessons/{lessonId}/contents/{contentId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
+    match /classes/{classId}/subjects/{subjectId}/chapters/{chapterId} {
+      allow read: if true;
+      allow write: if false;
     }
   }
 }

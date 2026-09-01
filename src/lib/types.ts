@@ -1,3 +1,4 @@
+
 import type { LucideIcon } from 'lucide-react';
 
 export interface Content {
@@ -48,4 +49,5 @@ export interface UserActivity {
   resourceSubject: string;
   resourceChapter: string;
   timestamp: any; // Firestore timestamp object
+  durationSeconds?: number;
 }

@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Class": {
@@ -75,7 +76,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Resource",
       "type": "object",
-      "description": "Represents a piece of content (e.g., a PDF, Word document, video) associated with a chapter.",
+      "description": "Represents a piece of content associated with a chapter.",
       "properties": {
         "id": {
           "type": "string",
@@ -91,7 +92,7 @@
         },
         "type": {
           "type": "string",
-          "description": "The type of the file (e.g., PDF, DOC, MP4)."
+          "description": "The type of the file."
         },
         "url": {
           "type": "string",
@@ -108,7 +109,7 @@
     },
     "UserActivity": {
       "title": "User Activity",
-      "description": "Records a user viewing a resource.",
+      "description": "Records a user viewing a resource and duration.",
       "type": "object",
       "properties": {
         "userId": { "type": "string", "description": "The ID of the user." },
@@ -119,7 +120,8 @@
         "resourceClass": { "type": "string", "description": "The class of the viewed resource." },
         "resourceSubject": { "type": "string", "description": "The subject of the viewed resource." },
         "resourceChapter": { "type": "string", "description": "The chapter of the viewed resource." },
-        "timestamp": { "type": "string", "format": "date-time", "description": "The time of the activity." }
+        "timestamp": { "type": "string", "format": "date-time", "description": "The start time of the activity." },
+        "durationSeconds": { "type": "number", "description": "Duration spent on the resource in seconds." }
       },
       "required": ["userId", "userEmail", "userName", "resourceId", "resourceTitle", "timestamp"]
     }
@@ -140,8 +142,7 @@
           "schema": {
             "$ref": "#/backend/entities/Class"
           },
-          "description": "Represents classes (e.g., 3rd grade, 4th grade).",
-          "params": []
+          "description": "Represents classes."
         }
       },
       {
@@ -151,68 +152,8 @@
           "schema": {
             "$ref": "#/backend/entities/Subject"
           },
-          "description": "Represents subjects within a class.",
-          "params": [
-            {
-              "name": "classId",
-              "description": "The ID of the class."
-            }
-          ]
+          "description": "Represents subjects within a class."
         }
-      },
-      {
-        "path": "/classes/{classId}/subjects/{subjectId}/chapters",
-        "definition": {
-          "entityName": "Chapter",
-          "schema": {
-            "$ref": "#/backend/entities/Chapter"
-          },
-          "description": "Represents chapters within a subject.",
-          "params": [
-            {
-              "name": "classId",
-              "description": "The ID of the class."
-            },
-            {
-              "name": "subjectId",
-              "description": "The ID of the subject."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/classes/{classId}/subjects/{subjectId}/chapters/{chapterId}/resources",
-        "definition": {
-          "entityName": "Resource",
-          "schema": {
-            "$ref": "#/backend/entities/Resource"
-          },
-          "description": "Represents resources within a chapter.",
-          "params": [
-            {
-              "name": "classId",
-              "description": "The ID of the class."
-            },
-            {
-              "name": "subjectId",
-              "description": "The ID of the subject."
-            },
-            {
-              "name": "chapterId",
-              "description": "The ID of the chapter."
-            }
-          ]
-        }
-      },
-      {
-          "path": "/resources",
-          "definition": {
-              "entityName": "Resource",
-              "schema": {
-                  "$ref": "#/backend/entities/Resource"
-              },
-              "description": "Flat collection of all resources for easier querying by admin."
-          }
       },
       {
         "path": "/user-activity",
@@ -221,10 +162,10 @@
           "schema": {
             "$ref": "#/backend/entities/UserActivity"
           },
-          "description": "Logs user interactions with content resources."
+          "description": "Logs user interactions with content resources including duration tracking."
         }
       }
     ],
-    "reasoning": "The structure is mostly hierarchical to represent the educational content. A flat '/resources' collection is added for administrative purposes, allowing easy querying and management of all content without traversing the nested structure. A new '/user-activity' collection is added to log all user interactions with resources for analytics."
+    "reasoning": "The structure maintains hierarchical content while enabling rich tracking of student engagement through the user-activity collection, including duration metrics for analytics."
   }
 }

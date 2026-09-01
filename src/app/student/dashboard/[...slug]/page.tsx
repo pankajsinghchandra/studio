@@ -1,11 +1,11 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/app/providers';
 import type { Resource } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -102,9 +102,6 @@ interface CardData {
     path: string;
 }
 
-/**
- * Custom Viewer for Images with Zoom Support (Mobile Pinch & PC Ctrl+Scroll)
- */
 function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, onClose?: () => void }) {
     const [scale, setScale] = useState(1);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -177,7 +174,6 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
 
     return (
         <div className="relative w-full h-full bg-black overflow-hidden flex flex-col touch-none">
-            {/* Zoom Controls & Close Button */}
             <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
                 <div className="flex bg-black/60 backdrop-blur-md rounded-full p-1 border border-white/20 shadow-xl">
                     <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full text-white hover:bg-white/20" onClick={handleZoomIn}>
@@ -196,8 +192,6 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
                     </Button>
                 )}
             </div>
-
-            {/* Image Container */}
             <div 
                 ref={containerRef}
                 className="flex-1 w-full overflow-auto flex items-center justify-center p-4 cursor-move"
@@ -215,8 +209,6 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
                     }}
                 />
             </div>
-            
-            {/* Hint Overlay */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-black/40 backdrop-blur-md rounded-full text-xs text-white/80 pointer-events-none border border-white/10">
                 <span className="md:hidden">Pinch to zoom • Drag to pan</span>
                 <span className="hidden md:inline">Ctrl + Scroll to zoom • Drag to pan</span>
@@ -245,16 +237,33 @@ export default function DynamicPage() {
         return '';
     }, [pageType, pathSegments]);
 
-
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [cards, setCards] = useState<CardData[]>([]);
-
     const [resources, setResources] = useState<Resource[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isNavigating, setIsNavigating] = useState(false);
-    
     const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
+
+    // Activity Tracking Refs
+    const activityIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const activeActivityIdRef = useRef<string | null>(null);
+    const startTimeRef = useRef<number>(0);
+
+    const stopActivityTracking = useCallback(() => {
+        if (activityIntervalRef.current) {
+            clearInterval(activityIntervalRef.current);
+            activityIntervalRef.current = null;
+        }
+        
+        if (activeActivityIdRef.current) {
+            const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
+            updateDoc(doc(db, 'user-activity', activeActivityIdRef.current), {
+                durationSeconds: duration
+            }).catch(() => {}); // Silent fail on unmount
+            activeActivityIdRef.current = null;
+        }
+    }, []);
 
     useEffect(() => {
         if (pageType === 'unknown' || authLoading || !user) return;
@@ -316,8 +325,17 @@ export default function DynamicPage() {
         };
 
         fetchData();
-
     }, [pageType, pathSegments, authLoading, user]);
+
+    useEffect(() => {
+        if (!selectedResource) {
+            stopActivityTracking();
+        }
+    }, [selectedResource, stopActivityTracking]);
+
+    useEffect(() => {
+        return () => stopActivityTracking();
+    }, [stopActivityTracking]);
 
     const handleCardClick = (path: string) => {
         setIsNavigating(true);
@@ -340,21 +358,19 @@ export default function DynamicPage() {
         return url;
     };
 
-    /**
-     * Converts Google Drive link to a direct high-res image URL (lh3 format)
-     */
     const getGoogleDriveDirectImageUrl = (url: string) => {
         const fileIdMatch = url.match(/(?:drive\.google\.com\/(?:file\/d\/|open\?id=)|docs\.google\.com\/file\/d\/)([a-zA-Z0-9_-]+)/);
         if (fileIdMatch && fileIdMatch[1]) {
-            // Using s2000 for high resolution suitable for zooming
             return `https://lh3.googleusercontent.com/d/${fileIdMatch[1]}=s2000`;
         }
         return url;
     };
 
-
     const handleResourceClick = (resource: Resource) => {
         if (user && userDetails) {
+            stopActivityTracking();
+            startTimeRef.current = Date.now();
+            
             addDoc(collection(db, 'user-activity'), {
                 userId: user.uid,
                 userName: userDetails.name,
@@ -364,7 +380,18 @@ export default function DynamicPage() {
                 resourceClass: resource.class,
                 resourceSubject: resource.subject,
                 resourceChapter: resource.chapter,
-                timestamp: new Date(),
+                timestamp: serverTimestamp(),
+                durationSeconds: 0
+            }).then(docRef => {
+                activeActivityIdRef.current = docRef.id;
+                activityIntervalRef.current = setInterval(() => {
+                    if (activeActivityIdRef.current) {
+                        const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
+                        updateDoc(doc(db, 'user-activity', activeActivityIdRef.current), {
+                            durationSeconds: duration
+                        }).catch(() => {});
+                    }
+                }, 10000);
             }).catch(error => {
                 console.error("Error logging activity: ", error);
             });
@@ -389,7 +416,6 @@ export default function DynamicPage() {
         const imageTypes = ['infographic', 'mind-map', 'lesson-plan-image'];
 
         if (imageTypes.includes(type)) {
-            // For images, if it's from Drive, ALWAYS convert to lh3 direct link
             embedUrl = url.includes('drive.google.com') ? getGoogleDriveDirectImageUrl(url) : url;
             isDirectImage = true;
             isDirectEmbeddable = true;
@@ -430,12 +456,9 @@ export default function DynamicPage() {
                     </div>
                 )
             }
-            
-            // Zoomable Image Viewer for Infographics/Mind Maps
             if (isDirectImage) {
                 return <ZoomableImageViewer src={embedUrl || url} alt={title} onClose={() => setSelectedResource(null)} />;
             }
-
             if (isGoogleDriveEmbed) {
                 return (
                     <div className="w-full h-full overflow-hidden">
@@ -450,7 +473,6 @@ export default function DynamicPage() {
                     </div>
                 )
             }
-
             return (
                  <iframe
                     src={embedUrl || url}
@@ -477,18 +499,10 @@ export default function DynamicPage() {
     }
     
     const getResourceTypeLabel = (type: string) => {
-        if (type === 'mind-map-json') {
-            return 'Mind Map';
-        }
-        if (type === 'translated-chapter') {
-            return 'Translated Chapter';
-        }
-        if (type === 'song') {
-            return 'Song';
-        }
-         if (type === 'lesson-plan-text') {
-            return 'Lesson Plan';
-        }
+        if (type === 'mind-map-json') return 'Mind Map';
+        if (type === 'translated-chapter') return 'Translated Chapter';
+        if (type === 'song') return 'Song';
+        if (type === 'lesson-plan-text') return 'Lesson Plan';
         return type.replace(/-/g, ' ');
     };
 
@@ -502,7 +516,6 @@ export default function DynamicPage() {
                     <h1 className="font-headline text-4xl font-bold text-foreground">{title}</h1>
                     <p className="text-lg text-muted-foreground">{description}</p>
                 </header>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {pageType !== 'chapter' && (
                      cards.length > 0 ? (
@@ -526,11 +539,9 @@ export default function DynamicPage() {
                             ))
                     ) : <p className="col-span-full text-center text-muted-foreground">No items found.</p>
                 )}
-                
                 {pageType === 'chapter' && (
                     <>
-                        {resources
-                         .map((resource, index) => (
+                        {resources.map((resource, index) => (
                             <Card key={resource.id} className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 h-full cursor-pointer active:scale-95" onClick={() => handleResourceClick(resource)}>
                                 <CardHeader className="p-4">
                                     <div className="flex items-start gap-4">
@@ -548,7 +559,6 @@ export default function DynamicPage() {
                 )}
                 </div>
             </div>
-            
              {selectedResource && (
                  <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col animate-in fade-in-0">
                     {!isFullImageMode && (
@@ -578,4 +588,3 @@ export default function DynamicPage() {
         </>
     );
 }
-

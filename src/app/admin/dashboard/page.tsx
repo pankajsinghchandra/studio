@@ -1,15 +1,14 @@
-
 'use client';
 
 import { useAuth } from '@/app/providers';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { collection, getDocs, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { useEffect, useState, useMemo } from 'react';
+import { collection, getDocs, deleteDoc, doc, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import Link from 'next/link';
-import { PlusCircle, Trash2, LayoutGrid, List, Eye, Download, Loader, X, ArrowLeft, ArrowDownUp, Pencil } from 'lucide-react';
+import { Trash2, LayoutGrid, List, Eye, Download, Loader, ArrowLeft, Pencil } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import LoadingOverlay from '@/components/loading-overlay';
@@ -25,8 +24,8 @@ import MindMap from '@/components/mind-map';
 export default function AdminDashboard() {
   const { user, loading, userDetails } = useAuth();
   const router = useRouter();
-  const [resources, setResources] = useState<any[]>([]);
   const { toast } = useToast();
+  
   const [isDeleting, setIsDeleting] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   
@@ -64,34 +63,22 @@ export default function AdminDashboard() {
 
         const resourcesList = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setAllResources(resourcesList);
-        setResources(resourcesList);
     } catch (error) {
-        console.error("Error fetching all resources: ", error);
+        console.error("Error fetching resources: ", error);
         toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch resources.'});
     } finally {
         setIsLoadingData(false);
     }
   };
 
-
   const handleDelete = async (resourceId: string) => {
     setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'resources', resourceId));
       setAllResources(prev => prev.filter(r => r.id !== resourceId));
-      toast({
-        title: 'Success',
-        description: 'Resource deleted successfully.',
-        duration: 1500,
-      });
+      toast({ title: 'Success', description: 'Resource deleted successfully.', duration: 1500 });
     } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to delete resource.',
-        duration: 3000,
-      });
-      console.error("Error deleting document: ", error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete resource.', duration: 3000 });
     } finally {
         setIsDeleting(false);
     }
@@ -126,44 +113,22 @@ export default function AdminDashboard() {
 
   const sortedAndFilteredResources = useMemo(() => {
     let filtered = allResources;
+    if (selectedClass) filtered = filtered.filter(r => r.class === selectedClass);
+    if (selectedSubject) filtered = filtered.filter(r => r.subject === selectedSubject);
+    if (selectedChapter) filtered = filtered.filter(r => r.chapter === selectedChapter);
+    if (selectedType) filtered = filtered.filter(r => r.type === selectedType);
 
-    if (selectedClass) {
-        filtered = filtered.filter(r => r.class === selectedClass);
-    }
-
-    if (selectedSubject) {
-        filtered = filtered.filter(r => r.subject === selectedSubject);
-    }
-    
-    if (selectedChapter) {
-        filtered = filtered.filter(r => r.chapter === selectedChapter);
-    }
-    
-    if (selectedType) {
-        filtered = filtered.filter(r => r.type === selectedType);
-    }
-
-    // Apply sorting
-    const sorted = [...filtered].sort((a, b) => {
+    return [...filtered].sort((a, b) => {
         switch (sortOrder) {
-            case 'newest':
-                return (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0);
-            case 'oldest':
-                return (a.createdAt?.toDate() || 0) - (b.createdAt?.toDate() || 0);
-            case 'subject':
-                return a.subject.localeCompare(b.subject) || a.chapter.localeCompare(b.chapter);
-            case 'type':
-                return a.type.localeCompare(b.type) || a.subject.localeCompare(b.subject);
-             case 'chapter':
-                return a.class.localeCompare(b.class) || a.subject.localeCompare(b.subject) || a.chapter.localeCompare(b.chapter) || a.title.localeCompare(b.title);
-            default:
-                return 0;
+            case 'newest': return (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0);
+            case 'oldest': return (a.createdAt?.toDate() || 0) - (b.createdAt?.toDate() || 0);
+            case 'subject': return a.subject.localeCompare(b.subject) || a.chapter.localeCompare(b.chapter);
+            case 'type': return a.type.localeCompare(b.type) || a.subject.localeCompare(b.subject);
+            case 'chapter': return a.class.localeCompare(b.class) || a.subject.localeCompare(b.subject) || a.chapter.localeCompare(b.chapter) || a.title.localeCompare(b.title);
+            default: return 0;
         }
     });
-
-    return sorted;
   }, [selectedClass, selectedSubject, selectedChapter, selectedType, allResources, sortOrder]);
-
 
   useEffect(() => {
     if (selectedClass) {
@@ -173,7 +138,6 @@ export default function AdminDashboard() {
         setSubjects([]);
         setChapters([]);
     }
-
     if (selectedSubject) {
         const classSyllabus = syllabus[selectedClass as keyof typeof syllabus];
         const subjectSyllabus = classSyllabus ? (classSyllabus as any)[selectedSubject] : [];
@@ -184,17 +148,13 @@ export default function AdminDashboard() {
     }
   }, [selectedClass, selectedSubject]);
 
-  if (loading || !user) {
-    return <LoadingOverlay isLoading={true} />;
-  }
+  if (loading || !user) return <LoadingOverlay isLoading={true} />;
   
   const isTextBased = (type: string) => type === 'lesson-plan-text' || type === 'mind-map-json';
 
   const renderDialogContent = () => {
     if (!selectedResource) return null;
-
     const { type, url } = selectedResource;
-    
     if (type === 'mind-map-json') {
         try {
             const mindMapData = JSON.parse(url);
@@ -203,18 +163,13 @@ export default function AdminDashboard() {
             return <div className="p-6 text-destructive-foreground bg-destructive">Invalid Mind Map JSON format.</div>
         }
     }
-
     if (type === 'lesson-plan-text') {
          return (
             <div className="w-full h-full overflow-y-auto p-6 bg-background rounded-lg">
-                <div 
-                    className="prose prose-sm max-w-none text-foreground"
-                    dangerouslySetInnerHTML={{ __html: url }} 
-                />
+                <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: url }} />
             </div>
         )
     }
-    
     return null;
   };
 
@@ -226,20 +181,14 @@ export default function AdminDashboard() {
     return type.replace(/-/g, ' ');
   };
 
-
   return (
     <div className="container mx-auto px-4 py-8">
       {(isDeleting || isLoadingData) && <LoadingOverlay isLoading={true} />}
       <header className="flex justify-between items-center mb-8">
-        <h1 className="font-headline text-4xl font-bold text-foreground">
-          Manage Content
-        </h1>
+        <h1 className="font-headline text-4xl font-bold text-foreground">Manage Content</h1>
         <div className="flex items-center gap-2">
             <Button variant="outline" asChild>
-                <Link href="/admin">
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Dashboard
-                </Link>
+                <Link href="/admin"><ArrowLeft className="mr-2 h-4 w-4" />Back to Dashboard</Link>
             </Button>
             <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('grid')}>
                 <LayoutGrid className="h-5 w-5" />
@@ -251,13 +200,12 @@ export default function AdminDashboard() {
       </header>
 
       <section className="mb-8">
-        <h2 className="font-headline text-3xl font-semibold mb-4">All Resources</h2>
         <Card className="bg-card p-4">
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div>
-                    <Label htmlFor="class-filter">Class</Label>
-                    <Select value={selectedClass || 'all'} onValueChange={value => { setSelectedClass(value === 'all' ? '' : value); setSelectedSubject(''); setSelectedChapter(''); }}>
-                        <SelectTrigger id="class-filter"><SelectValue placeholder="Filter by Class" /></SelectTrigger>
+                    <Label>Class</Label>
+                    <Select value={selectedClass || 'all'} onValueChange={v => { setSelectedClass(v === 'all' ? '' : v); setSelectedSubject(''); setSelectedChapter(''); }}>
+                        <SelectTrigger><SelectValue placeholder="Filter by Class" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Classes</SelectItem>
                             {classes.map(c => <SelectItem key={c} value={c}>Class {c}</SelectItem>)}
@@ -265,9 +213,9 @@ export default function AdminDashboard() {
                     </Select>
                 </div>
                 <div>
-                    <Label htmlFor="subject-filter">Subject</Label>
-                    <Select value={selectedSubject || 'all'} onValueChange={value => { setSelectedSubject(value === 'all' ? '' : value); setSelectedChapter(''); }} disabled={!selectedClass}>
-                        <SelectTrigger id="subject-filter"><SelectValue placeholder="Filter by Subject" /></SelectTrigger>
+                    <Label>Subject</Label>
+                    <Select value={selectedSubject || 'all'} onValueChange={v => { setSelectedSubject(v === 'all' ? '' : v); setSelectedChapter(''); }} disabled={!selectedClass}>
+                        <SelectTrigger><SelectValue placeholder="Filter by Subject" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Subjects</SelectItem>
                             {subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
@@ -275,9 +223,9 @@ export default function AdminDashboard() {
                     </Select>
                 </div>
                 <div>
-                    <Label htmlFor="chapter-filter">Chapter</Label>
-                    <Select value={selectedChapter || 'all'} onValueChange={(value) => setSelectedChapter(value === 'all' ? '' : value)} disabled={!selectedSubject}>
-                        <SelectTrigger id="chapter-filter"><SelectValue placeholder="Filter by Chapter" /></SelectTrigger>
+                    <Label>Chapter</Label>
+                    <Select value={selectedChapter || 'all'} onValueChange={v => setSelectedChapter(v === 'all' ? '' : v)} disabled={!selectedSubject}>
+                        <SelectTrigger><SelectValue placeholder="Filter by Chapter" /></SelectTrigger>
                         <SelectContent>
                              <SelectItem value="all">All Chapters</SelectItem>
                              {chapters.map(ch => <SelectItem key={ch} value={ch}>{ch}</SelectItem>)}
@@ -285,9 +233,9 @@ export default function AdminDashboard() {
                     </Select>
                 </div>
                  <div>
-                    <Label htmlFor="type-filter">Resource Type</Label>
-                    <Select value={selectedType || 'all'} onValueChange={value => setSelectedType(value === 'all' ? '' : value)}>
-                        <SelectTrigger id="type-filter"><SelectValue placeholder="Filter by Type" /></SelectTrigger>
+                    <Label>Resource Type</Label>
+                    <Select value={selectedType || 'all'} onValueChange={v => setSelectedType(v === 'all' ? '' : v)}>
+                        <SelectTrigger><SelectValue placeholder="Filter by Type" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Types</SelectItem>
                             <SelectItem value="lesson-plan-text">Lesson Plan (Text)</SelectItem>
@@ -301,11 +249,9 @@ export default function AdminDashboard() {
                     </Select>
                 </div>
                 <div>
-                  <Label htmlFor="sort-order">Sort by</Label>
+                  <Label>Sort by</Label>
                    <Select value={sortOrder} onValueChange={setSortOrder}>
-                        <SelectTrigger id="sort-order" className="w-full">
-                            <SelectValue placeholder="Sort by" />
-                        </SelectTrigger>
+                        <SelectTrigger className="w-full"><SelectValue placeholder="Sort by" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="newest">Newest First</SelectItem>
                             <SelectItem value="oldest">Oldest First</SelectItem>
@@ -323,54 +269,32 @@ export default function AdminDashboard() {
         {viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {sortedAndFilteredResources.map((resource: Resource & { id: string }) => (
-                <Card key={resource.id} className="bg-card flex flex-col">
+                <Card key={resource.id} className="bg-card flex flex-col hover:-translate-y-1 active:scale-95 transition-all">
                   <CardHeader>
                     <CardTitle>{resource.title}</CardTitle>
-                    <CardDescription>{getResourceTypeLabel(resource.type)} - Class {resource.class}, {resource.subject}, Chapter {resource.chapter}</CardDescription>
+                    <CardDescription>{getResourceTypeLabel(resource.type)} - Class {resource.class}, {resource.subject}</CardDescription>
                   </CardHeader>
                   <CardContent className="flex-grow">
-                     <div className="flex items-center gap-2">
+                     <div className="flex flex-wrap gap-2">
                         {!isTextBased(resource.type) ? (
-                            <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                            <a href={resource.url} target="_blank" rel="noopener noreferrer">
                                 <Button variant="default" size="sm"><Eye className="mr-2 h-4 w-4" /> View Resource</Button>
                             </a>
                         ) : (
                             <>
-                                <Button variant="default" size="sm" onClick={() => setSelectedResource(resource)}>
-                                    <Eye className="mr-2 h-4 w-4" /> View
-                                </Button>
-                                <Button variant="outline" size="sm" asChild>
-                                    <Link href={`/admin/edit-content/${resource.id}`}>
-                                        <Pencil className="mr-2 h-4 w-4" /> Edit
-                                    </Link>
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={() => handleDownload(resource)}>
-                                    <Download className="mr-2 h-4 w-4" /> Download
-                                </Button>
+                                <Button variant="default" size="sm" onClick={() => setSelectedResource(resource)}><Eye className="mr-2 h-4 w-4" /> View</Button>
+                                <Button variant="outline" size="sm" asChild><Link href={`/admin/edit-content/${resource.id}`}><Pencil className="mr-2 h-4 w-4" /> Edit</Link></Button>
+                                <Button variant="outline" size="sm" onClick={() => handleDownload(resource)}><Download className="mr-2 h-4 w-4" /> Download</Button>
                             </>
                         )}
                      </div>
                   </CardContent>
                   <CardFooter>
                     <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm">
-                          <Trash2 className="mr-2 h-4 w-4" /> Delete
-                        </Button>
-                      </AlertDialogTrigger>
+                      <AlertDialogTrigger asChild><Button variant="destructive" size="sm"><Trash2 className="mr-2 h-4 w-4" /> Delete</Button></AlertDialogTrigger>
                       <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the resource.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDelete(resource.id)}>
-                            Continue
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
+                        <AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+                        <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(resource.id)}>Continue</AlertDialogAction></AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
                   </CardFooter>
@@ -386,7 +310,6 @@ export default function AdminDashboard() {
                         <TableHead>Subject</TableHead>
                         <TableHead>Chapter</TableHead>
                         <TableHead>Type</TableHead>
-                        <TableHead>Class</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -397,7 +320,6 @@ export default function AdminDashboard() {
                             <TableCell><Badge variant="secondary">{resource.subject}</Badge></TableCell>
                             <TableCell>{resource.chapter}</TableCell>
                             <TableCell><Badge variant="outline">{getResourceTypeLabel(resource.type)}</Badge></TableCell>
-                            <TableCell><Badge>{resource.class}</Badge></TableCell>
                             <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-2">
                                      {isTextBased(resource.type) ? (
@@ -407,29 +329,13 @@ export default function AdminDashboard() {
                                             <Button variant="ghost" size="sm" onClick={() => handleDownload(resource)}>Download</Button>
                                         </>
                                       ) : (
-                                        <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                                            <Button variant="ghost" size="sm">View</Button>
-                                        </a>
+                                        <a href={resource.url} target="_blank" rel="noopener noreferrer"><Button variant="ghost" size="sm">View</Button></a>
                                       )}
                                     <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                      </AlertDialogTrigger>
+                                      <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
                                       <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            This action cannot be undone. This will permanently delete the resource.
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                          <AlertDialogAction onClick={() => handleDelete(resource.id)}>
-                                            Continue
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
+                                        <AlertDialogHeader><AlertDialogTitle>Delete Resource?</AlertDialogTitle></AlertDialogHeader>
+                                        <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(resource.id)}>Delete</AlertDialogAction></AlertDialogFooter>
                                       </AlertDialogContent>
                                     </AlertDialog>
                                 </div>
@@ -440,35 +346,18 @@ export default function AdminDashboard() {
             </Table>
           </Card>
         )}
-
-        {isLoadingData && (
-             <div className="flex justify-center items-center gap-2 text-muted-foreground py-8">
-                <Loader className="h-5 w-5 animate-spin" />
-                <span>Loading all resources...</span>
-            </div>
-        )}
-        
-        {!isLoadingData && sortedAndFilteredResources.length === 0 && (
-            <div className="text-center py-16 col-span-full">
-                <p className="text-lg text-muted-foreground">No resources found for the selected filters.</p>
-            </div>
-        )}
+        {isLoadingData && <div className="flex justify-center py-8"><Loader className="h-8 w-8 animate-spin text-primary" /></div>}
+        {!isLoadingData && sortedAndFilteredResources.length === 0 && <div className="text-center py-16 text-muted-foreground">No resources found.</div>}
       </section>
       
-        <Dialog open={!!selectedResource} onOpenChange={(open) => !open && setSelectedResource(null)}>
-            <DialogContent 
-              className="max-w-4xl w-full h-[80vh] p-0 flex flex-col"
-            >
-                <DialogHeader className="p-4 border-b">
+        <Dialog open={!!selectedResource} onOpenChange={o => !o && setSelectedResource(null)}>
+            <DialogContent className="max-w-4xl w-full h-[80vh] p-0 flex flex-col">
+                <DialogHeader className="p-4 border-b flex flex-row items-center justify-between">
                     <DialogTitle>{selectedResource?.title}</DialogTitle>
-                    <DialogClose />
                 </DialogHeader>
-                <div className="flex-1 w-full h-full overflow-auto">
-                  {selectedResource && renderDialogContent()}
-                </div>
+                <div className="flex-1 overflow-auto">{selectedResource && renderDialogContent()}</div>
             </DialogContent>
         </Dialog>
-
     </div>
   );
 }

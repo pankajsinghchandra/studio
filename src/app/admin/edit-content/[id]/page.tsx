@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -16,10 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import LoadingOverlay from '@/components/loading-overlay';
 import { syllabus } from '@/lib/syllabus';
 import { Textarea } from '@/components/ui/textarea';
-import { UploadCloud, ArrowLeft, Loader } from 'lucide-react';
+import { UploadCloud, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import RichTextEditor from '@/components/rich-text-editor';
-
 
 const isValidUrl = (url: string): boolean => {
     if (!url) return false;
@@ -33,14 +31,9 @@ const isValidUrl = (url: string): boolean => {
 
 const isValidJson = (str: string): boolean => {
     if (!str) return true;
-    try {
-        JSON.parse(str);
-    } catch (e) {
-        return false;
-    }
+    try { JSON.parse(str); } catch (e) { return false; }
     return true;
 };
-
 
 export default function EditContentPage() {
   const { user, loading: authLoading, userDetails } = useAuth();
@@ -61,10 +54,7 @@ export default function EditContentPage() {
   const [htmlContent, setHtmlContent] = useState('');
   const [jsonError, setJsonError] = useState('');
 
-  const subjects = useMemo(() => {
-    return resourceClass ? Object.keys(syllabus[resourceClass as keyof typeof syllabus] || {}) : [];
-  }, [resourceClass]);
-
+  const subjects = useMemo(() => resourceClass ? Object.keys(syllabus[resourceClass as keyof typeof syllabus] || {}) : [], [resourceClass]);
   const chapters = useMemo<string[]>(() => {
     if (resourceClass && subject) {
       const classSyllabus = syllabus[resourceClass as keyof typeof syllabus];
@@ -86,7 +76,6 @@ export default function EditContentPage() {
             try {
                 const docRef = doc(db, 'resources', resourceId);
                 const docSnap = await getDoc(docRef);
-
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     setTitle(data.title);
@@ -94,34 +83,17 @@ export default function EditContentPage() {
                     setSubject(data.subject);
                     setChapter(data.chapter);
                     setType(data.type);
-
-                    const isText = data.type === 'lesson-plan-text';
-                    const isJson = data.type === 'mind-map-json';
-                    const content = data.url || '';
-
-                    if (isText) {
-                        // If content has no HTML tags, it's likely old plain text. Convert it.
-                        if (content && !/<[a-z][\s\S]*>/i.test(content)) {
-                            const html = content
-                                .split('\n')
-                                .map((line: string) => line.trim() === '' ? '<p><br></p>' : `<p>${line}</p>`)
-                                .join('');
-                            setHtmlContent(html);
-                        } else {
-                            setHtmlContent(content);
-                        }
-                    } else if (isJson) {
-                        setHtmlContent(content)
+                    if (data.type === 'lesson-plan-text' || data.type === 'mind-map-json') {
+                        setHtmlContent(data.url || '');
                     } else {
-                        setResourceUrl(content);
+                        setResourceUrl(data.url || '');
                     }
                 } else {
                     toast({ variant: 'destructive', title: 'Error', description: 'Resource not found.' });
                     router.push('/admin/dashboard');
                 }
             } catch (error) {
-                console.error("Error fetching resource:", error);
-                toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch resource data.' });
+                toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch resource.' });
             } finally {
                 setIsLoading(false);
             }
@@ -130,14 +102,9 @@ export default function EditContentPage() {
     }
   }, [resourceId, user, authLoading, router, userDetails, toast]);
   
-  
   useEffect(() => {
     if (type === 'mind-map-json') {
-      if (!isValidJson(htmlContent)) {
-        setJsonError('The content is not valid JSON. Please check the format.');
-      } else {
-        setJsonError('');
-      }
+      setJsonError(isValidJson(htmlContent) ? '' : 'Invalid JSON format.');
     } else {
       setJsonError('');
     }
@@ -147,19 +114,11 @@ export default function EditContentPage() {
     const file = event.target.files?.[0];
     if (file) {
       if (file.type !== 'application/json') {
-        toast({ variant: 'destructive', title: 'Invalid File Type', description: 'Please upload a valid .json file.' });
+        toast({ variant: 'destructive', title: 'Invalid File', description: 'Please upload .json file.' });
         return;
       }
       const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result as string;
-        setHtmlContent(content);
-        if (isValidJson(content)) {
-          toast({ title: 'File Uploaded', description: 'The JSON content has been loaded.' });
-        } else {
-          toast({ variant: 'destructive', title: 'Invalid JSON', description: 'The file content is not valid JSON.' });
-        }
-      };
+      reader.onload = (e) => setHtmlContent(e.target?.result as string);
       reader.readAsText(file);
     }
   };
@@ -167,54 +126,32 @@ export default function EditContentPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    
-    const isTextContent = type === 'lesson-plan-text';
-    const isJsonContent = type === 'mind-map-json';
-
-    if (isJsonContent && !isValidJson(htmlContent)) {
-        toast({ variant: 'destructive', title: 'Invalid JSON', description: jsonError || 'The mind map content is not valid JSON.' });
+    const isTextContent = type === 'lesson-plan-text' || type === 'mind-map-json';
+    if (type === 'mind-map-json' && !isValidJson(htmlContent)) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Invalid JSON.' });
         return;
     }
-    
-    if (!(isTextContent || isJsonContent) && !isValidUrl(resourceUrl)) {
-        toast({ variant: 'destructive', title: 'Invalid Link', description: 'Please enter a valid URL.' });
+    if (!isTextContent && !isValidUrl(resourceUrl)) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Invalid URL.' });
         return;
     }
     
     setIsSubmitting(true);
-
     try {
-      const docRef = doc(db, 'resources', resourceId);
-      await updateDoc(docRef, {
-        title,
-        class: resourceClass,
-        subject,
-        chapter,
-        type,
-        url: isTextContent || isJsonContent ? htmlContent : resourceUrl,
+      await updateDoc(doc(db, 'resources', resourceId), {
+        title, class: resourceClass, subject, chapter, type,
+        url: isTextContent ? htmlContent : resourceUrl,
       });
-
-      toast({
-        title: 'Success!',
-        description: 'Resource has been updated successfully.',
-        duration: 1500,
-      });
+      toast({ title: 'Success!', description: 'Resource updated.', duration: 1500 });
       router.push('/admin/dashboard');
     } catch (error) {
-      console.error('Error updating document: ', error);
-      toast({
-        variant: 'destructive',
-        title: 'Uh oh! Something went wrong.',
-        description: (error as Error).message || 'There was a problem with your request.',
-      });
+      toast({ variant: 'destructive', title: 'Error', description: 'Problem updating resource.' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (isLoading || authLoading) {
-    return <LoadingOverlay isLoading={true} />;
-  }
+  if (isLoading || authLoading) return <LoadingOverlay isLoading={true} />;
 
   const isTextContent = type === 'lesson-plan-text';
   const isJsonContent = type === 'mind-map-json';
@@ -223,64 +160,48 @@ export default function EditContentPage() {
     <div className="container mx-auto px-4 py-8">
        <LoadingOverlay isLoading={isSubmitting} />
        <header className="flex justify-between items-center mb-8">
-        <h1 className="font-headline text-4xl font-bold text-foreground">
-          Edit Content
-        </h1>
+        <h1 className="font-headline text-4xl font-bold text-foreground">Edit Content</h1>
         <Button asChild variant="outline">
-          <Link href="/admin/dashboard">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Manage Content
-          </Link>
+          <Link href="/admin/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link>
         </Button>
       </header>
       <Card className="w-full max-w-4xl mx-auto">
         <form onSubmit={handleSubmit}>
           <CardHeader>
-            <CardTitle className="text-2xl font-headline">Edit Resource</CardTitle>
-            <CardDescription>Update the details of the resource below.</CardDescription>
+            <CardTitle>Edit Resource</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
-              <Input id="title" placeholder="e.g., Introduction to Algebra" required value={title} onChange={(e) => setTitle(e.target.value)} />
+              <Label>Title</Label>
+              <Input required value={title} onChange={e => setTitle(e.target.value)} />
             </div>
-            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                    <Label htmlFor="class">Class</Label>
-                    <Select onValueChange={value => { setResourceClass(value); setSubject(''); setChapter(''); }} required value={resourceClass}>
-                        <SelectTrigger id="class"><SelectValue placeholder="Select Class" /></SelectTrigger>
-                        <SelectContent>
-                            {Object.keys(syllabus).sort((a, b) => parseInt(a) - parseInt(b)).map(c => <SelectItem key={c} value={c}>Class {c}</SelectItem>)}
-                        </SelectContent>
+                    <Label>Class</Label>
+                    <Select onValueChange={v => { setResourceClass(v); setSubject(''); setChapter(''); }} value={resourceClass}>
+                        <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
+                        <SelectContent>{Object.keys(syllabus).sort((a,b)=>parseInt(a)-parseInt(b)).map(c => <SelectItem key={c} value={c}>Class {c}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
                  <div className="space-y-2">
-                    <Label htmlFor="subject">Subject</Label>
-                    <Select onValueChange={value => { setSubject(value); setChapter(''); }} required value={subject} disabled={!resourceClass}>
-                        <SelectTrigger id="subject"><SelectValue placeholder="Select Subject" /></SelectTrigger>
-                        <SelectContent>
-                            {subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                        </SelectContent>
+                    <Label>Subject</Label>
+                    <Select onValueChange={v => { setSubject(v); setChapter(''); }} value={subject} disabled={!resourceClass}>
+                        <SelectTrigger><SelectValue placeholder="Select Subject" /></SelectTrigger>
+                        <SelectContent>{subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
                  <div className="space-y-2">
-                    <Label htmlFor="chapter">Chapter</Label>
-                    <Select onValueChange={setChapter} required value={chapter} disabled={!subject}>
-                        <SelectTrigger id="chapter"><SelectValue placeholder="Select Chapter" /></SelectTrigger>
-                        <SelectContent>
-                            {chapters.map((ch: string) => <SelectItem key={ch} value={ch}>{ch}</SelectItem>)}
-                        </SelectContent>
+                    <Label>Chapter</Label>
+                    <Select onValueChange={setChapter} value={chapter} disabled={!subject}>
+                        <SelectTrigger><SelectValue placeholder="Select Chapter" /></SelectTrigger>
+                        <SelectContent>{chapters.map((ch: string) => <SelectItem key={ch} value={ch}>{ch}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="type">Resource Type</Label>
-              <Select onValueChange={setType} required value={type}>
-                <SelectTrigger id="type">
-                  <SelectValue placeholder="Select resource type" />
-                </SelectTrigger>
+              <Label>Resource Type</Label>
+              <Select onValueChange={setType} value={type}>
+                <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="lesson-plan-text">Lesson Plan (Text)</SelectItem>
                   <SelectItem value="video">Video</SelectItem>
@@ -288,54 +209,21 @@ export default function EditContentPage() {
                   <SelectItem value="mind-map-json">Mind Map (JSON)</SelectItem>
                   <SelectItem value="pdf-note">PDF Note</SelectItem>
                   <SelectItem value="translated-chapter">Translated Chapter (PDF)</SelectItem>
-                  <SelectItem value="song">Song (Video/Audio URL)</SelectItem>
+                  <SelectItem value="song">Song</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            
             {isTextContent ? (
-                <div className="space-y-2">
-                    <Label>Lesson Content</Label>
-                    <RichTextEditor content={htmlContent} onChange={setHtmlContent} />
-                </div>
+                <div className="space-y-2"><Label>Lesson Content</Label><RichTextEditor content={htmlContent} onChange={setHtmlContent} /></div>
             ) : isJsonContent ? (
                 <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                        <Label htmlFor="jsonContent">Mind Map JSON Content</Label>
-                         <>
-                            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json"/>
-                            <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                                <UploadCloud className="mr-2 h-4 w-4" /> Upload JSON
-                            </Button>
-                        </>
-                    </div>
-                    <Textarea 
-                        id="jsonContent" 
-                        placeholder={'Paste your mind map JSON here, or upload a file.'}
-                        required 
-                        value={htmlContent} 
-                        onChange={(e) => setHtmlContent(e.target.value)}
-                        className="min-h-[300px] font-mono text-sm"
-                    />
-                    {jsonError && <p className="text-sm text-destructive mt-1">{jsonError}</p>}
+                    <div className="flex justify-between items-center"><Label>Mind Map JSON</Label><input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json"/><Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>Upload JSON</Button></div>
+                    <Textarea required value={htmlContent} onChange={e => setHtmlContent(e.target.value)} className="min-h-[300px] font-mono text-sm" />
                 </div>
             ) : (
-                <div className="space-y-2">
-                  <Label htmlFor="resourceUrl">Resource Link</Label>
-                  <Input 
-                    id="resourceUrl" 
-                    type="url" 
-                    placeholder="https://example.com/resource" 
-                    required={!isTextContent && !isJsonContent}
-                    value={resourceUrl} 
-                    onChange={(e) => setResourceUrl(e.target.value)} 
-                  />
-                </div>
+                <div className="space-y-2"><Label>Link</Label><Input type="url" required value={resourceUrl} onChange={e => setResourceUrl(e.target.value)} /></div>
             )}
-
-            <Button className="w-full mt-6" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Updating...' : 'Update Resource'}
-            </Button>
+            <Button className="w-full mt-6" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Updating...' : 'Update Resource'}</Button>
           </CardContent>
         </form>
       </Card>

@@ -1,11 +1,10 @@
-
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '@/app/providers';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
@@ -31,7 +30,7 @@ const isValidUrl = (url: string): boolean => {
 };
 
 const isValidJson = (str: string): boolean => {
-    if (!str) return true; // Empty is valid until submission
+    if (!str) return true;
     try {
         JSON.parse(str);
     } catch (e) {
@@ -39,7 +38,6 @@ const isValidJson = (str: string): boolean => {
     }
     return true;
 };
-
 
 export default function ManageContentPage() {
   const { user, loading, userDetails } = useAuth();
@@ -81,7 +79,6 @@ export default function ManageContentPage() {
     }
   }, [htmlContent, type]);
 
-
   useEffect(() => {
       if (!loading && (!user || userDetails?.email !== 'quizpankaj@gmail.com')) {
         router.replace('/');
@@ -92,39 +89,24 @@ export default function ManageContentPage() {
     const file = event.target.files?.[0];
     if (file) {
       if (file.type !== 'application/json') {
-        toast({
-          variant: 'destructive',
-          title: 'Invalid File Type',
-          description: 'Please upload a valid .json file.',
-        });
+        toast({ variant: 'destructive', title: 'Invalid File Type', description: 'Please upload a valid .json file.' });
         return;
       }
-      
       const reader = new FileReader();
       reader.onload = (e) => {
         const content = e.target?.result as string;
         setHtmlContent(content);
         if (isValidJson(content)) {
-          toast({
-            title: 'File Uploaded',
-            description: 'The JSON content has been loaded into the text area.',
-          });
+          toast({ title: 'File Uploaded', description: 'JSON content loaded.' });
         } else {
-          toast({
-            variant: 'destructive',
-            title: 'Invalid JSON',
-            description: 'The content of the file is not valid JSON.',
-          });
+          toast({ variant: 'destructive', title: 'Invalid JSON', description: 'File content is not valid JSON.' });
         }
       };
       reader.readAsText(file);
     }
   };
 
-
-  if (loading || !user) {
-    return <LoadingOverlay isLoading={true} />;
-  }
+  if (loading || !user) return <LoadingOverlay isLoading={true} />;
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,43 +117,23 @@ export default function ManageContentPage() {
     const isUrlPlan = !isTextPlan && !isMindMap;
 
     if (!title || !resourceClass || !subject || !chapter || !type) {
-        toast({
-            variant: 'destructive',
-            title: 'Missing Fields',
-            description: 'Please fill out all required fields.',
-        });
+        toast({ variant: 'destructive', title: 'Missing Fields', description: 'Please fill out all required fields.' });
         return;
     }
-
     if (isUrlPlan && !isValidUrl(resourceUrl)) {
-        toast({
-            variant: 'destructive',
-            title: 'Invalid Link',
-            description: 'Please enter a valid URL for this resource type. It must start with http:// or https://',
-        });
+        toast({ variant: 'destructive', title: 'Invalid Link', description: 'Please enter a valid URL.' });
         return;
     }
-
     if ((isTextPlan || isMindMap) && !htmlContent.trim()) {
-        toast({
-            variant: 'destructive',
-            title: 'Missing Content',
-            description: `Please enter the content for the ${isMindMap ? 'mind map' : 'lesson plan'}.`,
-        });
+        toast({ variant: 'destructive', title: 'Missing Content', description: 'Please enter content.' });
         return;
     }
-
     if (isMindMap && !isValidJson(htmlContent)) {
-        toast({
-            variant: 'destructive',
-            title: 'Invalid JSON',
-            description: jsonError || 'The mind map content is not valid JSON. Please check the format.',
-        });
+        toast({ variant: 'destructive', title: 'Invalid JSON', description: 'Invalid JSON format.' });
         return;
     }
 
     setIsSubmitting(true);
-
     try {
       await addDoc(collection(db, 'resources'), {
         title,
@@ -181,22 +143,12 @@ export default function ManageContentPage() {
         type,
         url: isUrlPlan ? resourceUrl : htmlContent,
         authorId: user.uid,
-        createdAt: new Date(),
+        createdAt: serverTimestamp(),
       });
-
-      toast({
-        title: 'Success!',
-        description: 'Resource has been added successfully.',
-        duration: 1500,
-      });
+      toast({ title: 'Success!', description: 'Resource added successfully.', duration: 1500 });
       router.push('/admin/dashboard');
     } catch (error) {
-      console.error('Error adding document: ', error);
-      toast({
-        variant: 'destructive',
-        title: 'Uh oh! Something went wrong.',
-        description: (error as Error).message || 'There was a problem with your request.',
-      });
+      toast({ variant: 'destructive', title: 'Error', description: (error as Error).message });
     } finally {
       setIsSubmitting(false);
     }
@@ -209,14 +161,9 @@ export default function ManageContentPage() {
     <div className="container mx-auto px-4 py-8">
        <LoadingOverlay isLoading={isSubmitting} />
        <header className="flex justify-between items-center mb-8">
-        <h1 className="font-headline text-4xl font-bold text-foreground">
-          Add New Content
-        </h1>
+        <h1 className="font-headline text-4xl font-bold text-foreground">Add New Content</h1>
         <Button asChild variant="outline">
-          <Link href="/admin">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Link>
+          <Link href="/admin"><ArrowLeft className="mr-2 h-4 w-4" />Back to Dashboard</Link>
         </Button>
       </header>
       <Card className="w-full max-w-4xl mx-auto">
@@ -227,46 +174,42 @@ export default function ManageContentPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
-              <Input id="title" placeholder="e.g., Introduction to Algebra" required value={title} onChange={(e) => setTitle(e.target.value)} />
+              <Label>Title</Label>
+              <Input placeholder="e.g., Introduction to Algebra" required value={title} onChange={e => setTitle(e.target.value)} />
             </div>
-            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                    <Label htmlFor="class">Class</Label>
-                    <Select onValueChange={value => { setResourceClass(value); setSubject(''); setChapter(''); }} required value={resourceClass}>
-                        <SelectTrigger id="class"><SelectValue placeholder="Select Class" /></SelectTrigger>
+                    <Label>Class</Label>
+                    <Select onValueChange={v => { setResourceClass(v); setSubject(''); setChapter(''); }} required value={resourceClass}>
+                        <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
                         <SelectContent>
                             {Object.keys(syllabus).sort((a, b) => parseInt(a) - parseInt(b)).map(c => <SelectItem key={c} value={c}>Class {c}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
                  <div className="space-y-2">
-                    <Label htmlFor="subject">Subject</Label>
-                    <Select onValueChange={value => { setSubject(value); setChapter(''); }} required value={subject} disabled={!resourceClass}>
-                        <SelectTrigger id="subject"><SelectValue placeholder="Select Subject" /></SelectTrigger>
+                    <Label>Subject</Label>
+                    <Select onValueChange={v => { setSubject(v); setChapter(''); }} required value={subject} disabled={!resourceClass}>
+                        <SelectTrigger><SelectValue placeholder="Select Subject" /></SelectTrigger>
                         <SelectContent>
                             {subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
                  <div className="space-y-2">
-                    <Label htmlFor="chapter">Chapter</Label>
+                    <Label>Chapter</Label>
                     <Select onValueChange={setChapter} required value={chapter} disabled={!subject}>
-                        <SelectTrigger id="chapter"><SelectValue placeholder="Select Chapter" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Select Chapter" /></SelectTrigger>
                         <SelectContent>
                             {chapters.map((ch: string) => <SelectItem key={ch} value={ch}>{ch}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="type">Resource Type</Label>
+              <Label>Resource Type</Label>
               <Select onValueChange={setType} required value={type}>
-                <SelectTrigger id="type">
-                  <SelectValue placeholder="Select resource type" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select resource type" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="lesson-plan-text">Lesson Plan (Text)</SelectItem>
                   <SelectItem value="video">Video</SelectItem>
@@ -278,7 +221,6 @@ export default function ManageContentPage() {
                 </SelectContent>
               </Select>
             </div>
-            
             {isTextContent ? (
                  <div className="space-y-2">
                     <Label>Lesson Content</Label>
@@ -287,49 +229,22 @@ export default function ManageContentPage() {
             ) : isJsonContent ? (
                 <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                        <Label htmlFor="jsonContent">Mind Map JSON Content</Label>
-                         <>
-                            <input 
-                                type="file" 
-                                ref={fileInputRef} 
-                                onChange={handleFileChange} 
-                                className="hidden" 
-                                accept=".json"
-                            />
-                            <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                                <UploadCloud className="mr-2 h-4 w-4" />
-                                Upload JSON File
-                            </Button>
-                        </>
+                        <Label>Mind Map JSON Content</Label>
+                        <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
+                        <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                            <UploadCloud className="mr-2 h-4 w-4" />Upload JSON File
+                        </Button>
                     </div>
-                    <Textarea 
-                        id="jsonContent" 
-                        placeholder={'Paste your mind map JSON here, or upload a file.'}
-                        required 
-                        value={htmlContent} 
-                        onChange={(e) => setHtmlContent(e.target.value)}
-                        className="min-h-[200px] font-mono text-sm"
-                    />
+                    <Textarea placeholder="Paste JSON here..." required value={htmlContent} onChange={e => setHtmlContent(e.target.value)} className="min-h-[200px] font-mono text-sm" />
                     {jsonError && <p className="text-sm text-destructive mt-1">{jsonError}</p>}
                 </div>
             ) : (
                 <div className="space-y-2">
-                  <Label htmlFor="resourceUrl">Resource Link</Label>
-                  <Input 
-                    id="resourceUrl" 
-                    type="url" 
-                    placeholder="https://example.com/resource" 
-                    required={!isTextContent && !isJsonContent}
-                    value={resourceUrl} 
-                    onChange={(e) => setResourceUrl(e.target.value)} 
-                  />
+                  <Label>Resource Link</Label>
+                  <Input type="url" placeholder="https://..." required value={resourceUrl} onChange={e => setResourceUrl(e.target.value)} />
                 </div>
             )}
-
-
-            <Button className="w-full mt-6" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Submitting...' : 'Add Resource'}
-            </Button>
+            <Button className="w-full mt-6" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Submitting...' : 'Add Resource'}</Button>
           </CardContent>
         </form>
       </Card>

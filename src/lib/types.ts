@@ -1,4 +1,3 @@
-
 import type { LucideIcon } from 'lucide-react';
 
 export interface Content {
@@ -36,6 +35,7 @@ export interface Resource {
   subject: string;
   chapter: string;
   authorId: string;
+  createdAt?: any;
 }
 
 export interface UserActivity {

@@ -103,11 +103,13 @@ interface CardData {
 }
 
 /**
- * Custom Viewer for Images with Zoom Support (Mobile & PC)
+ * Custom Viewer for Images with Zoom Support (Mobile Pinch & PC Ctrl+Scroll)
  */
 function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, onClose?: () => void }) {
     const [scale, setScale] = useState(1);
     const containerRef = useRef<HTMLDivElement>(null);
+    const pointers = useRef<Map<number, PointerEvent>>(new Map());
+    const lastDist = useRef<number | null>(null);
 
     const handleZoomIn = () => setScale(prev => Math.min(prev + 0.5, 5));
     const handleZoomOut = () => setScale(prev => Math.max(prev - 0.5, 0.5));
@@ -125,15 +127,59 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
             }
         };
 
+        const handlePointerDown = (e: PointerEvent) => {
+            pointers.current.set(e.pointerId, e);
+        };
+
+        const handlePointerMove = (e: PointerEvent) => {
+            pointers.current.set(e.pointerId, e);
+            
+            if (pointers.current.size === 2) {
+                const pts = Array.from(pointers.current.values());
+                const dx = pts[0].clientX - pts[1].clientX;
+                const dy = pts[0].clientY - pts[1].clientY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (lastDist.current !== null) {
+                    const delta = dist - lastDist.current;
+                    if (Math.abs(delta) > 2) {
+                        setScale(prev => {
+                            const next = prev + (delta > 0 ? 0.05 : -0.05);
+                            return Math.min(Math.max(next, 0.5), 5);
+                        });
+                    }
+                }
+                lastDist.current = dist;
+            }
+        };
+
+        const handlePointerUp = (e: PointerEvent) => {
+            pointers.current.delete(e.pointerId);
+            if (pointers.current.size < 2) {
+                lastDist.current = null;
+            }
+        };
+
         el.addEventListener('wheel', handleWheel, { passive: false });
-        return () => el.removeEventListener('wheel', handleWheel);
+        el.addEventListener('pointerdown', handlePointerDown);
+        el.addEventListener('pointermove', handlePointerMove);
+        el.addEventListener('pointerup', handlePointerUp);
+        el.addEventListener('pointercancel', handlePointerUp);
+
+        return () => {
+            el.removeEventListener('wheel', handleWheel);
+            el.removeEventListener('pointerdown', handlePointerDown);
+            el.removeEventListener('pointermove', handlePointerMove);
+            el.removeEventListener('pointerup', handlePointerUp);
+            el.removeEventListener('pointercancel', handlePointerUp);
+        };
     }, []);
 
     return (
-        <div className="relative w-full h-full bg-black overflow-hidden flex flex-col">
+        <div className="relative w-full h-full bg-black overflow-hidden flex flex-col touch-none">
             {/* Zoom Controls & Close Button */}
-            <div className="absolute top-4 right-4 z-20 flex gap-2">
-                <div className="flex bg-black/40 backdrop-blur-md rounded-full p-1 border border-white/10">
+            <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+                <div className="flex bg-black/60 backdrop-blur-md rounded-full p-1 border border-white/20 shadow-xl">
                     <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full text-white hover:bg-white/20" onClick={handleZoomIn}>
                         <ZoomIn className="w-5 h-5" />
                     </Button>
@@ -145,8 +191,8 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
                     </Button>
                 </div>
                 {onClose && (
-                    <Button size="icon" variant="destructive" className="h-11 w-11 rounded-full shadow-lg ml-1" onClick={onClose}>
-                        <X className="w-6 h-6" />
+                    <Button size="icon" variant="destructive" className="h-9 w-9 rounded-full shadow-lg border border-white/10" onClick={onClose}>
+                        <X className="w-5 h-5" />
                     </Button>
                 )}
             </div>
@@ -154,16 +200,15 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
             {/* Image Container */}
             <div 
                 ref={containerRef}
-                className="flex-1 w-full overflow-auto touch-pan-x touch-pan-y flex items-center justify-center p-4"
+                className="flex-1 w-full overflow-auto flex items-center justify-center p-4 cursor-move"
             >
                 <img 
                     src={src} 
                     alt={alt}
                     draggable={false}
-                    className="max-w-none transition-transform duration-200 ease-out origin-center cursor-move"
+                    className="max-w-none transition-transform duration-100 ease-out origin-center"
                     style={{ 
                         transform: `scale(${scale})`,
-                        width: scale === 1 ? 'auto' : 'auto',
                         height: scale === 1 ? '90%' : 'auto',
                         maxWidth: scale === 1 ? '95%' : 'none',
                         objectFit: 'contain'
@@ -171,13 +216,10 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
                 />
             </div>
             
-            {/* Hint Overlay (Mobile) */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-xs text-white/60 pointer-events-none md:hidden">
-                Pinch to zoom • Drag to pan
-            </div>
-            {/* Hint Overlay (PC) */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-xs text-white/60 pointer-events-none hidden md:block">
-                Ctrl + Scroll to zoom • Drag to pan
+            {/* Hint Overlay */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-black/40 backdrop-blur-md rounded-full text-xs text-white/80 pointer-events-none border border-white/10">
+                <span className="md:hidden">Pinch to zoom • Drag to pan</span>
+                <span className="hidden md:inline">Ctrl + Scroll to zoom • Drag to pan</span>
             </div>
         </div>
     );
@@ -536,3 +578,4 @@ export default function DynamicPage() {
         </>
     );
 }
+

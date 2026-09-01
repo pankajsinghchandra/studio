@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Sparkles, LogOut, Loader, Shield, LayoutDashboard, Settings, Info } from 'lucide-react';
+import { Sparkles, LogOut, Loader, Shield, LayoutDashboard, Settings, Info, ExternalLink, GraduationCap, Heart, UserCheck } from 'lucide-react';
 import SearchBar from '../search-bar';
 import { Button } from '../ui/button';
 import { getAuth, signOut } from 'firebase/auth';
@@ -25,6 +25,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Separator } from '../ui/separator';
 
 export default function Header() {
   const { user, userDetails, loading, fetchUserDetails } = useAuth();
@@ -290,20 +291,96 @@ export default function Header() {
     </Dialog>
     
     <Dialog open={isAboutUsOpen} onOpenChange={setIsAboutUsOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle className="font-headline">Vidyalaya Notes - About Us</DialogTitle>
-                <DialogDescription>Vidyalaya Notes - आपकी डिजिटल लाइब्रेरी</DialogDescription>
+        <DialogContent className="max-w-2xl bg-background/80 backdrop-blur-xl border-primary/20 shadow-2xl overflow-hidden p-0 gap-0">
+            <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                <Sparkles className="w-32 h-32 text-primary" />
+            </div>
+            
+            <DialogHeader className="p-8 pb-4">
+                <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-primary/10 rounded-xl">
+                        <Sparkles className="w-6 h-6 text-primary" />
+                    </div>
+                    <DialogTitle className="font-headline text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600">
+                        Vidyalaya Notes
+                    </DialogTitle>
+                </div>
+                <DialogDescription className="text-lg font-medium text-foreground/80">
+                    आपकी डिजिटल लाइब्रेरी - शिक्षा की नई उमंग
+                </DialogDescription>
             </DialogHeader>
-            <div className="prose prose-sm max-w-none text-muted-foreground">
-                <p>"Vidyalaya Notes" शिक्षकों और छात्रों के लिए एक आधुनिक सहायक उपकरण (Teaching-Learning Aid) है।</p>
-                <h4 className="font-headline text-foreground">हमारी मुख्य विशेषताएँ:</h4>
-                <ul className="list-disc space-y-2">
-                    <li><strong>हमारा विजन:</strong> क्लासरूम की पढ़ाई को रोचक बनाने के लिए वीडियो, गानों के माध्यम से कविताएँ और कहानियाँ और विजुअल माइंडमैप्स उपलब्ध कराना।</li>
-                    <li><strong>स्वामित्व:</strong> इस प्लेटफॉर्म का संचालन और तकनीकी रखरखाव श्रीमती मीरा देवी द्वारा किया जाता है।</li>
-                    <li><strong>कंटेंट क्रेडिट:</strong> इसमें दी गई सामग्री अनुभवी शिक्षकों के परामर्श और NCERT/SCERT के पाठ्यक्रम पर आधारित है।</li>
-                    <li>यह ऐप शिक्षकों के शिक्षण कार्य को सुलभ बनाने के लिए एक 'स्वयंसेवी' पहल है।</li>
-                </ul>
+
+            <div className="px-8 py-4 space-y-6">
+                <div className="relative p-6 rounded-2xl bg-primary/5 border border-primary/10 shadow-inner">
+                    <p className="text-foreground leading-relaxed italic">
+                        &quot;Vidyalaya Notes&quot; शिक्षकों और छात्रों के लिए एक आधुनिक सहायक उपकरण (Teaching-Learning Aid) है, जिसे शिक्षा को सुलभ और मज़ेदार बनाने के लिए डिज़ाइन किया गया है।
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex gap-4 items-start p-4 rounded-xl bg-card border border-border/50 hover:border-primary/30 transition-colors">
+                        <div className="bg-primary/10 p-2 rounded-lg shrink-0">
+                            <GraduationCap className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-sm mb-1">हमारा विजन</h4>
+                            <p className="text-xs text-muted-foreground">क्लासरूम की पढ़ाई को रोचक बनाने के लिए वीडियो, गानों और विजुअल माइंडमैप्स उपलब्ध कराना।</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-4 items-start p-4 rounded-xl bg-card border border-border/50 hover:border-primary/30 transition-colors">
+                        <div className="bg-primary/10 p-2 rounded-lg shrink-0">
+                            <Heart className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-sm mb-1">स्वामित्व</h4>
+                            <p className="text-xs text-muted-foreground">इस प्लेटफॉर्म का संचालन और तकनीकी रखरखाव श्रीमती मीरा देवी द्वारा किया जाता है।</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-4 items-start p-4 rounded-xl bg-card border border-border/50 hover:border-primary/30 transition-colors">
+                        <div className="bg-primary/10 p-2 rounded-lg shrink-0">
+                            <UserCheck className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-sm mb-1">कंटेंट क्रेडिट</h4>
+                            <p className="text-xs text-muted-foreground">सामग्री अनुभवी शिक्षकों के परामर्श और NCERT/SCERT के पाठ्यक्रम पर आधारित है।</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-4 items-start p-4 rounded-xl bg-card border border-border/50 hover:border-primary/30 transition-colors">
+                        <div className="bg-primary/10 p-2 rounded-lg shrink-0">
+                            <Sparkles className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-sm mb-1">स्वयंसेवी पहल</h4>
+                            <p className="text-xs text-muted-foreground">यह ऐप शिक्षकों के शिक्षण कार्य को सुलभ बनाने के लिए एक नि:शुल्क सेवा है।</p>
+                        </div>
+                    </div>
+                </div>
+
+                <Separator className="opacity-50" />
+
+                <div className="pb-8">
+                    <h4 className="font-headline text-lg font-bold text-primary mb-4 flex items-center gap-2">
+                        हमारे अन्य उपयोगी ऐप्स
+                    </h4>
+                    <Link 
+                        href="https://myonlinetest.netlify.app" 
+                        target="_blank"
+                        className="group block p-5 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg hover:shadow-blue-500/30 transition-all duration-300 active:scale-[0.98]"
+                    >
+                        <div className="flex justify-between items-center">
+                            <div className="space-y-1">
+                                <h5 className="font-bold text-xl flex items-center gap-2 text-white">
+                                    My Test
+                                    <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Online Exam</span>
+                                </h5>
+                                <p className="text-blue-100 text-sm">परीक्षा की तैयारी के लिए यहाँ क्लिक करें और अभ्यास शुरू करें...</p>
+                            </div>
+                            <div className="bg-white/10 p-3 rounded-full group-hover:bg-white/20 transition-colors">
+                                <ExternalLink className="w-6 h-6" />
+                            </div>
+                        </div>
+                    </Link>
+                </div>
             </div>
         </DialogContent>
     </Dialog>

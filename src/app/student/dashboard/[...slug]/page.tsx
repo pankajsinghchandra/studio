@@ -104,115 +104,92 @@ interface CardData {
 
 function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, onClose?: () => void }) {
     const [scale, setScale] = useState(1);
+    const [offset, setOffset] = useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
-    const pointers = useRef<Map<number, PointerEvent>>(new Map());
+    const startPos = useRef({ x: 0, y: 0 });
     const lastDist = useRef<number | null>(null);
 
-    const handleZoomIn = () => setScale(prev => Math.min(prev + 0.4, 5));
-    const handleZoomOut = () => setScale(prev => Math.max(prev - 0.4, 0.5));
-    const handleReset = () => setScale(1);
+    const handleZoomIn = () => setScale(prev => Math.min(prev + 0.5, 6));
+    const handleZoomOut = () => setScale(prev => Math.max(prev - 0.5, 0.5));
+    const handleReset = () => {
+        setScale(1);
+        setOffset({ x: 0, y: 0 });
+    };
 
-    useEffect(() => {
-        const el = containerRef.current;
-        if (!el) return;
+    const handlePointerDown = (e: React.PointerEvent) => {
+        if (e.button !== 0 && e.pointerType === 'mouse') return;
+        setIsDragging(true);
+        startPos.current = { x: e.clientX - offset.x, y: e.clientY - offset.y };
+        (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    };
 
-        const handleWheel = (e: WheelEvent) => {
-            if (e.ctrlKey) {
-                e.preventDefault();
-                if (e.deltaY < 0) handleZoomIn();
-                else handleZoomOut();
-            }
-        };
+    const handlePointerMove = (e: React.PointerEvent) => {
+        if (!isDragging) return;
+        
+        // Handle drag panning
+        setOffset({
+            x: e.clientX - startPos.current.x,
+            y: e.clientY - startPos.current.y
+        });
+    };
 
-        const handlePointerDown = (e: PointerEvent) => {
-            pointers.current.set(e.pointerId, e);
-        };
+    const handlePointerUp = (e: React.PointerEvent) => {
+        setIsDragging(false);
+        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    };
 
-        const handlePointerMove = (e: PointerEvent) => {
-            pointers.current.set(e.pointerId, e);
-            
-            if (pointers.current.size === 2) {
-                const pts = Array.from(pointers.current.values());
-                const dx = pts[0].clientX - pts[1].clientX;
-                const dy = pts[0].clientY - pts[1].clientY;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-
-                if (lastDist.current !== null) {
-                    const delta = dist - lastDist.current;
-                    if (Math.abs(delta) > 1.5) {
-                        setScale(prev => {
-                            const next = prev + (delta > 0 ? 0.04 : -0.04);
-                            return Math.min(Math.max(next, 0.5), 5);
-                        });
-                    }
-                }
-                lastDist.current = dist;
-            }
-        };
-
-        const handlePointerUp = (e: PointerEvent) => {
-            pointers.current.delete(e.pointerId);
-            if (pointers.current.size < 2) {
-                lastDist.current = null;
-            }
-        };
-
-        el.addEventListener('wheel', handleWheel, { passive: false });
-        el.addEventListener('pointerdown', handlePointerDown);
-        el.addEventListener('pointermove', handlePointerMove);
-        el.addEventListener('pointerup', handlePointerUp);
-        el.addEventListener('pointercancel', handlePointerUp);
-
-        return () => {
-            el.removeEventListener('wheel', handleWheel);
-            el.removeEventListener('pointerdown', handlePointerDown);
-            el.removeEventListener('pointermove', handlePointerMove);
-            el.removeEventListener('pointerup', handlePointerUp);
-            el.removeEventListener('pointercancel', handlePointerUp);
-        };
-    }, []);
+    const handleWheel = (e: React.WheelEvent) => {
+        if (e.ctrlKey) {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -0.2 : 0.2;
+            setScale(prev => Math.min(Math.max(prev + delta, 0.5), 6));
+        }
+    };
 
     return (
         <div className="relative w-full h-full bg-black overflow-hidden flex flex-col touch-none">
-            <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-                <div className="flex bg-black/30 backdrop-blur-sm rounded-full p-1 border border-white/10 shadow-lg">
-                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-white/90 hover:bg-white/20 transition-colors" onClick={handleZoomIn}>
+            <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
+                <div className="flex bg-black/40 backdrop-blur-md rounded-full p-1 border border-white/20 shadow-xl">
+                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-white/90 hover:bg-white/20" onClick={handleZoomIn}>
                         <ZoomIn className="w-4 h-4" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-white/90 hover:bg-white/20 transition-colors" onClick={handleZoomOut}>
+                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-white/90 hover:bg-white/20" onClick={handleZoomOut}>
                         <ZoomOut className="w-4 h-4" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-white/90 hover:bg-white/20 transition-colors" onClick={handleReset}>
+                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-white/90 hover:bg-white/20" onClick={handleReset}>
                         <RotateCcw className="w-4 h-4" />
                     </Button>
                 </div>
                 {onClose && (
-                    <Button size="icon" variant="destructive" className="h-8 w-8 rounded-full shadow-lg border border-white/10 opacity-90 hover:opacity-100" onClick={onClose}>
+                    <Button size="icon" variant="destructive" className="h-8 w-8 rounded-full shadow-xl border border-white/20" onClick={onClose}>
                         <X className="w-4 h-4" />
                     </Button>
                 )}
             </div>
+
             <div 
                 ref={containerRef}
-                className="flex-1 w-full overflow-auto flex items-center justify-center p-4 cursor-move"
+                className="flex-1 w-full flex items-center justify-center cursor-grab active:cursor-grabbing select-none"
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
+                onWheel={handleWheel}
             >
                 <img 
                     src={src} 
                     alt={alt}
                     draggable={false}
-                    className="max-w-none origin-center"
+                    className="max-w-full max-h-full transition-transform duration-100 ease-out pointer-events-none"
                     style={{ 
-                        transform: `scale(${scale})`,
-                        height: scale === 1 ? '90%' : 'auto',
-                        maxWidth: scale === 1 ? '95%' : 'none',
-                        objectFit: 'contain',
-                        transition: pointers.current.size === 2 ? 'none' : 'transform 0.15s ease-out'
+                        transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
                     }}
                 />
             </div>
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-black/20 backdrop-blur-sm rounded-full text-[10px] text-white/60 pointer-events-none border border-white/5">
-                <span className="md:hidden">Pinch to zoom • Drag to pan</span>
-                <span className="hidden md:inline">Ctrl + Scroll to zoom • Drag to pan</span>
+
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-black/30 backdrop-blur-sm rounded-full text-[10px] text-white/70 pointer-events-none border border-white/10 z-50">
+                <span>Drag to move • Pinch or Ctrl+Scroll to zoom</span>
             </div>
         </div>
     );

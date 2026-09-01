@@ -157,7 +157,11 @@ export default function UserActivityPage() {
         if (!type) return 'Resource';
         if (type === 'mind-map-json') return 'Mind Map';
         if (type === 'lesson-plan-text') return 'Lesson Plan';
-        return type.replace(/-/g, ' ');
+        if (type === 'lesson-plan-pdf') return 'Lesson Plan (PDF)';
+        if (type === 'lesson-plan-image') return 'Lesson Plan (Image)';
+        if (type === 'pdf-note') return 'PDF Note';
+        if (type === 'translated-chapter') return 'Translated Chapter';
+        return type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     };
 
     if (authLoading || !user) {
@@ -265,7 +269,7 @@ export default function UserActivityPage() {
                                 <TableCell>
                                     <div className="flex flex-col gap-1">
                                         <span className="font-medium text-sm line-clamp-1">{activity.resourceTitle}</span>
-                                        <Badge variant="outline" className="w-fit text-[9px] py-0 px-1.5 h-4 uppercase tracking-tighter bg-primary/5 text-primary border-primary/20">
+                                        <Badge variant="secondary" className="w-fit text-[10px] py-0 px-2 h-5 bg-primary/10 text-primary border-none font-semibold">
                                             {getResourceTypeLabel(activity.resourceType)}
                                         </Badge>
                                     </div>

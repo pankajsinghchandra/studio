@@ -13,7 +13,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, AlertCircle, Save, CheckCircle2, RefreshCcw, Loader } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Save, CheckCircle2, RefreshCcw, Loader, BookOpen, Bookmark } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -47,6 +47,7 @@ export default function FixContentPage() {
             setResources(allRes);
         } catch (e) {
             console.error(e);
+            toast({ variant: 'destructive', title: "Fetch Error", description: "Could not load resources." });
         } finally {
             setIsLoading(false);
         }
@@ -98,11 +99,13 @@ export default function FixContentPage() {
             
             toast({ title: "Success", description: "Resource updated successfully!" });
             
-            // Remove from list locally
+            // Remove from list locally for better performance
             setResources(prev => prev.filter(r => r.id !== resId));
-            const newPending = { ...pendingChanges };
-            delete newPending[resId];
-            setPendingChanges(newPending);
+            setPendingChanges(prev => {
+                const updated = { ...prev };
+                delete updated[resId];
+                return updated;
+            });
         } catch (error) {
             toast({ variant: 'destructive', title: "Error", description: "Failed to update." });
         } finally {
@@ -116,12 +119,11 @@ export default function FixContentPage() {
         const subData = classData[subject];
         if (Array.isArray(subData)) return subData;
         
-        // Handle nested categories (like Science)
         let flatChapters: string[] = [];
         Object.values(subData).forEach((list: any) => {
             if (Array.isArray(list)) flatChapters = [...flatChapters, ...list];
         });
-        return flatChapters.sort();
+        return [...new Set(flatChapters)].sort();
     };
 
     if (loading || isLoading) return <LoadingOverlay isLoading={true} />;
@@ -131,47 +133,45 @@ export default function FixContentPage() {
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                 <div>
                     <h1 className="font-headline text-4xl font-bold text-foreground flex items-center gap-3">
-                        Quick Repair Tool
-                        <Badge variant="outline" className="text-sm font-normal">Fast-Fix Enabled</Badge>
+                        Content Repair Hub
+                        <Badge variant="destructive" className="animate-pulse">{orphanedResources.length}</Badge>
                     </h1>
-                    <p className="text-muted-foreground mt-1">Directly map {orphanedResources.length} items to new subjects/chapters.</p>
+                    <p className="text-muted-foreground mt-1">Showing items that are not mapped to the current syllabus.</p>
                 </div>
                 <div className="flex gap-2">
                     <Button variant="outline" onClick={fetchResources}>
-                        <RefreshCcw className="mr-2 h-4 w-4" /> Refresh List
+                        <RefreshCcw className="mr-2 h-4 w-4" /> Refresh
                     </Button>
                     <Button variant="outline" asChild>
-                        <Link href="/admin"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link>
+                        <Link href="/admin"><ArrowLeft className="mr-2 h-4 w-4" /> Dashboard</Link>
                     </Button>
                 </div>
             </header>
 
             <div className="grid gap-6">
-                <Card className={orphanedResources.length > 0 ? "border-destructive/30 bg-destructive/5" : "border-green-500/30 bg-green-50/50"}>
-                    <CardHeader className="flex flex-row items-center gap-4">
-                        {orphanedResources.length > 0 ? (
-                             <AlertCircle className="w-10 h-10 text-destructive" />
-                        ) : (
-                             <CheckCircle2 className="w-10 h-10 text-green-500" />
-                        )}
-                        <div className="flex-1">
-                            <CardTitle className="text-xl">Status: {orphanedResources.length} Broken Items</CardTitle>
+                {orphanedResources.length > 0 && (
+                    <Card className="border-destructive/20 bg-destructive/5">
+                        <CardHeader className="py-4">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <AlertCircle className="w-5 h-5 text-destructive" />
+                                Instructions
+                            </CardTitle>
                             <CardDescription>
-                                Select the correct Subject and Chapter below, then click the Save icon to fix each item instantly.
+                                Current details (Subject/Chapter) are shown in <span className="text-destructive font-bold">Red</span>. Choose the new mapping and click Save.
                             </CardDescription>
-                        </div>
-                    </CardHeader>
-                </Card>
+                        </CardHeader>
+                    </Card>
+                )}
 
                 <Card className="overflow-hidden border-border/60">
-                    <div className="max-h-[70vh] overflow-auto">
+                    <div className="max-h-[75vh] overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-primary/20">
                         <Table>
-                            <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                            <TableHeader className="bg-muted/80 sticky top-0 z-20 backdrop-blur">
                                 <TableRow>
-                                    <TableHead className="w-[200px]">Resource Details</TableHead>
-                                    <TableHead className="w-[250px]">New Subject</TableHead>
-                                    <TableHead className="w-[250px]">New Chapter</TableHead>
-                                    <TableHead className="text-right">Action</TableHead>
+                                    <TableHead className="min-w-[250px]">Resource & Current Info</TableHead>
+                                    <TableHead className="min-w-[200px]">New Subject</TableHead>
+                                    <TableHead className="min-w-[200px]">New Chapter</TableHead>
+                                    <TableHead className="text-right w-[80px]">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -182,13 +182,20 @@ export default function FixContentPage() {
                                     const chapters = getChaptersForSubject(classKey, selectedSubject);
 
                                     return (
-                                        <TableRow key={res.id} className="hover:bg-accent/5">
+                                        <TableRow key={res.id} className="hover:bg-accent/5 transition-colors">
                                             <TableCell>
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="font-bold text-xs line-clamp-1">{res.title}</span>
-                                                    <div className="flex gap-1">
-                                                        <Badge variant="outline" className="text-[9px] py-0">Cl {res.class}</Badge>
-                                                        <Badge variant="destructive" className="text-[9px] py-0 italic opacity-70">{res.chapter}</Badge>
+                                                <div className="flex flex-col gap-1.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-bold bg-primary/5">Cl {res.class}</Badge>
+                                                        <span className="font-bold text-sm line-clamp-1">{res.title}</span>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 gap-1">
+                                                        <div className="flex items-center text-[10px] text-destructive/80 font-medium bg-destructive/5 px-2 py-0.5 rounded">
+                                                            <BookOpen className="w-3 h-3 mr-1" /> {res.subject}
+                                                        </div>
+                                                        <div className="flex items-center text-[10px] text-destructive/80 font-medium bg-destructive/5 px-2 py-0.5 rounded">
+                                                            <Bookmark className="w-3 h-3 mr-1" /> {res.chapter}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </TableCell>
@@ -200,7 +207,7 @@ export default function FixContentPage() {
                                                         [res.id]: { subject: val, chapter: "" } 
                                                     }))}
                                                 >
-                                                    <SelectTrigger className="h-8 text-xs">
+                                                    <SelectTrigger className="h-9 text-xs">
                                                         <SelectValue placeholder="Select Subject" />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -217,7 +224,7 @@ export default function FixContentPage() {
                                                         [res.id]: { ...prev[res.id], chapter: val } 
                                                     }))}
                                                 >
-                                                    <SelectTrigger className="h-8 text-xs">
+                                                    <SelectTrigger className="h-9 text-xs">
                                                         <SelectValue placeholder="Select Chapter" />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -227,9 +234,9 @@ export default function FixContentPage() {
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <Button 
-                                                    size="sm" 
+                                                    size="icon" 
                                                     variant="default"
-                                                    className="h-8 w-8 p-0"
+                                                    className="h-9 w-9"
                                                     disabled={updatingId === res.id || !pendingChanges[res.id]?.chapter}
                                                     onClick={() => handleQuickUpdate(res.id)}
                                                 >
@@ -245,12 +252,17 @@ export default function FixContentPage() {
                                 })}
                                 {orphanedResources.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={4} className="text-center py-20">
-                                            <div className="flex flex-col items-center gap-3">
-                                                <CheckCircle2 className="w-12 h-12 text-green-500" />
-                                                <h3 className="text-xl font-bold">All items fixed!</h3>
-                                                <Button asChild variant="outline" className="mt-2">
-                                                    <Link href="/admin/dashboard">Go to Dashboard</Link>
+                                        <TableCell colSpan={4} className="text-center py-24">
+                                            <div className="flex flex-col items-center gap-4">
+                                                <div className="p-4 bg-green-500/10 rounded-full">
+                                                    <CheckCircle2 className="w-12 h-12 text-green-500" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <h3 className="text-2xl font-bold">Great Job!</h3>
+                                                    <p className="text-muted-foreground">All resources are perfectly mapped to the current syllabus.</p>
+                                                </div>
+                                                <Button asChild variant="outline" className="mt-4">
+                                                    <Link href="/admin/dashboard">Go to Manage Content</Link>
                                                 </Button>
                                             </div>
                                         </TableCell>
@@ -264,3 +276,4 @@ export default function FixContentPage() {
         </div>
     );
 }
+

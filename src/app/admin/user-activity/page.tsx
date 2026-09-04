@@ -42,7 +42,7 @@ export default function UserActivityPage() {
 
     const [activities, setActivities] = useState<UserActivity[]>([]);
     const [users, setUsers] = useState<UserForFilter[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     
     const [selectedUser, setSelectedUser] = useState('all');
@@ -50,11 +50,9 @@ export default function UserActivityPage() {
 
     const [lastVisible, setLastVisible] = useState<DocumentSnapshot<DocumentData> | null>(null);
     const [isLastPage, setIsLastPage] = useState(false);
-    const [page, setPage] = useState(1);
     
     const isFetchingRef = useRef(false);
 
-    // Initial check for admin rights
     useEffect(() => {
         if (!authLoading) {
             if (!user || userDetails?.email !== ADMIN_EMAIL) {
@@ -108,10 +106,8 @@ export default function UserActivityPage() {
                 }
             }
             
-            // Standard order by timestamp desc (requires index for filters)
             q = query(q, orderBy('timestamp', 'desc'));
 
-            // Pagination logic
             if (!isInitial && lastVisible) {
                 q = query(q, startAfter(lastVisible));
             }
@@ -134,23 +130,21 @@ export default function UserActivityPage() {
 
         } catch (err: any) {
             console.error("Activities fetch error:", err);
-            setError("Unable to load activities. If you have active filters, ensure required composite indexes are created in Firebase Console.");
+            setError("Unable to load activities. Indexing may be required in Firebase console for these filters.");
         } finally {
             setIsLoading(false);
             isFetchingRef.current = false;
         }
     }, [selectedUser, selectedTime, lastVisible]);
 
-    // Re-fetch when filters change
     useEffect(() => {
         if (!authLoading && user && userDetails?.email === ADMIN_EMAIL) {
-            setPage(1);
             setLastVisible(null);
             fetchActivities(true);
         }
     }, [selectedUser, selectedTime, authLoading, user, userDetails?.email]);
 
-    const handleNextPage = () => { if (!isLastPage && !isLoading) { setPage(p => p + 1); fetchActivities(false); } };
+    const handleNextPage = () => { if (!isLastPage && !isLoading) { fetchActivities(false); } };
     const handleReset = () => { setSelectedUser('all'); setSelectedTime('all'); };
 
     const formatDuration = (seconds: number = 0) => {
@@ -284,3 +278,4 @@ export default function UserActivityPage() {
         </div>
     );
 }
+

@@ -54,29 +54,27 @@ export default function UserActivityPage() {
     
     const isFetchingRef = useRef(false);
 
-    // Initial check and fetch users
+    // Fetch Users once for filtering
     useEffect(() => {
-        if (!authLoading) {
-            if (!user || userDetails?.email !== ADMIN_EMAIL) {
-                router.replace('/');
-            } else {
-                const fetchUsersList = async () => {
-                    try {
-                        const usersSnapshot = await getDocs(collection(db, 'users'));
-                        const usersList = usersSnapshot.docs
-                            .map(doc => ({ 
-                                uid: doc.id, 
-                                email: doc.data().email as string | null,
-                                name: doc.data().name as string | null 
-                            }))
-                            .filter(u => u.email !== ADMIN_EMAIL);
-                        setUsers(usersList);
-                    } catch (err) {
-                        console.error("Error fetching users:", err);
-                    }
-                };
-                fetchUsersList();
-            }
+        if (!authLoading && user && userDetails?.email === ADMIN_EMAIL) {
+            const fetchUsersList = async () => {
+                try {
+                    const usersSnapshot = await getDocs(collection(db, 'users'));
+                    setUsers(usersSnapshot.docs
+                        .map(doc => ({ 
+                            uid: doc.id, 
+                            email: doc.data().email as string | null,
+                            name: doc.data().name as string | null 
+                        }))
+                        .filter(u => u.email !== ADMIN_EMAIL)
+                    );
+                } catch (err) {
+                    console.error("Error fetching users:", err);
+                }
+            };
+            fetchUsersList();
+        } else if (!authLoading && (!user || userDetails?.email !== ADMIN_EMAIL)) {
+            router.replace('/');
         }
     }, [user, userDetails, authLoading, router]);
 
@@ -107,12 +105,12 @@ export default function UserActivityPage() {
                 }
             }
             
-            // Sort by timestamp if no complex filters that conflict with order
+            // Apply sorting (requires composite index if combined with where)
             if (selectedUser === 'all' && selectedTime === 'all') {
                 q = query(q, orderBy('timestamp', 'desc'));
             }
 
-            // Handle Pagination
+            // Pagination logic
             if (!isReset && page > 1 && lastVisible) {
                 q = query(q, startAfter(lastVisible));
             }
@@ -120,65 +118,50 @@ export default function UserActivityPage() {
             q = query(q, limit(PAGE_SIZE));
 
             const docSnapshots = await getDocs(q);
-            const fetchedActivities = docSnapshots.docs
+            const fetched = docSnapshots.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as UserActivity))
                 .filter(a => a.userEmail !== ADMIN_EMAIL);
             
-            setActivities(fetchedActivities);
+            setActivities(fetched);
             setLastVisible(docSnapshots.docs[docSnapshots.docs.length - 1] || null);
             setIsLastPage(docSnapshots.docs.length < PAGE_SIZE);
 
         } catch (err: any) {
-            console.error("Firestore Fetch Error:", err);
-            setError("Could not fetch activities. This might be due to missing database indexes for combined filters.");
+            console.error("Activities fetch error:", err);
+            setError("Unable to load activities. If you added filters, ensure composite indexes are created in Firebase.");
         } finally {
             setIsLoading(false);
             isFetchingRef.current = false;
         }
     }, [selectedUser, selectedTime, page, user, userDetails, lastVisible]);
 
-    // Handle initial load and filter changes
+    // Handle filter changes
     useEffect(() => {
         if (!authLoading && user && userDetails?.email === ADMIN_EMAIL) {
             setPage(1);
             setLastVisible(null);
             fetchActivities(true);
         }
-    }, [selectedUser, selectedTime, authLoading, user, userDetails?.email]); // DO NOT add fetchActivities to dependencies to avoid loop
+    }, [selectedUser, selectedTime, authLoading, user, userDetails?.email]);
 
-    // Handle explicit page changes separately
+    // Handle explicit page step
     useEffect(() => {
-        if (page > 1 && !authLoading && user && userDetails?.email === ADMIN_EMAIL) {
+        if (page > 1) {
             fetchActivities(false);
         }
-    }, [page]); // ONLY triggers on page change
+    }, [page]);
 
-    const handleNextPage = () => {
-        if (!isLastPage && !isLoading) setPage(p => p + 1);
-    };
-
-    const handlePrevPage = () => {
-        if (page > 1 && !isLoading) setPage(p => p - 1);
-    }
-
-    const handleReset = () => {
-        setSelectedUser('all');
-        setSelectedTime('all');
-    };
+    const handleNextPage = () => { if (!isLastPage && !isLoading) setPage(p => p + 1); };
+    const handlePrevPage = () => { if (page > 1 && !isLoading) setPage(p => p - 1); };
+    const handleReset = () => { setSelectedUser('all'); setSelectedTime('all'); };
 
     const formatDuration = (seconds: number = 0) => {
         if (seconds < 60) return `${seconds}s`;
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}m ${secs}s`;
+        return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
     };
 
     const getResourceTypeLabel = (type?: string) => {
         if (!type) return 'Resource';
-        if (type === 'mind-map-json') return 'Mind Map';
-        if (type === 'lesson-plan-text') return 'Lesson Plan';
-        if (type === 'pdf-note') return 'PDF Note';
-        if (type === 'translated-chapter') return 'Translated Chapter';
         return type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     };
 
@@ -188,56 +171,37 @@ export default function UserActivityPage() {
         <div className="container mx-auto px-4 py-8">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                 <div>
-                    <h1 className="font-headline text-4xl font-bold text-foreground">
-                        User Activity Logs
-                    </h1>
-                    <p className="text-muted-foreground mt-1">Track student engagement and resource usage.</p>
+                    <h1 className="font-headline text-4xl font-bold text-foreground">User Engagement Logs</h1>
+                    <p className="text-muted-foreground mt-1">Monitor how students are using your educational resources.</p>
                 </div>
                 <div className="flex gap-2">
                     <Button variant="outline" onClick={() => fetchActivities(true)}>
                         <RotateCcw className="mr-2 h-4 w-4" /> Refresh
                     </Button>
                     <Button asChild variant="outline">
-                        <Link href="/admin">
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            Back
-                        </Link>
+                        <Link href="/admin"><ArrowLeft className="mr-2 h-4 w-4" /> Back</Link>
                     </Button>
                 </div>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium flex items-center">
-                            <User className="w-4 h-4 mr-2" /> Filter by Student
-                        </CardTitle>
-                    </CardHeader>
+                <Card className="border-border/60">
+                    <CardHeader className="pb-3"><CardTitle className="text-sm font-medium flex items-center"><User className="w-4 h-4 mr-2" /> Student</CardTitle></CardHeader>
                     <CardContent>
-                        <Select value={selectedUser} onValueChange={(val) => setSelectedUser(val)}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a user" />
-                            </SelectTrigger>
+                        <Select value={selectedUser} onValueChange={setSelectedUser}>
+                            <SelectTrigger><SelectValue placeholder="All Students" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Students</SelectItem>
-                                {users.map(u => (
-                                    <SelectItem key={u.uid} value={u.uid}>{u.name || u.email}</SelectItem>
-                                ))}
+                                {users.map(u => <SelectItem key={u.uid} value={u.uid}>{u.name || u.email}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium flex items-center">
-                            <Clock className="w-4 h-4 mr-2" /> Time Range
-                        </CardTitle>
-                    </CardHeader>
+                <Card className="border-border/60">
+                    <CardHeader className="pb-3"><CardTitle className="text-sm font-medium flex items-center"><Clock className="w-4 h-4 mr-2" /> Timeframe</CardTitle></CardHeader>
                     <CardContent>
-                        <Select value={selectedTime} onValueChange={(val) => setSelectedTime(val)}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select time range" />
-                            </SelectTrigger>
+                        <Select value={selectedTime} onValueChange={setSelectedTime}>
+                            <SelectTrigger><SelectValue placeholder="All Time" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Time</SelectItem>
                                 <SelectItem value="24h">Last 24 Hours</SelectItem>
@@ -250,53 +214,37 @@ export default function UserActivityPage() {
                 </Card>
             </div>
 
-            {error && (
-                <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-lg mb-6 flex items-center gap-3">
-                    <AlertCircle className="w-5 h-5" />
-                    <p className="text-sm">{error}</p>
-                </div>
-            )}
+            {error && <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-lg mb-6 flex items-center gap-3"><AlertCircle className="w-5 h-5" /><p className="text-sm">{error}</p></div>}
 
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden border-border/60">
                 <Table>
                     <TableHeader className="bg-muted/50">
                         <TableRow>
-                            <TableHead className="w-[180px]">Student</TableHead>
-                            <TableHead>Resource & Type</TableHead>
-                            <TableHead>Hierarchy</TableHead>
-                            <TableHead>Time Spent</TableHead>
-                            <TableHead className="text-right">Date</TableHead>
+                            <TableHead>Student</TableHead>
+                            <TableHead>Content Info</TableHead>
+                            <TableHead>Path</TableHead>
+                            <TableHead>Duration</TableHead>
+                            <TableHead className="text-right">Activity Time</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading && activities.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={5} className="text-center py-20">
-                                    <div className="flex flex-col items-center gap-2">
-                                        <Loader className="h-8 w-8 animate-spin text-primary" />
-                                        <span className="text-muted-foreground">Loading activities...</span>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
+                            <TableRow><TableCell colSpan={5} className="text-center py-20"><Loader className="h-8 w-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
                         ) : activities.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={5} className="text-center py-20 text-muted-foreground">
-                                    No activity logs found.
-                                </TableCell>
-                            </TableRow>
+                            <TableRow><TableCell colSpan={5} className="text-center py-20 text-muted-foreground">No logs found for this filter.</TableCell></TableRow>
                         ) : (
                             activities.map(activity => (
-                                <TableRow key={activity.id} className="hover:bg-accent/5 transition-colors">
+                                <TableRow key={activity.id} className="hover:bg-accent/5">
                                     <TableCell>
                                         <div className="flex flex-col">
-                                            <span className="font-bold text-foreground text-sm">{activity.userName}</span>
+                                            <span className="font-bold text-sm">{activity.userName}</span>
                                             <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">{activity.userEmail}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex flex-col gap-1">
                                             <span className="font-medium text-sm line-clamp-1">{activity.resourceTitle}</span>
-                                            <Badge variant="outline" className="w-fit text-[10px] py-0 px-2 h-5 bg-primary/10 text-primary border-none">
+                                            <Badge variant="outline" className="w-fit text-[9px] py-0 px-1.5 h-4 bg-primary/5 text-primary border-primary/20">
                                                 {getResourceTypeLabel(activity.resourceType)}
                                             </Badge>
                                         </div>
@@ -310,8 +258,7 @@ export default function UserActivityPage() {
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-1 font-mono text-primary font-bold text-xs">
-                                            <Clock className="w-3 h-3" />
-                                            {formatDuration(activity.durationSeconds)}
+                                            <Clock className="w-3 h-3" /> {formatDuration(activity.durationSeconds)}
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-right text-[10px] text-muted-foreground whitespace-nowrap">
@@ -325,20 +272,12 @@ export default function UserActivityPage() {
             </Card>
             
             <div className="flex items-center justify-between py-6">
-                <p className="text-xs text-muted-foreground">
-                    Page {page} {isLoading ? '(Refreshing...)' : ''}
-                </p>
-                <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleReset} disabled={selectedUser === 'all' && selectedTime === 'all'}>
-                        Reset Filters
-                    </Button>
+                <p className="text-xs text-muted-foreground">Page {page} {isLoading ? '(Refreshing...)' : ''}</p>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={handleReset} disabled={selectedUser === 'all' && selectedTime === 'all'}>Reset</Button>
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePrevPage} disabled={page <= 1 || isLoading}>
-                            <ChevronRight className="h-4 w-4 rotate-180" />
-                        </Button>
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleNextPage} disabled={isLastPage || isLoading}>
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePrevPage} disabled={page <= 1 || isLoading}><ChevronRight className="h-4 w-4 rotate-180" /></Button>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleNextPage} disabled={isLastPage || isLoading}><ChevronRight className="h-4 w-4" /></Button>
                     </div>
                 </div>
             </div>

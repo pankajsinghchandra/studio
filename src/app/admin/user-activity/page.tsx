@@ -45,16 +45,13 @@ export default function UserActivityPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     
-    // Filter states
     const [selectedUser, setSelectedUser] = useState('all');
     const [selectedTime, setSelectedTime] = useState('all');
 
-    // Pagination states
     const [lastVisible, setLastVisible] = useState<DocumentSnapshot<DocumentData> | null>(null);
     const [isLastPage, setIsLastPage] = useState(false);
     const [page, setPage] = useState(1);
     
-    // Fetch users for filter dropdown
     useEffect(() => {
         if (!authLoading) {
             if (!user || userDetails?.email !== ADMIN_EMAIL) {
@@ -80,7 +77,6 @@ export default function UserActivityPage() {
         }
     }, [user, userDetails, authLoading, router]);
 
-    // Main fetch function - Stabilized to prevent loops
     const fetchActivities = useCallback(async (isReset: boolean = false) => {
         if (!user || userDetails?.email !== ADMIN_EMAIL) return;
         
@@ -90,12 +86,10 @@ export default function UserActivityPage() {
         try {
             let q = query(collection(db, "user-activity"));
 
-            // Filter by User
             if (selectedUser !== 'all') {
                 q = query(q, where('userId', '==', selectedUser));
             }
 
-            // Filter by Time
             if (selectedTime !== 'all') {
                 const now = new Date();
                 let startDate;
@@ -109,13 +103,10 @@ export default function UserActivityPage() {
                 }
             }
             
-            // Order by timestamp (requires composite index if where is used)
-            // To prevent crashes if index is missing, we only orderBy if no filter or specific filters
             if (selectedUser === 'all' && selectedTime === 'all') {
                 q = query(q, orderBy('timestamp', 'desc'));
             }
 
-            // Pagination logic
             if (!isReset && page > 1 && lastVisible) {
                 q = query(q, startAfter(lastVisible));
             }
@@ -137,14 +128,12 @@ export default function UserActivityPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [selectedUser, selectedTime, page, user, userDetails]);
+    }, [selectedUser, selectedTime, page, user, userDetails, lastVisible]);
 
-    // Trigger fetch on changes
     useEffect(() => {
         fetchActivities();
-    }, [fetchActivities]);
+    }, [selectedUser, selectedTime, page, user, userDetails]);
 
-    // Reset logic when filters change
     useEffect(() => {
         setPage(1);
         setLastVisible(null);
@@ -295,7 +284,7 @@ export default function UserActivityPage() {
                                         <div className="flex flex-wrap gap-1">
                                             <Badge variant="outline" className="text-[9px] py-0 px-1 h-4">Cl {activity.resourceClass}</Badge>
                                             <Badge variant="secondary" className="text-[9px] py-0 px-1 h-4">{activity.resourceSubject}</Badge>
-                                            <Badge variant="ghost" className="text-[9px] py-0 px-1 h-4 border italic">{activity.resourceChapter}</Badge>
+                                            <Badge variant="outline" className="text-[9px] py-0 px-1 h-4 border italic">{activity.resourceChapter}</Badge>
                                         </div>
                                     </TableCell>
                                     <TableCell>

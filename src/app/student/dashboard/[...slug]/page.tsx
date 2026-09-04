@@ -132,7 +132,6 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
     const handlePointerDown = (e: React.PointerEvent) => {
         pointers.current.set(e.pointerId, e.nativeEvent);
         
-        // Double tap logic for touch
         if (e.pointerType === 'touch') {
             const now = Date.now();
             if (now - lastTap.current < 300) {
@@ -155,7 +154,6 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
         pointers.current.set(e.pointerId, e.nativeEvent);
         const pointerList = Array.from(pointers.current.values());
 
-        // Pinch to zoom logic
         if (pointerList.length === 2) {
             setIsDragging(false);
             const curDiff = Math.hypot(
@@ -169,7 +167,6 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
             }
             prevDiff.current = curDiff;
         } 
-        // Drag logic
         else if (isDragging && pointerList.length === 1) {
             setOffset({
                 x: e.clientX - startPos.current.x,
@@ -189,7 +186,6 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
         (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     };
 
-    // Attach wheel event with non-passive option
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
@@ -361,11 +357,25 @@ export default function DynamicPage() {
                     })));
                 } else if (pageType === 'chapter') {
                     const targetChapter = finalChapterName || subOrChapterName;
-                    const q = query(collection(db, "resources"),
-                        where("class", "==", classId),
-                        where("subject", "==", subjectName),
-                        where("chapter", "==", targetChapter)
-                    );
+                    
+                    // Logic to sync Computer resources across class 6, 7, and 8
+                    const isComputerCrossClass = subjectName?.toLowerCase().includes('computer') && ['6', '7', '8'].includes(classId);
+                    
+                    let q;
+                    if (isComputerCrossClass) {
+                        q = query(collection(db, "resources"),
+                            where("subject", "==", subjectName),
+                            where("chapter", "==", targetChapter),
+                            where("class", "in", ["6", "7", "8"])
+                        );
+                    } else {
+                        q = query(collection(db, "resources"),
+                            where("class", "==", classId),
+                            where("subject", "==", subjectName),
+                            where("chapter", "==", targetChapter)
+                        );
+                    }
+
                     const querySnapshot = await getDocs(q);
                     const fetchedResources = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Resource[];
                     setTitle(targetChapter!);

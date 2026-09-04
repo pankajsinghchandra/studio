@@ -19,7 +19,7 @@ import { syllabus } from '@/lib/syllabus';
 import type { Resource } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import MindMap from '@/components/mind-map';
 
 export default function AdminDashboard() {
@@ -179,6 +179,9 @@ export default function AdminDashboard() {
     if (type === 'translated-chapter') return 'Translated Chapter';
     if (type === 'song') return 'Song';
     if (type === 'lesson-plan-text') return 'Lesson Plan';
+    if (type === 'video') return 'Video';
+    if (type === 'infographic') return 'Infographic';
+    if (type === 'pdf-note') return 'PDF Note';
     return type.replace(/-/g, ' ');
   };
 
@@ -353,9 +356,6 @@ export default function AdminDashboard() {
       
         <Dialog open={!!selectedResource} onOpenChange={o => !o && setSelectedResource(null)}>
             <DialogContent className="max-w-4xl w-full h-[80vh] p-0 flex flex-col">
-                <DialogHeader className="p-4 border-b flex flex-row items-center justify-between">
-                    <DialogTitle>{selectedResource?.title}</DialogTitle>
-                </DialogHeader>
                 <div className="flex-1 overflow-auto">{selectedResource && renderDialogContent()}</div>
             </DialogContent>
         </Dialog>

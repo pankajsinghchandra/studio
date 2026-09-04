@@ -34,7 +34,7 @@ function SearchPageComponent() {
           
           const lowerCaseQuery = queryParam.toLowerCase();
           
-          // NORMAL SEARCH LOGIC: No AI used here to save quota
+          // NORMAL SEARCH LOGIC: Filter by title, subject, chapter, or class
           const filtered = allResources.filter(resource => 
               resource.title.toLowerCase().includes(lowerCaseQuery) ||
               resource.subject.toLowerCase().includes(lowerCaseQuery) ||
@@ -65,6 +65,9 @@ function SearchPageComponent() {
     if (type === 'translated-chapter') return 'Translated Chapter';
     if (type === 'song') return 'Song';
     if (type === 'lesson-plan-text') return 'Lesson Plan';
+    if (type === 'video') return 'Video';
+    if (type === 'infographic') return 'Infographic';
+    if (type === 'pdf-note') return 'PDF Note';
     return type.replace(/-/g, ' ');
   };
 

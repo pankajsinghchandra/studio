@@ -56,7 +56,7 @@ export default function SearchBar() {
         ).map(resource => ({
             ...resource,
             path: `/student/dashboard/${resource.class}/${encodeURIComponent(resource.subject)}/${encodeURIComponent(resource.chapter)}`
-        })).slice(0, 6); // Limit to 6 suggestions for cleaner look
+        })).slice(0, 8); // Showing up to 8 suggestions for a modern feel
         
         setSuggestions(filtered);
       } catch (error) {
@@ -116,7 +116,7 @@ export default function SearchBar() {
         )}
       </form>
 
-      {/* Modern Search Suggestions Dropdown */}
+      {/* Modern YouTube-like Search Suggestions Dropdown */}
       {showSuggestions && (searchTerm.length >= 3) && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-background border border-border rounded-xl shadow-2xl overflow-hidden z-[60] animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="p-2 bg-muted/30 border-b flex items-center justify-between">
@@ -124,7 +124,7 @@ export default function SearchBar() {
             {isLoading && <div className="h-3 w-3 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />}
           </div>
           
-          <div className="max-h-[350px] overflow-y-auto">
+          <div className="max-h-[400px] overflow-y-auto">
             {suggestions.length > 0 ? (
               <div className="p-1">
                 {suggestions.map((s) => (

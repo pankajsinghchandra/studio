@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/app/providers';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
@@ -13,7 +13,9 @@ import {
     limit, 
     startAfter, 
     type DocumentData, 
-    type DocumentSnapshot 
+    type DocumentSnapshot,
+    doc,
+    updateDoc
 } from 'firebase/firestore';
 import type { UserActivity } from '@/lib/types';
 import LoadingOverlay from '@/components/loading-overlay';
@@ -51,6 +53,9 @@ export default function UserActivityPage() {
     const [isLastPage, setIsLastPage] = useState(false);
     const [page, setPage] = useState(1);
     
+    // Safety ref to prevent multiple simultaneous fetches
+    const isFetching = useRef(false);
+
     useEffect(() => {
         if (!authLoading) {
             if (!user || userDetails?.email !== ADMIN_EMAIL) {
@@ -77,14 +82,16 @@ export default function UserActivityPage() {
     }, [user, userDetails, authLoading, router]);
 
     const fetchActivities = useCallback(async (isReset: boolean = false) => {
-        if (!user || userDetails?.email !== ADMIN_EMAIL) return;
+        if (!user || userDetails?.email !== ADMIN_EMAIL || isFetching.current) return;
         
+        isFetching.current = true;
         setIsLoading(true);
         setError(null);
         
         try {
             let q = query(collection(db, "user-activity"));
 
+            // Note: In a real-world app, you might need composite indexes for complex filtering
             if (selectedUser !== 'all') {
                 q = query(q, where('userId', '==', selectedUser));
             }
@@ -102,6 +109,7 @@ export default function UserActivityPage() {
                 }
             }
             
+            // Apply sorting if no complex filters that break simple index
             if (selectedUser === 'all' && selectedTime === 'all') {
                 q = query(q, orderBy('timestamp', 'desc'));
             }
@@ -123,9 +131,10 @@ export default function UserActivityPage() {
 
         } catch (err: any) {
             console.error("Firestore Fetch Error:", err);
-            setError("Could not fetch activities. Check filters or database connection.");
+            setError("Could not fetch activities. This might be due to missing database indexes or filters.");
         } finally {
             setIsLoading(false);
+            isFetching.current = false;
         }
     }, [selectedUser, selectedTime, page, user, userDetails, lastVisible]);
 
@@ -189,7 +198,7 @@ export default function UserActivityPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <Select value={selectedUser} onValueChange={setSelectedUser}>
+                        <Select value={selectedUser} onValueChange={(val) => { setSelectedUser(val); setPage(1); setLastVisible(null); }}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select a user" />
                             </SelectTrigger>
@@ -209,7 +218,7 @@ export default function UserActivityPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <Select value={selectedTime} onValueChange={setSelectedTime}>
+                        <Select value={selectedTime} onValueChange={(val) => { setSelectedTime(val); setPage(1); setLastVisible(null); }}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select time range" />
                             </SelectTrigger>

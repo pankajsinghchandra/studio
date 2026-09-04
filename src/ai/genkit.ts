@@ -1,16 +1,17 @@
+
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/google-genai';
 
 /**
  * Genkit instance configured for Google AI.
  * 
- * NOTE: यह कॉन्फ़िगरेशन Firebase Studio के नए Auth Key सिस्टम के लिए है।
- * Studio के अंदर चलते समय अब .env फाइल में मैन्युअल API key की ज़रूरत नहीं है।
+ * In Firebase Studio, it uses the built-in Auth Key.
+ * In Netlify, it will use the GOOGLE_GENAI_API_KEY environment variable.
  */
 export const ai = genkit({
   plugins: [
     googleAI(),
   ],
-  // gemini-1.5-flash का उपयोग करें जो सबसे स्थिर और तेज़ है।
+  // Using gemini-1.5-flash for speed and reliability.
   model: 'googleai/gemini-1.5-flash',
 });

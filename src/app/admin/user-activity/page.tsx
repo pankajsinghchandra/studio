@@ -22,7 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Loader, ChevronRight, Clock, User, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Loader, ChevronRight, Clock, User, AlertCircle, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +54,7 @@ export default function UserActivityPage() {
     
     const isFetching = useRef(false);
 
+    // Initial check and fetch users
     useEffect(() => {
         if (!authLoading) {
             if (!user || userDetails?.email !== ADMIN_EMAIL) {
@@ -89,6 +90,7 @@ export default function UserActivityPage() {
         try {
             let q = query(collection(db, "user-activity"));
 
+            // Dynamic Query Building
             if (selectedUser !== 'all') {
                 q = query(q, where('userId', '==', selectedUser));
             }
@@ -106,10 +108,13 @@ export default function UserActivityPage() {
                 }
             }
             
+            // Note: If filtering and sorting on different fields, Firestore needs a composite index.
+            // Default to timestamp desc for general view.
             if (selectedUser === 'all' && selectedTime === 'all') {
                 q = query(q, orderBy('timestamp', 'desc'));
             }
 
+            // Pagination
             if (!isReset && page > 1 && lastVisible) {
                 q = query(q, startAfter(lastVisible));
             }
@@ -127,22 +132,28 @@ export default function UserActivityPage() {
 
         } catch (err: any) {
             console.error("Firestore Fetch Error:", err);
-            setError("Could not fetch activities. This might be due to missing database indexes or filters.");
+            setError("Could not fetch activities. This might be due to missing database indexes or high data load.");
         } finally {
             setIsLoading(false);
             isFetching.current = false;
         }
     }, [selectedUser, selectedTime, page, user, userDetails, lastVisible]);
 
+    // Trigger fetch on filter change
     useEffect(() => {
         if (!authLoading && user && userDetails?.email === ADMIN_EMAIL) {
-            fetchActivities();
+            fetchActivities(true);
         }
-    }, [selectedUser, selectedTime, page, authLoading, user, userDetails, fetchActivities]);
+    }, [selectedUser, selectedTime]); // Dependencies are ONLY filters to trigger reset
 
+    // Pagination trigger
     const handleNextPage = () => {
-        if (!isLastPage) setPage(p => p + 1);
+        if (!isLastPage && !isLoading) setPage(p => p + 1);
     };
+
+    const handlePrevPage = () => {
+        if (page > 1 && !isLoading) setPage(p => p - 1);
+    }
 
     const handleReset = () => {
         setPage(1);
@@ -178,12 +189,17 @@ export default function UserActivityPage() {
                     </h1>
                     <p className="text-muted-foreground mt-1">Track student engagement and resource usage.</p>
                 </div>
-                <Button asChild variant="outline">
-                    <Link href="/admin">
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Dashboard
-                    </Link>
-                </Button>
+                <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => fetchActivities(true)}>
+                        <RotateCcw className="mr-2 h-4 w-4" /> Refresh
+                    </Button>
+                    <Button asChild variant="outline">
+                        <Link href="/admin">
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Back
+                        </Link>
+                    </Button>
+                </div>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -243,9 +259,9 @@ export default function UserActivityPage() {
                         <TableRow>
                             <TableHead className="w-[180px]">Student</TableHead>
                             <TableHead>Resource & Type</TableHead>
-                            <TableHead>Hierarchy (Cl &gt; Sub &gt; Ch)</TableHead>
+                            <TableHead>Hierarchy</TableHead>
                             <TableHead>Time Spent</TableHead>
-                            <TableHead className="text-right">Activity Date</TableHead>
+                            <TableHead className="text-right">Date</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -254,7 +270,7 @@ export default function UserActivityPage() {
                                 <TableCell colSpan={5} className="text-center py-20">
                                     <div className="flex flex-col items-center gap-2">
                                         <Loader className="h-8 w-8 animate-spin text-primary" />
-                                        <span className="text-muted-foreground">Fetching activities...</span>
+                                        <span className="text-muted-foreground">Loading activities...</span>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -276,7 +292,7 @@ export default function UserActivityPage() {
                                     <TableCell>
                                         <div className="flex flex-col gap-1">
                                             <span className="font-medium text-sm line-clamp-1">{activity.resourceTitle}</span>
-                                            <Badge variant="secondary" className="w-fit text-[10px] py-0 px-2 h-5 bg-primary/10 text-primary border-none font-semibold">
+                                            <Badge variant="secondary" className="w-fit text-[10px] py-0 px-2 h-5 bg-primary/10 text-primary border-none">
                                                 {getResourceTypeLabel(activity.resourceType)}
                                             </Badge>
                                         </div>
@@ -306,19 +322,23 @@ export default function UserActivityPage() {
             
             <div className="flex items-center justify-between py-6">
                 <p className="text-xs text-muted-foreground">
-                    Showing {activities.length} activities
+                    Showing {activities.length} logs
                 </p>
                 <div className="flex items-center space-x-2">
                     <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleReset} disabled={page <= 1 && selectedUser === 'all' && selectedTime === 'all'}>
                         Reset
                     </Button>
-                    <div className="bg-muted px-3 py-1 rounded-md text-xs font-medium">
-                        Page {page}
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePrevPage} disabled={page <= 1 || isLoading}>
+                            <ChevronRight className="h-4 w-4 rotate-180" />
+                        </Button>
+                        <div className="bg-muted px-3 py-1 rounded-md text-xs font-medium">
+                            Page {page}
+                        </div>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleNextPage} disabled={isLastPage || isLoading}>
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
                     </div>
-                    <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleNextPage} disabled={isLastPage || isLoading}>
-                        Next
-                        <ChevronRight className="h-3 w-3 ml-1"/>
-                    </Button>
                 </div>
             </div>
         </div>

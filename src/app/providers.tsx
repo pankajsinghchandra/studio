@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
@@ -78,7 +79,6 @@ export default function Providers({ children }: { children: ReactNode }) {
         setUser(firebaseUser);
         const details = await fetchUserDetails(firebaseUser.uid);
         if (!details) {
-          // This is a new user (or existing user with no db record)
           setShowOnboarding(true);
         }
       } else {
@@ -173,7 +173,7 @@ export default function Providers({ children }: { children: ReactNode }) {
                                         <SelectValue placeholder="Select Class" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {Array.from({ length: 6 }, (_, i) => i + 3).map(c => (
+                                        {Array.from({ length: 8 }, (_, i) => i + 3).map(c => (
                                             <SelectItem key={c} value={c.toString()}>Class {c}</SelectItem>
                                         ))}
                                     </SelectContent>

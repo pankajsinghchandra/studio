@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -54,11 +55,20 @@ export default function EditContentPage() {
   const [htmlContent, setHtmlContent] = useState('');
   const [jsonError, setJsonError] = useState('');
 
-  const subjects = useMemo(() => resourceClass ? Object.keys(syllabus[resourceClass as keyof typeof syllabus] || {}) : [], [resourceClass]);
-  const chapters = useMemo<string[]>(() => {
+  const subjects = useMemo(() => resourceClass ? Object.keys(syllabus[resourceClass] || {}) : [], [resourceClass]);
+  const chaptersList = useMemo<string[]>(() => {
     if (resourceClass && subject) {
-      const classSyllabus = syllabus[resourceClass as keyof typeof syllabus];
-      return classSyllabus ? (classSyllabus as any)[subject] || [] : [];
+      const classSyllabus = syllabus[resourceClass];
+      const subjectData = classSyllabus ? classSyllabus[subject] : [];
+      if (Array.isArray(subjectData)) {
+          return subjectData;
+      } else if (typeof subjectData === 'object' && subjectData !== null) {
+          let list: string[] = [];
+          Object.keys(subjectData).forEach(sub => {
+              list = [...list, ...(subjectData as any)[sub]];
+          });
+          return list.sort();
+      }
     }
     return [];
   }, [resourceClass, subject]);
@@ -194,7 +204,7 @@ export default function EditContentPage() {
                     <Label>Chapter</Label>
                     <Select onValueChange={setChapter} value={chapter} disabled={!subject}>
                         <SelectTrigger><SelectValue placeholder="Select Chapter" /></SelectTrigger>
-                        <SelectContent>{chapters.map((ch: string) => <SelectItem key={ch} value={ch}>{ch}</SelectItem>)}</SelectContent>
+                        <SelectContent>{chaptersList.map((ch: string) => <SelectItem key={ch} value={ch}>{ch}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
             </div>

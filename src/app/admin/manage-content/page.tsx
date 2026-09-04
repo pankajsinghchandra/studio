@@ -57,13 +57,22 @@ export default function ManageContentPage() {
   const [jsonError, setJsonError] = useState('');
 
   const subjects = useMemo(() => {
-    return resourceClass ? Object.keys(syllabus[resourceClass as keyof typeof syllabus] || {}) : [];
+    return resourceClass ? Object.keys(syllabus[resourceClass] || {}) : [];
   }, [resourceClass]);
 
-  const chapters = useMemo<string[]>(() => {
+  const chaptersList = useMemo<string[]>(() => {
     if (resourceClass && subject) {
-      const classSyllabus = syllabus[resourceClass as keyof typeof syllabus];
-      return classSyllabus ? (classSyllabus as any)[subject] || [] : [];
+      const classSyllabus = syllabus[resourceClass];
+      const subjectData = classSyllabus ? classSyllabus[subject] : [];
+      if (Array.isArray(subjectData)) {
+          return subjectData;
+      } else if (typeof subjectData === 'object' && subjectData !== null) {
+          let list: string[] = [];
+          Object.keys(subjectData).forEach(sub => {
+              list = [...list, ...(subjectData as any)[sub]];
+          });
+          return list.sort();
+      }
     }
     return [];
   }, [resourceClass, subject]);
@@ -202,7 +211,7 @@ export default function ManageContentPage() {
                     <Select onValueChange={setChapter} required value={chapter} disabled={!subject}>
                         <SelectTrigger><SelectValue placeholder="Select Chapter" /></SelectTrigger>
                         <SelectContent>
-                            {chapters.map((ch: string) => <SelectItem key={ch} value={ch}>{ch}</SelectItem>)}
+                            {chaptersList.map((ch: string) => <SelectItem key={ch} value={ch}>{ch}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>

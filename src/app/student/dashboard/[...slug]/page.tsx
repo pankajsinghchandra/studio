@@ -45,7 +45,7 @@ const subjectIcons: { [key: string]: React.ElementType } = {
 
 const chapterIcons = [Milestone, Scroll, Book, Users, Drama, Leaf, Landmark, Globe, Calculator, FlaskConical, Palette, Dna, Atom];
 
-const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: string, resourceType?: string, subjectNameForChapter?: string, index: number = 0) => {
+const getIcon = (itemType: 'class' | 'subject' | 'sub-subject' | 'chapter' | 'resource', name?: string, resourceType?: string, index: number = 0) => {
     const iconProps = { className: `w-8 h-8 text-primary drop-shadow-[0_2px_2px_rgba(0,0,0,0.1)]` };
     const resourceIconProps = { className: "w-8 h-8 text-primary/80 mt-1 drop-shadow-[0_2px_2px_rgba(0,0,0,0.2)]" };
 
@@ -62,7 +62,7 @@ const getIcon = (itemType: 'class' | 'subject' | 'chapter' | 'resource', name?: 
         return <Folder {...iconProps} />;
     }
 
-    if (itemType === 'subject') {
+    if (itemType === 'subject' || itemType === 'sub-subject') {
        return getSubjectIcon(name || '');
     }
 
@@ -100,6 +100,7 @@ interface CardData {
     name: string;
     description: string;
     path: string;
+    type: 'subject' | 'sub-subject' | 'chapter';
 }
 
 function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, onClose?: () => void }) {
@@ -108,7 +109,6 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
     const [isDragging, setIsDragging] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const startPos = useRef({ x: 0, y: 0 });
-    const lastDist = useRef<number | null>(null);
 
     const handleZoomIn = () => setScale(prev => Math.min(prev + 0.5, 6));
     const handleZoomOut = () => setScale(prev => Math.max(prev - 0.5, 0.5));
@@ -126,8 +126,6 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
 
     const handlePointerMove = (e: React.PointerEvent) => {
         if (!isDragging) return;
-        
-        // Handle drag panning
         setOffset({
             x: e.clientX - startPos.current.x,
             y: e.clientY - startPos.current.y
@@ -187,7 +185,6 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
                     }}
                 />
             </div>
-
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-black/30 backdrop-blur-sm rounded-full text-[10px] text-white/70 pointer-events-none border border-white/10 z-50">
                 <span>Drag to move • Pinch or Ctrl+Scroll to zoom</span>
             </div>
@@ -201,19 +198,27 @@ export default function DynamicPage() {
     const { user, userDetails, loading: authLoading } = useAuth();
     
     const pathSegments = useMemo(() => pathname.split('/').filter(Boolean).slice(2), [pathname]);
+    
+    const classId = pathSegments[0];
+    const subjectName = pathSegments[1] ? decodeURIComponent(pathSegments[1]) : undefined;
+    const subOrChapterName = pathSegments[2] ? decodeURIComponent(pathSegments[2]) : undefined;
+    const finalChapterName = pathSegments[3] ? decodeURIComponent(pathSegments[3]) : undefined;
+
+    const classData = classId ? syllabus[classId] : undefined;
+    const subjectData = (classData && subjectName) ? classData[subjectName] : undefined;
+    const isSubjectNested = subjectData && !Array.isArray(subjectData);
+
     const pageType = useMemo(() => {
         if (pathSegments.length === 1) return 'class';
-        if (pathSegments.length === 2) return 'subject';
-        if (pathSegments.length === 3) return 'chapter';
-        return 'unknown';
-    }, [pathSegments]);
-
-    const subjectNameForChapterIcon = useMemo(() => {
-        if (pageType === 'chapter' && pathSegments.length > 1) {
-            return pathSegments[1];
+        if (pathSegments.length === 2) {
+            return isSubjectNested ? 'subject-nested' : 'subject';
         }
-        return '';
-    }, [pageType, pathSegments]);
+        if (pathSegments.length === 3) {
+            return isSubjectNested ? 'sub-subject' : 'chapter';
+        }
+        if (pathSegments.length === 4) return 'chapter';
+        return 'unknown';
+    }, [pathSegments, isSubjectNested]);
 
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -223,7 +228,6 @@ export default function DynamicPage() {
     const [isNavigating, setIsNavigating] = useState(false);
     const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
 
-    // Activity Tracking Refs
     const activityIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const activeActivityIdRef = useRef<string | null>(null);
     const startTimeRef = useRef<number>(0);
@@ -233,12 +237,11 @@ export default function DynamicPage() {
             clearInterval(activityIntervalRef.current);
             activityIntervalRef.current = null;
         }
-        
         if (activeActivityIdRef.current) {
             const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
             updateDoc(doc(db, 'user-activity', activeActivityIdRef.current), {
                 durationSeconds: duration
-            }).catch(() => {}); // Silent fail on unmount
+            }).catch(() => {});
             activeActivityIdRef.current = null;
         }
     }, []);
@@ -247,51 +250,62 @@ export default function DynamicPage() {
         if (pageType === 'unknown' || authLoading || !user) return;
         setIsLoading(true);
 
-        const [classId, subjectId, chapterId] = pathSegments.map(decodeURIComponent);
-
         const fetchData = async () => {
-            const className = classId;
-            const subjectName = subjectId;
-            const chapterName = chapterId;
-
             try {
                 if (pageType === 'class') {
-                    const classSyllabus = syllabus[className];
-                    const subjectNames = classSyllabus ? Object.keys(classSyllabus) : [];
-                    
-                    setTitle(`Class ${className}`);
+                    const subjectNames = classData ? Object.keys(classData) : [];
+                    setTitle(`Class ${classId}`);
                     setDescription('Select a subject to explore.');
-                    setCards(subjectNames.map(subject => ({
-                        id: subject,
-                        name: subject,
-                        description: `${classSyllabus?.[subject]?.length || 0} chapters`,
-                        path: `/student/dashboard/${className}/${encodeURIComponent(subject)}`
+                    setCards(subjectNames.map(s => ({
+                        id: s,
+                        name: s,
+                        description: Array.isArray(classData?.[s]) ? `${(classData?.[s] as string[]).length} chapters` : `${Object.keys(classData?.[s] as object).length} categories`,
+                        path: `/student/dashboard/${classId}/${encodeURIComponent(s)}`,
+                        type: 'subject'
                     })));
-                }
-
-                if (pageType === 'subject') {
-                    const subjectChapters = syllabus[className]?.[subjectName] || [];
-
-                    setTitle(subjectName);
+                } else if (pageType === 'subject-nested') {
+                    const subSubjects = Object.keys(subjectData as object);
+                    setTitle(subjectName!);
+                    setDescription('Select a category to explore.');
+                    setCards(subSubjects.map(sub => ({
+                        id: sub,
+                        name: sub,
+                        description: `${(subjectData as any)[sub].length} chapters`,
+                        path: `/student/dashboard/${classId}/${encodeURIComponent(subjectName!)}/${encodeURIComponent(sub)}`,
+                        type: 'sub-subject'
+                    })));
+                } else if (pageType === 'subject') {
+                    const chapters = (subjectData as string[]) || [];
+                    setTitle(subjectName!);
                     setDescription('Select a chapter to start learning.');
-                    setCards(subjectChapters.map((chapter: string) => ({
-                        id: chapter,
-                        name: chapter,
+                    setCards(chapters.map(ch => ({
+                        id: ch,
+                        name: ch,
                         description: 'View resources',
-                        path: `/student/dashboard/${className}/${encodeURIComponent(subjectName)}/${encodeURIComponent(chapter)}`
+                        path: `/student/dashboard/${classId}/${encodeURIComponent(subjectName!)}/${encodeURIComponent(ch)}`,
+                        type: 'chapter'
                     })));
-                }
-
-                if (pageType === 'chapter') {
+                } else if (pageType === 'sub-subject') {
+                    const subData = (subjectData as any)[subOrChapterName!];
+                    setTitle(subOrChapterName!);
+                    setDescription('Select a chapter.');
+                    setCards(subData.map((ch: string) => ({
+                        id: ch,
+                        name: ch,
+                        description: 'View resources',
+                        path: `/student/dashboard/${classId}/${encodeURIComponent(subjectName!)}/${encodeURIComponent(subOrChapterName!)}/${encodeURIComponent(ch)}`,
+                        type: 'chapter'
+                    })));
+                } else if (pageType === 'chapter') {
+                    const targetChapter = finalChapterName || subOrChapterName;
                     const q = query(collection(db, "resources"),
-                        where("class", "==", className),
+                        where("class", "==", classId),
                         where("subject", "==", subjectName),
-                        where("chapter", "==", chapterName)
+                        where("chapter", "==", targetChapter)
                     );
                     const querySnapshot = await getDocs(q);
                     const fetchedResources = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Resource[];
-                    
-                    setTitle(chapterName);
+                    setTitle(targetChapter!);
                     setDescription('Available resources for this chapter.');
                     setResources(fetchedResources);
                 }
@@ -303,12 +317,10 @@ export default function DynamicPage() {
         };
 
         fetchData();
-    }, [pageType, pathSegments, authLoading, user]);
+    }, [pageType, classId, subjectName, subOrChapterName, finalChapterName, classData, subjectData, authLoading, user]);
 
     useEffect(() => {
-        if (!selectedResource) {
-            stopActivityTracking();
-        }
+        if (!selectedResource) stopActivityTracking();
     }, [selectedResource, stopActivityTracking]);
 
     useEffect(() => {
@@ -322,33 +334,23 @@ export default function DynamicPage() {
     
     const getYoutubeEmbedUrl = (url: string) => {
         const videoIdMatch = url.match(/(?:v=|vi\/|embed\/|youtu.be\/|watch\?v=|shorts\/)([a-zA-Z0-9_-]{11})/);
-        if (videoIdMatch && videoIdMatch[1]) {
-            return `https://www.youtube-nocookie.com/embed/${videoIdMatch[1]}`;
-        }
-        return null;
+        return videoIdMatch ? `https://www.youtube-nocookie.com/embed/${videoIdMatch[1]}` : null;
     }
 
     const getGoogleDriveEmbedUrl = (url: string) => {
         const fileIdMatch = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/);
-        if (fileIdMatch && fileIdMatch[1]) {
-            return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
-        }
-        return url;
+        return fileIdMatch ? `https://drive.google.com/file/d/${fileIdMatch[1]}/preview` : url;
     };
 
     const getGoogleDriveDirectImageUrl = (url: string) => {
         const fileIdMatch = url.match(/(?:drive\.google\.com\/(?:file\/d\/|open\?id=)|docs\.google\.com\/file\/d\/)([a-zA-Z0-9_-]+)/);
-        if (fileIdMatch && fileIdMatch[1]) {
-            return `https://lh3.googleusercontent.com/d/${fileIdMatch[1]}=s2000`;
-        }
-        return url;
+        return fileIdMatch ? `https://lh3.googleusercontent.com/d/${fileIdMatch[1]}=s2000` : url;
     };
 
     const handleResourceClick = (resource: Resource) => {
         if (user && userDetails) {
             stopActivityTracking();
             startTimeRef.current = Date.now();
-            
             addDoc(collection(db, 'user-activity'), {
                 userId: user.uid,
                 userName: userDetails.name,
@@ -366,32 +368,24 @@ export default function DynamicPage() {
                 activityIntervalRef.current = setInterval(() => {
                     if (activeActivityIdRef.current) {
                         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-                        updateDoc(doc(db, 'user-activity', activeActivityIdRef.current), {
-                            durationSeconds: duration
-                        }).catch(() => {});
+                        updateDoc(doc(db, 'user-activity', activeActivityIdRef.current), { durationSeconds: duration }).catch(() => {});
                     }
                 }, 10000);
-            }).catch(error => {
-                console.error("Error logging activity: ", error);
-            });
+            }).catch(e => console.error("Error logging activity: ", e));
         }
         setSelectedResource(resource);
     };
     
-    if (authLoading || isLoading) {
-        return <LoadingOverlay isLoading={true} />;
-    }
+    if (authLoading || isLoading) return <LoadingOverlay isLoading={true} />;
 
     const renderDialogContent = () => {
         if (!selectedResource) return null;
-
         const { type, url, title } = selectedResource;
         let embedUrl: string | null = null;
         let isDirectEmbeddable = false;
         let isGoogleDriveEmbed = false;
         let isDirectImage = false;
         let mindMapData: MindMapNodeType | null = null;
-
         const imageTypes = ['infographic', 'mind-map', 'lesson-plan-image'];
 
         if (imageTypes.includes(type)) {
@@ -408,71 +402,39 @@ export default function DynamicPage() {
         } else if (type === 'lesson-plan-text' || type === 'mind-map-json') {
             isDirectEmbeddable = true;
             if (type === 'mind-map-json') {
-                try {
-                    mindMapData = JSON.parse(url);
-                } catch (e) {
-                    return <div className="p-6 text-destructive-foreground bg-destructive">Invalid Mind Map JSON format.</div>
-                }
+                try { mindMapData = JSON.parse(url); } catch (e) { return <div className="p-6 text-destructive-foreground bg-destructive">Invalid Mind Map JSON format.</div> }
             }
         }
 
         if (isDirectEmbeddable) {
-             if (type === 'mind-map-json' && mindMapData) {
-                return <MindMap data={mindMapData} />
-            }
+            if (type === 'mind-map-json' && mindMapData) return <MindMap data={mindMapData} />;
             if (type === 'lesson-plan-text') {
-                 return (
+                return (
                     <div className="w-full h-full bg-background rounded-b-lg relative">
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
                             <span className="text-7xl font-bold text-muted-foreground/10 rotate-[-30deg]">Vidyalaya Notes</span>
                         </div>
                          <div className="relative z-10 w-full h-full overflow-y-auto p-6">
-                            <div
-                                className="prose prose-sm max-w-none text-foreground whitespace-pre-wrap"
-                                dangerouslySetInnerHTML={{ __html: url }}
-                            />
+                            <div className="prose prose-sm max-w-none text-foreground whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: url }} />
                         </div>
                     </div>
-                )
+                );
             }
-            if (isDirectImage) {
-                return <ZoomableImageViewer src={embedUrl || url} alt={title} onClose={() => setSelectedResource(null)} />;
-            }
+            if (isDirectImage) return <ZoomableImageViewer src={embedUrl || url} alt={title} onClose={() => setSelectedResource(null)} />;
             if (isGoogleDriveEmbed) {
                 return (
                     <div className="w-full h-full overflow-hidden">
-                        <iframe
-                            src={embedUrl || url}
-                            title={title}
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                            allowFullScreen
-                            className="w-full h-[calc(100%+48px)] -mt-12 rounded-b-lg"
-                        ></iframe>
+                        <iframe src={embedUrl || url} title={title} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen className="w-full h-[calc(100%+48px)] -mt-12 rounded-b-lg" />
                     </div>
-                )
+                );
             }
-            return (
-                 <iframe
-                    src={embedUrl || url}
-                    title={title}
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                    className="w-full h-full rounded-b-lg"
-                ></iframe>
-            )
+            return <iframe src={embedUrl || url} title={title} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen className="w-full h-full rounded-b-lg" />;
         }
-        
         return (
             <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-muted/40">
                 <p className="text-lg font-semibold text-foreground mb-2">This content cannot be shown here.</p>
                 <p className="text-muted-foreground mb-4">Please use the button below to open it in a new tab.</p>
-                <Button asChild>
-                    <a href={url} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="mr-2 h-4 w-4" /> Open Content
-                    </a>
-                </Button>
+                <Button asChild><a href={url} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-2 h-4 w-4" /> Open Content</a></Button>
             </div>
         );
     }
@@ -506,7 +468,7 @@ export default function DynamicPage() {
                                 >
                                     <CardHeader className="flex flex-row items-center justify-between p-4">
                                         <div className='flex items-center gap-4'>
-                                          {getIcon(pageType === 'class' ? 'subject' : 'chapter', card.name, undefined, subjectNameForChapterIcon, index)}
+                                          {getIcon(card.type === 'sub-subject' ? 'sub-subject' : (card.type === 'chapter' ? 'chapter' : 'subject'), card.name, undefined, index)}
                                           <div>
                                             <CardTitle className="font-headline text-xl text-foreground">{card.name}</CardTitle>
                                             <CardDescription>{card.description}</CardDescription>
@@ -524,7 +486,7 @@ export default function DynamicPage() {
                             <Card key={resource.id} className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 h-full cursor-pointer active:scale-95" onClick={() => handleResourceClick(resource)}>
                                 <CardHeader className="p-4">
                                     <div className="flex items-start gap-4">
-                                        {getIcon('resource', undefined, resource.type, undefined, index)}
+                                        {getIcon('resource', undefined, resource.type, index)}
                                         <div>
                                             <CardTitle className="font-headline text-xl text-foreground leading-tight">{resource.title}</CardTitle>
                                             <CardDescription className="mt-1 capitalize">{getResourceTypeLabel(resource.type)}</CardDescription>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -72,7 +73,6 @@ export default function RegisterPage() {
         const provider = new GoogleAuthProvider();
         try {
           await signInWithPopup(auth, provider);
-           // AuthProvider will now handle user creation/update, role, and terms
            toast({
               title: "Sign-up successful!",
               description: "Redirecting...",
@@ -248,7 +248,7 @@ export default function RegisterPage() {
                                         <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {Array.from({ length: 6 }, (_, i) => i + 3).map(c => (
+                                        {Array.from({ length: 8 }, (_, i) => i + 3).map(c => (
                                             <SelectItem key={c} value={c.toString()}>Class {c}</SelectItem>
                                         ))}
                                     </SelectContent>

@@ -133,17 +133,24 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (selectedClass) {
-        const subjectKeys = Object.keys(syllabus[selectedClass as keyof typeof syllabus] || {});
+        const subjectKeys = Object.keys(syllabus[selectedClass] || {});
         setSubjects(subjectKeys.sort());
     } else {
         setSubjects([]);
         setChapters([]);
     }
     if (selectedSubject) {
-        const classSyllabus = syllabus[selectedClass as keyof typeof syllabus];
-        const subjectSyllabus = classSyllabus ? (classSyllabus as any)[selectedSubject] : [];
-        const chapterKeys = Array.isArray(subjectSyllabus) ? subjectSyllabus : Object.keys(subjectSyllabus || {});
-        setChapters(chapterKeys.sort());
+        const classSyllabus = syllabus[selectedClass];
+        const subjectData = classSyllabus ? classSyllabus[selectedSubject] : [];
+        let chapterList: string[] = [];
+        if (Array.isArray(subjectData)) {
+            chapterList = subjectData;
+        } else if (typeof subjectData === 'object' && subjectData !== null) {
+            Object.keys(subjectData).forEach(sub => {
+                chapterList = [...chapterList, ...(subjectData as any)[sub]];
+            });
+        }
+        setChapters(chapterList.sort());
     } else {
         setChapters([]);
     }

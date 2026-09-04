@@ -21,8 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { ArrowLeft, Loader, ChevronLeft, ChevronRight, Clock, User, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Loader, ChevronRight, Clock, User, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -124,27 +123,17 @@ export default function UserActivityPage() {
 
         } catch (err: any) {
             console.error("Firestore Fetch Error:", err);
-            setError("Could not fetch activities. This might be due to a missing database index or connection issue.");
+            setError("Could not fetch activities. Check filters or database connection.");
         } finally {
             setIsLoading(false);
         }
     }, [selectedUser, selectedTime, page, user, userDetails, lastVisible]);
 
     useEffect(() => {
-        fetchActivities();
-    }, [selectedUser, selectedTime, page, user, userDetails]);
-
-    useEffect(() => {
-        setPage(1);
-        setLastVisible(null);
-    }, [selectedUser, selectedTime]);
-
-    const formatDuration = (seconds: number = 0) => {
-        if (seconds < 60) return `${seconds}s`;
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}m ${secs}s`;
-    };
+        if (!authLoading && user && userDetails?.email === ADMIN_EMAIL) {
+            fetchActivities();
+        }
+    }, [fetchActivities, authLoading, user, userDetails]);
 
     const handleNextPage = () => {
         if (!isLastPage) setPage(p => p + 1);
@@ -155,6 +144,13 @@ export default function UserActivityPage() {
         setLastVisible(null);
         setSelectedUser('all');
         setSelectedTime('all');
+    };
+
+    const formatDuration = (seconds: number = 0) => {
+        if (seconds < 60) return `${seconds}s`;
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}m ${secs}s`;
     };
 
     const getResourceTypeLabel = (type?: string) => {
@@ -260,7 +256,7 @@ export default function UserActivityPage() {
                         ) : activities.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={5} className="text-center py-20 text-muted-foreground">
-                                    No activity logs found for the selected filters.
+                                    No activity logs found.
                                 </TableCell>
                             </TableRow>
                         ) : (
@@ -305,7 +301,7 @@ export default function UserActivityPage() {
             
             <div className="flex items-center justify-between py-6">
                 <p className="text-xs text-muted-foreground">
-                    Showing {activities.length} activities on this page
+                    Showing {activities.length} activities
                 </p>
                 <div className="flex items-center space-x-2">
                     <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleReset} disabled={page <= 1 && selectedUser === 'all' && selectedTime === 'all'}>

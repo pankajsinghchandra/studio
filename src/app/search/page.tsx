@@ -34,7 +34,6 @@ function SearchPageComponent() {
           
           const lowerCaseQuery = queryParam.toLowerCase();
           
-          // NORMAL SEARCH LOGIC: Filter by title, subject, chapter, or class
           const filtered = allResources.filter(resource => 
               resource.title.toLowerCase().includes(lowerCaseQuery) ||
               resource.subject.toLowerCase().includes(lowerCaseQuery) ||

@@ -34,7 +34,7 @@ export default function SearchBar() {
 
   useEffect(() => {
     const fetchSuggestions = async () => {
-      if (searchTerm.length < 3) {
+      if (searchTerm.trim().length < 3) {
         setSuggestions([]);
         return;
       }
@@ -56,7 +56,7 @@ export default function SearchBar() {
         ).map(resource => ({
             ...resource,
             path: `/student/dashboard/${resource.class}/${encodeURIComponent(resource.subject)}/${encodeURIComponent(resource.chapter)}`
-        })).slice(0, 8); // Showing up to 8 suggestions for a modern feel
+        })).slice(0, 8);
         
         setSuggestions(filtered);
       } catch (error) {
@@ -116,8 +116,7 @@ export default function SearchBar() {
         )}
       </form>
 
-      {/* Modern YouTube-like Search Suggestions Dropdown */}
-      {showSuggestions && (searchTerm.length >= 3) && (
+      {showSuggestions && (searchTerm.trim().length >= 3) && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-background border border-border rounded-xl shadow-2xl overflow-hidden z-[60] animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="p-2 bg-muted/30 border-b flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2">Suggestions</span>

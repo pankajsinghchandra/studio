@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useAuth } from '@/app/providers';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -36,13 +36,16 @@ const isValidJson = (str: string): boolean => {
     return true;
 };
 
-export default function EditContentPage() {
+function EditContentForm() {
   const { user, loading: authLoading, userDetails } = useAuth();
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const resourceId = params?.id as string;
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const returnTo = searchParams.get('from');
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -153,7 +156,12 @@ export default function EditContentPage() {
         url: isTextContent ? htmlContent : resourceUrl,
       });
       toast({ title: 'Success!', description: 'Resource updated.', duration: 1500 });
-      router.push('/admin/dashboard');
+      
+      if (returnTo === 'fix-tool') {
+          router.push('/admin/fix-content');
+      } else {
+          router.push('/admin/dashboard');
+      }
     } catch (error) {
       toast({ variant: 'destructive', title: 'Error', description: 'Problem updating resource.' });
     } finally {
@@ -172,7 +180,9 @@ export default function EditContentPage() {
        <header className="flex justify-between items-center mb-8">
         <h1 className="font-headline text-4xl font-bold text-foreground">Edit Content</h1>
         <Button asChild variant="outline">
-          <Link href="/admin/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link>
+          <Link href={returnTo === 'fix-tool' ? "/admin/fix-content" : "/admin/dashboard"}>
+            <ArrowLeft className="mr-2 h-4 w-4" />Back
+          </Link>
         </Button>
       </header>
       <Card className="w-full max-w-4xl mx-auto">
@@ -239,4 +249,12 @@ export default function EditContentPage() {
       </Card>
     </div>
   );
+}
+
+export default function EditContentPage() {
+    return (
+        <Suspense fallback={<LoadingOverlay isLoading={true} />}>
+            <EditContentForm />
+        </Suspense>
+    )
 }

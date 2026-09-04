@@ -52,7 +52,7 @@ export default function UserActivityPage() {
     const [isLastPage, setIsLastPage] = useState(false);
     const [page, setPage] = useState(1);
     
-    const isFetching = useRef(false);
+    const isFetchingRef = useRef(false);
 
     // Initial check and fetch users
     useEffect(() => {
@@ -81,16 +81,15 @@ export default function UserActivityPage() {
     }, [user, userDetails, authLoading, router]);
 
     const fetchActivities = useCallback(async (isReset: boolean = false) => {
-        if (!user || userDetails?.email !== ADMIN_EMAIL || isFetching.current) return;
+        if (!user || userDetails?.email !== ADMIN_EMAIL || isFetchingRef.current) return;
         
-        isFetching.current = true;
+        isFetchingRef.current = true;
         setIsLoading(true);
         setError(null);
         
         try {
             let q = query(collection(db, "user-activity"));
 
-            // Dynamic Query Building
             if (selectedUser !== 'all') {
                 q = query(q, where('userId', '==', selectedUser));
             }
@@ -108,13 +107,12 @@ export default function UserActivityPage() {
                 }
             }
             
-            // Note: If filtering and sorting on different fields, Firestore needs a composite index.
-            // Default to timestamp desc for general view.
+            // Sort by timestamp if no filter conflict
             if (selectedUser === 'all' && selectedTime === 'all') {
                 q = query(q, orderBy('timestamp', 'desc'));
             }
 
-            // Pagination
+            // Handle Pagination
             if (!isReset && page > 1 && lastVisible) {
                 q = query(q, startAfter(lastVisible));
             }
@@ -132,21 +130,29 @@ export default function UserActivityPage() {
 
         } catch (err: any) {
             console.error("Firestore Fetch Error:", err);
-            setError("Could not fetch activities. This might be due to missing database indexes or high data load.");
+            setError("Could not fetch activities. This might be due to missing database indexes or filter constraints.");
         } finally {
             setIsLoading(false);
-            isFetching.current = false;
+            isFetchingRef.current = false;
         }
     }, [selectedUser, selectedTime, page, user, userDetails, lastVisible]);
 
-    // Trigger fetch on filter change
+    // Only reset on filter changes, not on page changes
     useEffect(() => {
         if (!authLoading && user && userDetails?.email === ADMIN_EMAIL) {
+            setPage(1);
+            setLastVisible(null);
             fetchActivities(true);
         }
-    }, [selectedUser, selectedTime]); // Dependencies are ONLY filters to trigger reset
+    }, [selectedUser, selectedTime, authLoading, user, userDetails?.email]); 
 
-    // Pagination trigger
+    // Handle pagination specifically
+    useEffect(() => {
+        if (page > 1 && !authLoading && user && userDetails?.email === ADMIN_EMAIL) {
+            fetchActivities(false);
+        }
+    }, [page]);
+
     const handleNextPage = () => {
         if (!isLastPage && !isLoading) setPage(p => p + 1);
     };
@@ -156,10 +162,9 @@ export default function UserActivityPage() {
     }
 
     const handleReset = () => {
-        setPage(1);
-        setLastVisible(null);
         setSelectedUser('all');
         setSelectedTime('all');
+        // Resetting filters will trigger the first useEffect
     };
 
     const formatDuration = (seconds: number = 0) => {
@@ -210,7 +215,7 @@ export default function UserActivityPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <Select value={selectedUser} onValueChange={(val) => { setSelectedUser(val); setPage(1); setLastVisible(null); }}>
+                        <Select value={selectedUser} onValueChange={(val) => setSelectedUser(val)}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select a user" />
                             </SelectTrigger>
@@ -230,7 +235,7 @@ export default function UserActivityPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <Select value={selectedTime} onValueChange={(val) => { setSelectedTime(val); setPage(1); setLastVisible(null); }}>
+                        <Select value={selectedTime} onValueChange={(val) => setSelectedTime(val)}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select time range" />
                             </SelectTrigger>
@@ -265,7 +270,7 @@ export default function UserActivityPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {isLoading ? (
+                        {isLoading && activities.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={5} className="text-center py-20">
                                     <div className="flex flex-col items-center gap-2">
@@ -292,7 +297,7 @@ export default function UserActivityPage() {
                                     <TableCell>
                                         <div className="flex flex-col gap-1">
                                             <span className="font-medium text-sm line-clamp-1">{activity.resourceTitle}</span>
-                                            <Badge variant="secondary" className="w-fit text-[10px] py-0 px-2 h-5 bg-primary/10 text-primary border-none">
+                                            <Badge variant="outline" className="w-fit text-[10px] py-0 px-2 h-5 bg-primary/10 text-primary border-none">
                                                 {getResourceTypeLabel(activity.resourceType)}
                                             </Badge>
                                         </div>
@@ -301,7 +306,7 @@ export default function UserActivityPage() {
                                         <div className="flex flex-wrap gap-1">
                                             <Badge variant="outline" className="text-[9px] py-0 px-1 h-4">Cl {activity.resourceClass}</Badge>
                                             <Badge variant="secondary" className="text-[9px] py-0 px-1 h-4">{activity.resourceSubject}</Badge>
-                                            <Badge variant="outline" className="text-[9px] py-0 px-1 h-4 italic">{activity.resourceChapter}</Badge>
+                                            <Badge variant="outline" className="text-[9px] py-0 px-1 h-4 italic border-none bg-accent/50">{activity.resourceChapter}</Badge>
                                         </div>
                                     </TableCell>
                                     <TableCell>
@@ -322,19 +327,16 @@ export default function UserActivityPage() {
             
             <div className="flex items-center justify-between py-6">
                 <p className="text-xs text-muted-foreground">
-                    Showing {activities.length} logs
+                    Page {page} {isLoading ? '(Refreshing...)' : ''}
                 </p>
                 <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleReset} disabled={page <= 1 && selectedUser === 'all' && selectedTime === 'all'}>
-                        Reset
+                    <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleReset} disabled={selectedUser === 'all' && selectedTime === 'all'}>
+                        Reset Filters
                     </Button>
                     <div className="flex items-center gap-2">
                         <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePrevPage} disabled={page <= 1 || isLoading}>
                             <ChevronRight className="h-4 w-4 rotate-180" />
                         </Button>
-                        <div className="bg-muted px-3 py-1 rounded-md text-xs font-medium">
-                            Page {page}
-                        </div>
                         <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleNextPage} disabled={isLastPage || isLoading}>
                             <ChevronRight className="h-4 w-4" />
                         </Button>

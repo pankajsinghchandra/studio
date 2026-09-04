@@ -4,15 +4,25 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/providers';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy, where, limit, startAfter, DocumentData, DocumentSnapshot } from 'firebase/firestore';
-import { UserActivity } from '@/lib/types';
+import { 
+    collection, 
+    getDocs, 
+    query, 
+    orderBy, 
+    where, 
+    limit, 
+    startAfter, 
+    type DocumentData, 
+    type DocumentSnapshot 
+} from 'firebase/firestore';
+import type { UserActivity } from '@/lib/types';
 import LoadingOverlay from '@/components/loading-overlay';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Loader, ChevronLeft, ChevronRight, Clock, User, FileText } from 'lucide-react';
+import { ArrowLeft, Loader, ChevronLeft, ChevronRight, Clock, User } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -62,7 +72,7 @@ export default function UserActivityPage() {
                     email: doc.data().email as string | null,
                     name: doc.data().name as string | null 
                 }))
-                .filter(u => u.email !== ADMIN_EMAIL); // Exclude admin from filter
+                .filter(u => u.email !== ADMIN_EMAIL);
             setUsers(usersList);
         } catch (error) {
             console.error("Error fetching users:", error);
@@ -96,7 +106,7 @@ export default function UserActivityPage() {
                     }
                 }
                 
-                // Always try to order by timestamp if no other primary order is conflicting
+                // Always try to order by timestamp if filtering defaults
                 if (selectedUser === 'all' && selectedTime === 'all') {
                     q = query(q, orderBy('timestamp', 'desc'));
                 }
@@ -110,7 +120,7 @@ export default function UserActivityPage() {
                 const docSnapshots = await getDocs(q);
                 const fetchedActivities = docSnapshots.docs
                     .map(doc => ({ id: doc.id, ...doc.data() } as UserActivity))
-                    .filter(a => a.userEmail !== ADMIN_EMAIL); // Filter out admin activity
+                    .filter(a => a.userEmail !== ADMIN_EMAIL);
                 
                 setActivities(fetchedActivities);
                 setLastVisible(docSnapshots.docs[docSnapshots.docs.length - 1] || null);
@@ -127,7 +137,7 @@ export default function UserActivityPage() {
         if(user && userDetails?.email === ADMIN_EMAIL) {
             fetchActivities();
         }
-    }, [selectedUser, selectedTime, page, user, userDetails]);
+    }, [selectedUser, selectedTime, page, user, userDetails, lastVisible]);
 
     useEffect(() => {
         setPage(1);

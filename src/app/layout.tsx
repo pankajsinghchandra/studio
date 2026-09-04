@@ -36,10 +36,17 @@ export default function RootLayout({
         <meta name="theme-color" content="#FF8A65" />
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body>
+      <body className="flex flex-col min-h-screen">
         <Providers>
           <Header />
-          <div className="flex-grow">{children}</div>
+          <main className="flex-grow">{children}</main>
+          <footer className="w-full border-t border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-6">
+            <div className="container flex flex-col items-center justify-center">
+              <p className="text-sm font-medium text-muted-foreground text-center">
+                © 2026 Vidyalaya Notes. All rights reserved.
+              </p>
+            </div>
+          </footer>
           <Toaster />
           <InstallPWA />
         </Providers>

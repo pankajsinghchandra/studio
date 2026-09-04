@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/app/providers';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
@@ -22,7 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Loader, ChevronLeft, ChevronRight, Clock, User } from 'lucide-react';
+import { ArrowLeft, Loader, ChevronLeft, ChevronRight, Clock, User, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +43,7 @@ export default function UserActivityPage() {
     const [activities, setActivities] = useState<UserActivity[]>([]);
     const [users, setUsers] = useState<UserForFilter[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     
     // Filter states
     const [selectedUser, setSelectedUser] = useState('all');
@@ -53,92 +54,97 @@ export default function UserActivityPage() {
     const [isLastPage, setIsLastPage] = useState(false);
     const [page, setPage] = useState(1);
     
+    // Fetch users for filter dropdown
     useEffect(() => {
         if (!authLoading) {
             if (!user || userDetails?.email !== ADMIN_EMAIL) {
                 router.replace('/');
             } else {
-                fetchUsers();
+                const fetchUsersList = async () => {
+                    try {
+                        const usersSnapshot = await getDocs(collection(db, 'users'));
+                        const usersList = usersSnapshot.docs
+                            .map(doc => ({ 
+                                uid: doc.id, 
+                                email: doc.data().email as string | null,
+                                name: doc.data().name as string | null 
+                            }))
+                            .filter(u => u.email !== ADMIN_EMAIL);
+                        setUsers(usersList);
+                    } catch (err) {
+                        console.error("Error fetching users:", err);
+                    }
+                };
+                fetchUsersList();
             }
         }
     }, [user, userDetails, authLoading, router]);
 
-    const fetchUsers = async () => {
-        try {
-            const usersSnapshot = await getDocs(collection(db, 'users'));
-            const usersList = usersSnapshot.docs
-                .map(doc => ({ 
-                    uid: doc.id, 
-                    email: doc.data().email as string | null,
-                    name: doc.data().name as string | null 
-                }))
-                .filter(u => u.email !== ADMIN_EMAIL);
-            setUsers(usersList);
-        } catch (error) {
-            console.error("Error fetching users:", error);
-        }
-    };
-
-    useEffect(() => {
-        const fetchActivities = async () => {
-            setIsLoading(true);
-            try {
-                let q = query(collection(db, "user-activity"));
-
-                if (selectedUser !== 'all') {
-                    q = query(q, where('userId', '==', selectedUser));
-                }
-
-                if (selectedTime !== 'all') {
-                    const now = new Date();
-                    let startDate;
-                    if (selectedTime === '24h') {
-                        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-                    } else if (selectedTime === '3d') {
-                        startDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-                    } else if (selectedTime === 'weekly') {
-                        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                    } else if (selectedTime === 'monthly') {
-                        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                    }
-                    if (startDate) {
-                        q = query(q, where('timestamp', '>=', startDate));
-                    }
-                }
-                
-                // Always try to order by timestamp if filtering defaults
-                if (selectedUser === 'all' && selectedTime === 'all') {
-                    q = query(q, orderBy('timestamp', 'desc'));
-                }
-
-                if (page > 1 && lastVisible) {
-                    q = query(q, startAfter(lastVisible));
-                }
-                
-                q = query(q, limit(PAGE_SIZE));
-
-                const docSnapshots = await getDocs(q);
-                const fetchedActivities = docSnapshots.docs
-                    .map(doc => ({ id: doc.id, ...doc.data() } as UserActivity))
-                    .filter(a => a.userEmail !== ADMIN_EMAIL);
-                
-                setActivities(fetchedActivities);
-                setLastVisible(docSnapshots.docs[docSnapshots.docs.length - 1] || null);
-                setIsLastPage(docSnapshots.docs.length < PAGE_SIZE);
-
-            } catch (error) {
-                console.error("Error fetching user activities:", error);
-                setActivities([]); 
-            } finally {
-                setIsLoading(false);
-            }
-        };
+    // Main fetch function - Stabilized to prevent loops
+    const fetchActivities = useCallback(async (isReset: boolean = false) => {
+        if (!user || userDetails?.email !== ADMIN_EMAIL) return;
         
-        if(user && userDetails?.email === ADMIN_EMAIL) {
-            fetchActivities();
-        }
-    }, [selectedUser, selectedTime, page, user, userDetails, lastVisible]);
+        setIsLoading(true);
+        setError(null);
+        
+        try {
+            let q = query(collection(db, "user-activity"));
 
+            // Filter by User
+            if (selectedUser !== 'all') {
+                q = query(q, where('userId', '==', selectedUser));
+            }
+
+            // Filter by Time
+            if (selectedTime !== 'all') {
+                const now = new Date();
+                let startDate;
+                if (selectedTime === '24h') startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                else if (selectedTime === '3d') startDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+                else if (selectedTime === 'weekly') startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                else if (selectedTime === 'monthly') startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                
+                if (startDate) {
+                    q = query(q, where('timestamp', '>=', startDate));
+                }
+            }
+            
+            // Order by timestamp (requires composite index if where is used)
+            // To prevent crashes if index is missing, we only orderBy if no filter or specific filters
+            if (selectedUser === 'all' && selectedTime === 'all') {
+                q = query(q, orderBy('timestamp', 'desc'));
+            }
+
+            // Pagination logic
+            if (!isReset && page > 1 && lastVisible) {
+                q = query(q, startAfter(lastVisible));
+            }
+            
+            q = query(q, limit(PAGE_SIZE));
+
+            const docSnapshots = await getDocs(q);
+            const fetchedActivities = docSnapshots.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as UserActivity))
+                .filter(a => a.userEmail !== ADMIN_EMAIL);
+            
+            setActivities(fetchedActivities);
+            setLastVisible(docSnapshots.docs[docSnapshots.docs.length - 1] || null);
+            setIsLastPage(docSnapshots.docs.length < PAGE_SIZE);
+
+        } catch (err: any) {
+            console.error("Firestore Fetch Error:", err);
+            setError("Could not fetch activities. This might be due to a missing database index or connection issue.");
+        } finally {
+            setIsLoading(false);
+        }
+    }, [selectedUser, selectedTime, page, user, userDetails]);
+
+    // Trigger fetch on changes
+    useEffect(() => {
+        fetchActivities();
+    }, [fetchActivities]);
+
+    // Reset logic when filters change
     useEffect(() => {
         setPage(1);
         setLastVisible(null);
@@ -153,14 +159,14 @@ export default function UserActivityPage() {
 
     const handleNextPage = () => {
         if (!isLastPage) setPage(p => p + 1);
-    }
+    };
 
-    const handlePrevPage = () => {
-        if (page > 1) {
-            setPage(1);
-            setLastVisible(null);
-        }
-    }
+    const handleReset = () => {
+        setPage(1);
+        setLastVisible(null);
+        setSelectedUser('all');
+        setSelectedTime('all');
+    };
 
     const getResourceTypeLabel = (type?: string) => {
         if (!type) return 'Resource';
@@ -171,9 +177,7 @@ export default function UserActivityPage() {
         return type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     };
 
-    if (authLoading || !user) {
-        return <LoadingOverlay isLoading={true} />;
-    }
+    if (authLoading) return <LoadingOverlay isLoading={true} />;
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -236,6 +240,13 @@ export default function UserActivityPage() {
                 </Card>
             </div>
 
+            {error && (
+                <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-lg mb-6 flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5" />
+                    <p className="text-sm">{error}</p>
+                </div>
+            )}
+
             <Card className="overflow-hidden">
                 <Table>
                     <TableHeader className="bg-muted/50">
@@ -248,7 +259,7 @@ export default function UserActivityPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {isLoading && (
+                        {isLoading ? (
                             <TableRow>
                                 <TableCell colSpan={5} className="text-center py-20">
                                     <div className="flex flex-col items-center gap-2">
@@ -257,48 +268,48 @@ export default function UserActivityPage() {
                                     </div>
                                 </TableCell>
                             </TableRow>
-                        )}
-                        {!isLoading && activities.length === 0 && (
+                        ) : activities.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={5} className="text-center py-20 text-muted-foreground">
                                     No activity logs found for the selected filters.
                                 </TableCell>
                             </TableRow>
+                        ) : (
+                            activities.map(activity => (
+                                <TableRow key={activity.id} className="hover:bg-accent/5 transition-colors">
+                                    <TableCell>
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-foreground text-sm">{activity.userName}</span>
+                                            <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">{activity.userEmail}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-col gap-1">
+                                            <span className="font-medium text-sm line-clamp-1">{activity.resourceTitle}</span>
+                                            <Badge variant="secondary" className="w-fit text-[10px] py-0 px-2 h-5 bg-primary/10 text-primary border-none font-semibold">
+                                                {getResourceTypeLabel(activity.resourceType)}
+                                            </Badge>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-wrap gap-1">
+                                            <Badge variant="outline" className="text-[9px] py-0 px-1 h-4">Cl {activity.resourceClass}</Badge>
+                                            <Badge variant="secondary" className="text-[9px] py-0 px-1 h-4">{activity.resourceSubject}</Badge>
+                                            <Badge variant="ghost" className="text-[9px] py-0 px-1 h-4 border italic">{activity.resourceChapter}</Badge>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-1 font-mono text-primary font-bold text-xs">
+                                            <Clock className="w-3 h-3" />
+                                            {formatDuration(activity.durationSeconds)}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right text-[10px] text-muted-foreground whitespace-nowrap">
+                                        {activity.timestamp ? format(activity.timestamp.toDate(), 'PPpp') : 'N/A'}
+                                    </TableCell>
+                                </TableRow>
+                            ))
                         )}
-                        {!isLoading && activities.map(activity => (
-                            <TableRow key={activity.id} className="hover:bg-accent/5 transition-colors">
-                                <TableCell>
-                                    <div className="flex flex-col">
-                                        <span className="font-bold text-foreground text-sm">{activity.userName}</span>
-                                        <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">{activity.userEmail}</span>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex flex-col gap-1">
-                                        <span className="font-medium text-sm line-clamp-1">{activity.resourceTitle}</span>
-                                        <Badge variant="secondary" className="w-fit text-[10px] py-0 px-2 h-5 bg-primary/10 text-primary border-none font-semibold">
-                                            {getResourceTypeLabel(activity.resourceType)}
-                                        </Badge>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex flex-wrap gap-1">
-                                        <Badge variant="outline" className="text-[9px] py-0 px-1 h-4">Cl {activity.resourceClass}</Badge>
-                                        <Badge variant="secondary" className="text-[9px] py-0 px-1 h-4">{activity.resourceSubject}</Badge>
-                                        <Badge variant="ghost" className="text-[9px] py-0 px-1 h-4 border italic">{activity.resourceChapter}</Badge>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex items-center gap-1 font-mono text-primary font-bold text-xs">
-                                        <Clock className="w-3 h-3" />
-                                        {formatDuration(activity.durationSeconds)}
-                                    </div>
-                                </TableCell>
-                                <TableCell className="text-right text-[10px] text-muted-foreground whitespace-nowrap">
-                                    {activity.timestamp ? format(activity.timestamp.toDate(), 'PPpp') : 'N/A'}
-                                </TableCell>
-                            </TableRow>
-                        ))}
                     </TableBody>
                 </Table>
             </Card>
@@ -308,14 +319,13 @@ export default function UserActivityPage() {
                     Showing {activities.length} activities on this page
                 </p>
                 <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handlePrevPage} disabled={page <= 1}>
-                        <ChevronLeft className="h-3 w-3 mr-1"/>
+                    <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleReset} disabled={page <= 1 && selectedUser === 'all' && selectedTime === 'all'}>
                         Reset
                     </Button>
                     <div className="bg-muted px-3 py-1 rounded-md text-xs font-medium">
                         Page {page}
                     </div>
-                    <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleNextPage} disabled={isLastPage}>
+                    <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleNextPage} disabled={isLastPage || isLoading}>
                         Next
                         <ChevronRight className="h-3 w-3 ml-1"/>
                     </Button>

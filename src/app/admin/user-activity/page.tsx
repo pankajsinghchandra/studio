@@ -107,7 +107,7 @@ export default function UserActivityPage() {
                 }
             }
             
-            // Sort by timestamp if no filter conflict
+            // Sort by timestamp if no complex filters that conflict with order
             if (selectedUser === 'all' && selectedTime === 'all') {
                 q = query(q, orderBy('timestamp', 'desc'));
             }
@@ -130,28 +130,28 @@ export default function UserActivityPage() {
 
         } catch (err: any) {
             console.error("Firestore Fetch Error:", err);
-            setError("Could not fetch activities. This might be due to missing database indexes or filter constraints.");
+            setError("Could not fetch activities. This might be due to missing database indexes for combined filters.");
         } finally {
             setIsLoading(false);
             isFetchingRef.current = false;
         }
     }, [selectedUser, selectedTime, page, user, userDetails, lastVisible]);
 
-    // Only reset on filter changes, not on page changes
+    // Handle initial load and filter changes
     useEffect(() => {
         if (!authLoading && user && userDetails?.email === ADMIN_EMAIL) {
             setPage(1);
             setLastVisible(null);
             fetchActivities(true);
         }
-    }, [selectedUser, selectedTime, authLoading, user, userDetails?.email]); 
+    }, [selectedUser, selectedTime, authLoading, user, userDetails?.email]); // DO NOT add fetchActivities to dependencies to avoid loop
 
-    // Handle pagination specifically
+    // Handle explicit page changes separately
     useEffect(() => {
         if (page > 1 && !authLoading && user && userDetails?.email === ADMIN_EMAIL) {
             fetchActivities(false);
         }
-    }, [page]);
+    }, [page]); // ONLY triggers on page change
 
     const handleNextPage = () => {
         if (!isLastPage && !isLoading) setPage(p => p + 1);
@@ -164,7 +164,6 @@ export default function UserActivityPage() {
     const handleReset = () => {
         setSelectedUser('all');
         setSelectedTime('all');
-        // Resetting filters will trigger the first useEffect
     };
 
     const formatDuration = (seconds: number = 0) => {
@@ -306,7 +305,7 @@ export default function UserActivityPage() {
                                         <div className="flex flex-wrap gap-1">
                                             <Badge variant="outline" className="text-[9px] py-0 px-1 h-4">Cl {activity.resourceClass}</Badge>
                                             <Badge variant="secondary" className="text-[9px] py-0 px-1 h-4">{activity.resourceSubject}</Badge>
-                                            <Badge variant="outline" className="text-[9px] py-0 px-1 h-4 italic border-none bg-accent/50">{activity.resourceChapter}</Badge>
+                                            <Badge variant="outline" className="text-[9px] py-0 px-1 h-4 border italic">{activity.resourceChapter}</Badge>
                                         </div>
                                     </TableCell>
                                     <TableCell>

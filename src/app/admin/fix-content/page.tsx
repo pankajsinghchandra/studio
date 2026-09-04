@@ -49,18 +49,20 @@ export default function FixContentPage() {
 
     const orphanedResources = useMemo(() => {
         return resources.filter(res => {
-            const classData = syllabus[res.class];
+            const classKey = String(res.class);
+            const classData = syllabus[classKey];
             if (!classData) return true;
             
             const subjectData = classData[res.subject];
             if (!subjectData) return true;
 
+            const targetChapter = res.chapter?.trim();
             if (Array.isArray(subjectData)) {
-                return !subjectData.includes(res.chapter);
+                return !subjectData.map(c => c.trim()).includes(targetChapter);
             } else {
                 let found = false;
-                Object.values(subjectData).forEach(chapters => {
-                    if (chapters.includes(res.chapter)) found = true;
+                Object.values(subjectData).forEach((chapters: any) => {
+                    if (chapters.map((c: string) => c.trim()).includes(targetChapter)) found = true;
                 });
                 return !found;
             }
@@ -68,29 +70,34 @@ export default function FixContentPage() {
     }, [resources]);
 
     const handleSmartFix = async () => {
-        if (!window.confirm(`Attempt to auto-fix ${orphanedResources.length} items by name match?`)) return;
+        if (orphanedResources.length === 0) return;
+        if (!window.confirm(`Attempt to auto-fix ${orphanedResources.length} items? This will search for matching chapter names across all subjects in the same class.`)) return;
         
         setIsAutoFixing(true);
         let fixedCount = 0;
 
         try {
             for (const res of orphanedResources) {
-                const classData = syllabus[res.class];
+                const classKey = String(res.class);
+                const classData = syllabus[classKey];
                 if (!classData) continue;
 
                 let foundSubject = '';
+                const targetChapter = res.chapter?.trim();
+
                 // Search all subjects in this class for the exact chapter name
                 for (const subName in classData) {
                     const subData = classData[subName];
                     if (Array.isArray(subData)) {
-                        if (subData.includes(res.chapter)) {
+                        if (subData.map(c => c.trim()).includes(targetChapter)) {
                             foundSubject = subName;
                             break;
                         }
                     } else {
-                        // Nested Science
+                        // Nested Science/English/Hindi categories
                         for (const catName in subData) {
-                            if ((subData as any)[catName].includes(res.chapter)) {
+                            const chapters = subData[catName] as string[];
+                            if (chapters.map(c => c.trim()).includes(targetChapter)) {
                                 foundSubject = subName;
                                 break;
                             }
@@ -109,11 +116,12 @@ export default function FixContentPage() {
             
             toast({
                 title: "Auto-Fix Complete",
-                description: `Successfully re-mapped ${fixedCount} resources.`,
+                description: `Successfully re-mapped ${fixedCount} out of ${orphanedResources.length} resources.`,
             });
             fetchResources();
         } catch (error) {
-            toast({ variant: 'destructive', title: "Error", description: "Batch update failed." });
+            console.error("Smart Fix Error:", error);
+            toast({ variant: 'destructive', title: "Error", description: "Batch update failed. Please try again." });
         } finally {
             setIsAutoFixing(false);
         }
@@ -145,13 +153,19 @@ export default function FixContentPage() {
             </header>
 
             <div className="grid gap-6">
-                <Card className="border-destructive/20 bg-destructive/5">
+                <Card className={orphanedResources.length > 0 ? "border-destructive/20 bg-destructive/5" : "border-green-500/20 bg-green-50/50"}>
                     <CardHeader className="flex flex-row items-center gap-4">
-                        <AlertCircle className="w-8 h-8 text-destructive" />
+                        {orphanedResources.length > 0 ? (
+                             <AlertCircle className="w-8 h-8 text-destructive" />
+                        ) : (
+                             <CheckCircle2 className="w-8 h-8 text-green-500" />
+                        )}
                         <div>
                             <CardTitle>Orphaned Resources Detected: {orphanedResources.length}</CardTitle>
                             <CardDescription>
-                                These items were not found in the current syllabus. Use 'Smart Fix' to automatically map chapters with matching names.
+                                {orphanedResources.length > 0 
+                                    ? "These items were not found in the current syllabus. Use 'Smart Fix' to automatically map chapters with matching names."
+                                    : "All resources are currently mapped correctly to the syllabus."}
                             </CardDescription>
                         </div>
                     </CardHeader>
@@ -171,7 +185,7 @@ export default function FixContentPage() {
                                 <TableRow key={res.id}>
                                     <TableCell className="font-medium">{res.title}</TableCell>
                                     <TableCell>
-                                        <div className="flex gap-2">
+                                        <div className="flex flex-wrap gap-2">
                                             <Badge variant="outline">Class {res.class}</Badge>
                                             <Badge variant="secondary">{res.subject}</Badge>
                                             <Badge variant="destructive" className="italic">{res.chapter}</Badge>

@@ -92,7 +92,7 @@ function EditContentForm() {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     setTitle(data.title);
-                    setResourceClass(data.class);
+                    setResourceClass(String(data.class));
                     setSubject(data.subject);
                     setChapter(data.chapter);
                     setType(data.type);

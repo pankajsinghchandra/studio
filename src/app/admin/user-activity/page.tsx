@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -13,9 +14,7 @@ import {
     limit, 
     startAfter, 
     type DocumentData, 
-    type DocumentSnapshot,
-    doc,
-    updateDoc
+    type DocumentSnapshot
 } from 'firebase/firestore';
 import type { UserActivity } from '@/lib/types';
 import LoadingOverlay from '@/components/loading-overlay';
@@ -53,7 +52,6 @@ export default function UserActivityPage() {
     const [isLastPage, setIsLastPage] = useState(false);
     const [page, setPage] = useState(1);
     
-    // Safety ref to prevent multiple simultaneous fetches
     const isFetching = useRef(false);
 
     useEffect(() => {
@@ -91,7 +89,6 @@ export default function UserActivityPage() {
         try {
             let q = query(collection(db, "user-activity"));
 
-            // Note: In a real-world app, you might need composite indexes for complex filtering
             if (selectedUser !== 'all') {
                 q = query(q, where('userId', '==', selectedUser));
             }
@@ -109,7 +106,6 @@ export default function UserActivityPage() {
                 }
             }
             
-            // Apply sorting if no complex filters that break simple index
             if (selectedUser === 'all' && selectedTime === 'all') {
                 q = query(q, orderBy('timestamp', 'desc'));
             }
@@ -142,7 +138,8 @@ export default function UserActivityPage() {
         if (!authLoading && user && userDetails?.email === ADMIN_EMAIL) {
             fetchActivities();
         }
-    }, [fetchActivities, authLoading, user, userDetails]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedUser, selectedTime, page, authLoading, user, userDetails]);
 
     const handleNextPage = () => {
         if (!isLastPage) setPage(p => p + 1);

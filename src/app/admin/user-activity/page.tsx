@@ -106,6 +106,7 @@ export default function UserActivityPage() {
                 }
             }
             
+            // Only apply ordering if we don't have conflicting where clauses (Firestore requirement)
             if (selectedUser === 'all' && selectedTime === 'all') {
                 q = query(q, orderBy('timestamp', 'desc'));
             }

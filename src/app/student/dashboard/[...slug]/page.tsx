@@ -189,7 +189,7 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
         (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     };
 
-    // Correctly handle Ctrl + Scroll to zoom image only
+    // Attach wheel event with non-passive option
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;

@@ -238,7 +238,7 @@ export default function Header() {
                                         <SelectValue placeholder="Select Class" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {Array.from({ length: 6 }, (_, i) => i + 3).map(c => (
+                                        {Array.from({ length: 8 }, (_, i) => i + 3).map(c => (
                                           <SelectItem key={c} value={c.toString()}>Class {c}</SelectItem>
                                         ))}
                                     </SelectContent>

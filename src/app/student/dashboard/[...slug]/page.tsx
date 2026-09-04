@@ -107,6 +107,10 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
     const [scale, setScale] = useState(1);
     const [offset, setOffset] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
+    
+    const pointers = useRef<Map<number, PointerEvent>>(new Map());
+    const prevDiff = useRef<number>(-1);
+    const lastTap = useRef<number>(0);
     const containerRef = useRef<HTMLDivElement>(null);
     const startPos = useRef({ x: 0, y: 0 });
 
@@ -117,36 +121,96 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
         setOffset({ x: 0, y: 0 });
     };
 
+    const handleDoubleClick = (e: React.MouseEvent | React.TouchEvent) => {
+        if (scale > 1) {
+            handleReset();
+        } else {
+            setScale(2.5);
+        }
+    };
+
     const handlePointerDown = (e: React.PointerEvent) => {
-        if (e.button !== 0 && e.pointerType === 'mouse') return;
-        setIsDragging(true);
-        startPos.current = { x: e.clientX - offset.x, y: e.clientY - offset.y };
+        pointers.current.set(e.pointerId, e.nativeEvent);
+        
+        // Double tap logic for touch
+        if (e.pointerType === 'touch') {
+            const now = Date.now();
+            if (now - lastTap.current < 300) {
+                handleDoubleClick(e);
+                lastTap.current = 0;
+                return;
+            }
+            lastTap.current = now;
+        }
+
+        if (pointers.current.size === 1) {
+            setIsDragging(true);
+            startPos.current = { x: e.clientX - offset.x, y: e.clientY - offset.y };
+        }
+        
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
     };
 
     const handlePointerMove = (e: React.PointerEvent) => {
-        if (!isDragging) return;
-        setOffset({
-            x: e.clientX - startPos.current.x,
-            y: e.clientY - startPos.current.y
-        });
-    };
+        pointers.current.set(e.pointerId, e.nativeEvent);
+        const pointerList = Array.from(pointers.current.values());
 
-    const handlePointerUp = (e: React.PointerEvent) => {
-        setIsDragging(false);
-        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-    };
+        // Pinch to zoom logic
+        if (pointerList.length === 2) {
+            setIsDragging(false);
+            const curDiff = Math.hypot(
+                pointerList[0].clientX - pointerList[1].clientX,
+                pointerList[0].clientY - pointerList[1].clientY
+            );
 
-    const handleWheel = (e: React.WheelEvent) => {
-        if (e.ctrlKey) {
-            e.preventDefault();
-            const delta = e.deltaY > 0 ? -0.2 : 0.2;
-            setScale(prev => Math.min(Math.max(prev + delta, 0.5), 6));
+            if (prevDiff.current > 0) {
+                const delta = (curDiff - prevDiff.current) * 0.01;
+                setScale(prev => Math.min(Math.max(prev + delta, 0.5), 6));
+            }
+            prevDiff.current = curDiff;
+        } 
+        // Drag logic
+        else if (isDragging && pointerList.length === 1) {
+            setOffset({
+                x: e.clientX - startPos.current.x,
+                y: e.clientY - startPos.current.y
+            });
         }
     };
 
+    const handlePointerUp = (e: React.PointerEvent) => {
+        pointers.current.delete(e.pointerId);
+        if (pointers.current.size < 2) {
+            prevDiff.current = -1;
+        }
+        if (pointers.current.size === 0) {
+            setIsDragging(false);
+        }
+        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    };
+
+    // Correctly handle Ctrl + Scroll to zoom image only
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const handleWheel = (e: WheelEvent) => {
+            if (e.ctrlKey) {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -0.2 : 0.2;
+                setScale(prev => Math.min(Math.max(prev + delta, 0.5), 6));
+            }
+        };
+
+        container.addEventListener('wheel', handleWheel, { passive: false });
+        return () => container.removeEventListener('wheel', handleWheel);
+    }, []);
+
     return (
-        <div className="relative w-full h-full bg-black overflow-hidden flex flex-col touch-none">
+        <div 
+            ref={containerRef}
+            className="relative w-full h-full bg-black overflow-hidden flex flex-col touch-none"
+        >
             <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
                 <div className="flex bg-black/40 backdrop-blur-md rounded-full p-1 border border-white/20 shadow-xl">
                     <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-white/90 hover:bg-white/20" onClick={handleZoomIn}>
@@ -167,13 +231,12 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
             </div>
 
             <div 
-                ref={containerRef}
                 className="flex-1 w-full flex items-center justify-center cursor-grab active:cursor-grabbing select-none"
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerUp}
-                onWheel={handleWheel}
+                onDoubleClick={handleDoubleClick}
             >
                 <img 
                     src={src} 
@@ -185,8 +248,8 @@ function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, 
                     }}
                 />
             </div>
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-black/30 backdrop-blur-sm rounded-full text-[10px] text-white/70 pointer-events-none border border-white/10 z-50">
-                <span>Drag to move • Pinch or Ctrl+Scroll to zoom</span>
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-black/30 backdrop-blur-sm rounded-full text-[10px] text-white/70 pointer-events-none border border-white/10 z-50 text-center">
+                <span>Pinch or Ctrl+Scroll to zoom • Double tap to reset • Drag to move</span>
             </div>
         </div>
     );

@@ -54,32 +54,35 @@ export default function UserActivityPage() {
     
     const isFetchingRef = useRef(false);
 
-    // Fetch Users once for filtering
+    // Initial check for admin rights
     useEffect(() => {
-        if (!authLoading && user && userDetails?.email === ADMIN_EMAIL) {
-            const fetchUsersList = async () => {
-                try {
-                    const usersSnapshot = await getDocs(collection(db, 'users'));
-                    setUsers(usersSnapshot.docs
-                        .map(doc => ({ 
-                            uid: doc.id, 
-                            email: doc.data().email as string | null,
-                            name: doc.data().name as string | null 
-                        }))
-                        .filter(u => u.email !== ADMIN_EMAIL)
-                    );
-                } catch (err) {
-                    console.error("Error fetching users:", err);
-                }
-            };
-            fetchUsersList();
-        } else if (!authLoading && (!user || userDetails?.email !== ADMIN_EMAIL)) {
-            router.replace('/');
+        if (!authLoading) {
+            if (!user || userDetails?.email !== ADMIN_EMAIL) {
+                router.replace('/');
+            } else {
+                fetchUsersList();
+            }
         }
     }, [user, userDetails, authLoading, router]);
 
-    const fetchActivities = useCallback(async (isReset: boolean = false) => {
-        if (!user || userDetails?.email !== ADMIN_EMAIL || isFetchingRef.current) return;
+    const fetchUsersList = async () => {
+        try {
+            const usersSnapshot = await getDocs(collection(db, 'users'));
+            setUsers(usersSnapshot.docs
+                .map(doc => ({ 
+                    uid: doc.id, 
+                    email: doc.data().email as string | null,
+                    name: doc.data().name as string | null 
+                }))
+                .filter(u => u.email !== ADMIN_EMAIL)
+            );
+        } catch (err) {
+            console.error("Error fetching users:", err);
+        }
+    };
+
+    const fetchActivities = useCallback(async (isInitial: boolean = false) => {
+        if (isFetchingRef.current) return;
         
         isFetchingRef.current = true;
         setIsLoading(true);
@@ -105,13 +108,11 @@ export default function UserActivityPage() {
                 }
             }
             
-            // Apply sorting (requires composite index if combined with where)
-            if (selectedUser === 'all' && selectedTime === 'all') {
-                q = query(q, orderBy('timestamp', 'desc'));
-            }
+            // Standard order by timestamp desc (requires index for filters)
+            q = query(q, orderBy('timestamp', 'desc'));
 
             // Pagination logic
-            if (!isReset && page > 1 && lastVisible) {
+            if (!isInitial && lastVisible) {
                 q = query(q, startAfter(lastVisible));
             }
             
@@ -122,20 +123,25 @@ export default function UserActivityPage() {
                 .map(doc => ({ id: doc.id, ...doc.data() } as UserActivity))
                 .filter(a => a.userEmail !== ADMIN_EMAIL);
             
-            setActivities(fetched);
+            if (isInitial) {
+                setActivities(fetched);
+            } else {
+                setActivities(prev => [...prev, ...fetched]);
+            }
+            
             setLastVisible(docSnapshots.docs[docSnapshots.docs.length - 1] || null);
             setIsLastPage(docSnapshots.docs.length < PAGE_SIZE);
 
         } catch (err: any) {
             console.error("Activities fetch error:", err);
-            setError("Unable to load activities. If you added filters, ensure composite indexes are created in Firebase.");
+            setError("Unable to load activities. If you have active filters, ensure required composite indexes are created in Firebase Console.");
         } finally {
             setIsLoading(false);
             isFetchingRef.current = false;
         }
-    }, [selectedUser, selectedTime, page, user, userDetails, lastVisible]);
+    }, [selectedUser, selectedTime, lastVisible]);
 
-    // Handle filter changes
+    // Re-fetch when filters change
     useEffect(() => {
         if (!authLoading && user && userDetails?.email === ADMIN_EMAIL) {
             setPage(1);
@@ -144,15 +150,7 @@ export default function UserActivityPage() {
         }
     }, [selectedUser, selectedTime, authLoading, user, userDetails?.email]);
 
-    // Handle explicit page step
-    useEffect(() => {
-        if (page > 1) {
-            fetchActivities(false);
-        }
-    }, [page]);
-
-    const handleNextPage = () => { if (!isLastPage && !isLoading) setPage(p => p + 1); };
-    const handlePrevPage = () => { if (page > 1 && !isLoading) setPage(p => p - 1); };
+    const handleNextPage = () => { if (!isLastPage && !isLoading) { setPage(p => p + 1); fetchActivities(false); } };
     const handleReset = () => { setSelectedUser('all'); setSelectedTime('all'); };
 
     const formatDuration = (seconds: number = 0) => {
@@ -272,13 +270,15 @@ export default function UserActivityPage() {
             </Card>
             
             <div className="flex items-center justify-between py-6">
-                <p className="text-xs text-muted-foreground">Page {page} {isLoading ? '(Refreshing...)' : ''}</p>
+                <p className="text-xs text-muted-foreground">Showing {activities.length} logs</p>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={handleReset} disabled={selectedUser === 'all' && selectedTime === 'all'}>Reset</Button>
-                    <div className="flex items-center gap-2">
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePrevPage} disabled={page <= 1 || isLoading}><ChevronRight className="h-4 w-4 rotate-180" /></Button>
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleNextPage} disabled={isLastPage || isLoading}><ChevronRight className="h-4 w-4" /></Button>
-                    </div>
+                    <Button variant="outline" size="sm" onClick={handleReset} disabled={selectedUser === 'all' && selectedTime === 'all'}>Reset Filters</Button>
+                    {!isLastPage && (
+                        <Button variant="outline" size="sm" onClick={handleNextPage} disabled={isLoading}>
+                            {isLoading ? <Loader className="h-4 w-4 animate-spin mr-2" /> : <ChevronRight className="h-4 w-4 mr-2" />}
+                            Load More
+                        </Button>
+                    )}
                 </div>
             </div>
         </div>

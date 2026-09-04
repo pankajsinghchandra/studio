@@ -13,9 +13,10 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, AlertCircle, Pencil, Zap, CheckCircle2, Loader, RefreshCcw } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Save, CheckCircle2, RefreshCcw, Loader } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function FixContentPage() {
     const { user, userDetails, loading } = useAuth();
@@ -24,8 +25,10 @@ export default function FixContentPage() {
     
     const [resources, setResources] = useState<Resource[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isAutoFixing, setIsAutoFixing] = useState(false);
-    const [fixProgress, setFixProgress] = useState({ current: 0, total: 0 });
+    const [updatingId, setUpdatingId] = useState<string | null>(null);
+    
+    // Track local selections for each orphaned resource
+    const [pendingChanges, setPendingChanges] = useState<Record<string, { subject: string, chapter: string }>>({});
 
     useEffect(() => {
         if (!loading && (!user || userDetails?.email !== 'quizpankaj@gmail.com')) {
@@ -40,7 +43,8 @@ export default function FixContentPage() {
         try {
             const q = query(collection(db, 'resources'));
             const snap = await getDocs(q);
-            setResources(snap.docs.map(d => ({ id: d.id, ...d.data() } as Resource)));
+            const allRes = snap.docs.map(d => ({ id: d.id, ...d.data() } as Resource));
+            setResources(allRes);
         } catch (e) {
             console.error(e);
         } finally {
@@ -48,17 +52,9 @@ export default function FixContentPage() {
         }
     };
 
-    // Helper to clean chapter names for better matching
     const normalizeName = (text: string) => {
         if (!text) return "";
-        return text
-            .replace(/^[0-9\.\-\s]+/, '') // Remove leading numbers and dots (e.g. "1. ")
-            .replace(/^अध्याय\s+[0-9\:\-\s]+/, '') // Remove "अध्याय 1:"
-            .replace(/^Prose\s+[0-9\:\-\s]+/, '') // Remove "Prose 1:"
-            .replace(/^Poetry\s+[0-9\:\-\s]+/, '') // Remove "Poetry 1:"
-            .replace(/[\*\(\)]/g, '') // Remove asterisks and brackets
-            .trim()
-            .toLowerCase();
+        return text.replace(/^[0-9\.\-\s]+/, '').trim().toLowerCase();
     };
 
     const orphanedResources = useMemo(() => {
@@ -72,11 +68,9 @@ export default function FixContentPage() {
 
             const targetChapter = normalizeName(res.chapter);
             
-            // Check in standard subjects
             if (Array.isArray(subjectData)) {
                 return !subjectData.some(c => normalizeName(c) === targetChapter);
             } else {
-                // Check in nested objects (like Science or English/Hindi sections)
                 let found = false;
                 Object.values(subjectData).forEach((chapters: any) => {
                     if (Array.isArray(chapters) && chapters.some(c => normalizeName(c) === targetChapter)) {
@@ -88,71 +82,46 @@ export default function FixContentPage() {
         });
     }, [resources]);
 
-    const handleSmartFix = async () => {
-        if (orphanedResources.length === 0) return;
-        if (!window.confirm(`Attempt to fuzzy-match and auto-fix ${orphanedResources.length} items? This will search across all subjects in the same class.`)) return;
-        
-        setIsAutoFixing(true);
-        setFixProgress({ current: 0, total: orphanedResources.length });
-        let fixedCount = 0;
-
-        try {
-            for (const res of orphanedResources) {
-                const classKey = String(res.class);
-                const classData = syllabus[classKey];
-                if (!classData) continue;
-
-                let foundSubject = '';
-                let foundChapterExact = '';
-                const dbChapterNormalized = normalizeName(res.chapter);
-
-                // Search all subjects in this class
-                for (const subName in classData) {
-                    const subData = classData[subName];
-                    
-                    if (Array.isArray(subData)) {
-                        const match = subData.find(c => normalizeName(c) === dbChapterNormalized);
-                        if (match) {
-                            foundSubject = subName;
-                            foundChapterExact = match;
-                            break;
-                        }
-                    } else {
-                        // Nested Categories
-                        for (const catName in subData) {
-                            const chapters = subData[catName] as string[];
-                            const match = chapters.find(c => normalizeName(c) === dbChapterNormalized);
-                            if (match) {
-                                foundSubject = subName;
-                                foundChapterExact = match;
-                                break;
-                            }
-                        }
-                    }
-                    if (foundSubject) break;
-                }
-
-                if (foundSubject && foundChapterExact) {
-                    await updateDoc(doc(db, 'resources', res.id), {
-                        subject: foundSubject,
-                        chapter: foundChapterExact // Also update to exact name from syllabus
-                    });
-                    fixedCount++;
-                }
-                setFixProgress(prev => ({ ...prev, current: prev.current + 1 }));
-            }
-            
-            toast({
-                title: "Auto-Fix Complete",
-                description: `Successfully re-mapped ${fixedCount} out of ${orphanedResources.length} resources.`,
-            });
-            fetchResources();
-        } catch (error) {
-            console.error("Smart Fix Error:", error);
-            toast({ variant: 'destructive', title: "Error", description: "Batch update failed." });
-        } finally {
-            setIsAutoFixing(false);
+    const handleQuickUpdate = async (resId: string) => {
+        const change = pendingChanges[resId];
+        if (!change || !change.subject || !change.chapter) {
+            toast({ variant: 'destructive', title: "Error", description: "Please select both subject and chapter." });
+            return;
         }
+
+        setUpdatingId(resId);
+        try {
+            await updateDoc(doc(db, 'resources', resId), {
+                subject: change.subject,
+                chapter: change.chapter
+            });
+            
+            toast({ title: "Success", description: "Resource updated successfully!" });
+            
+            // Remove from list locally
+            setResources(prev => prev.filter(r => r.id !== resId));
+            const newPending = { ...pendingChanges };
+            delete newPending[resId];
+            setPendingChanges(newPending);
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Error", description: "Failed to update." });
+        } finally {
+            setUpdatingId(null);
+        }
+    };
+
+    const getChaptersForSubject = (classId: string, subject: string) => {
+        const classData = syllabus[classId];
+        if (!classData || !subject) return [];
+        const subData = classData[subject];
+        if (Array.isArray(subData)) return subData;
+        
+        // Handle nested categories (like Science)
+        let flatChapters: string[] = [];
+        Object.values(subData).forEach((list: any) => {
+            if (Array.isArray(list)) flatChapters = [...flatChapters, ...list];
+        });
+        return flatChapters.sort();
     };
 
     if (loading || isLoading) return <LoadingOverlay isLoading={true} />;
@@ -162,26 +131,14 @@ export default function FixContentPage() {
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                 <div>
                     <h1 className="font-headline text-4xl font-bold text-foreground flex items-center gap-3">
-                        Content Repair Tool
-                        <Badge variant="outline" className="text-sm font-normal">Super Smart v2</Badge>
+                        Quick Repair Tool
+                        <Badge variant="outline" className="text-sm font-normal">Fast-Fix Enabled</Badge>
                     </h1>
-                    <p className="text-muted-foreground mt-1">Found {orphanedResources.length} items that need fixing.</p>
+                    <p className="text-muted-foreground mt-1">Directly map {orphanedResources.length} items to new subjects/chapters.</p>
                 </div>
                 <div className="flex gap-2">
-                    <Button 
-                        variant="default" 
-                        className="bg-orange-600 hover:bg-orange-700 text-white font-bold shadow-orange-200 shadow-lg" 
-                        onClick={handleSmartFix}
-                        disabled={isAutoFixing || orphanedResources.length === 0}
-                    >
-                        {isAutoFixing ? (
-                            <><Loader className="animate-spin mr-2 h-4 w-4" /> {fixProgress.current}/{fixProgress.total} Fixing...</>
-                        ) : (
-                            <><Zap className="mr-2 h-4 w-4 fill-current" /> Fuzzy Auto-Fix All</>
-                        )}
-                    </Button>
-                    <Button variant="outline" onClick={fetchResources} disabled={isAutoFixing}>
-                        <RefreshCcw className="mr-2 h-4 w-4" /> Refresh
+                    <Button variant="outline" onClick={fetchResources}>
+                        <RefreshCcw className="mr-2 h-4 w-4" /> Refresh List
                     </Button>
                     <Button variant="outline" asChild>
                         <Link href="/admin"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link>
@@ -193,69 +150,105 @@ export default function FixContentPage() {
                 <Card className={orphanedResources.length > 0 ? "border-destructive/30 bg-destructive/5" : "border-green-500/30 bg-green-50/50"}>
                     <CardHeader className="flex flex-row items-center gap-4">
                         {orphanedResources.length > 0 ? (
-                             <AlertCircle className="w-10 h-10 text-destructive animate-pulse" />
+                             <AlertCircle className="w-10 h-10 text-destructive" />
                         ) : (
                              <CheckCircle2 className="w-10 h-10 text-green-500" />
                         )}
                         <div className="flex-1">
-                            <CardTitle className="text-xl">Status Report</CardTitle>
-                            <CardDescription className="text-base">
-                                {orphanedResources.length > 0 
-                                    ? `There are ${orphanedResources.length} resources with names that don't match the new syllabus (possibly due to numbering like "1." or "अध्याय 1:").`
-                                    : "Perfect! All 700+ resources are correctly mapped to your syllabus."}
+                            <CardTitle className="text-xl">Status: {orphanedResources.length} Broken Items</CardTitle>
+                            <CardDescription>
+                                Select the correct Subject and Chapter below, then click the Save icon to fix each item instantly.
                             </CardDescription>
                         </div>
-                        {orphanedResources.length > 0 && (
-                            <div className="hidden md:block text-right px-4">
-                                <p className="text-3xl font-bold text-destructive">{orphanedResources.length}</p>
-                                <p className="text-[10px] uppercase font-bold text-muted-foreground">Broken Items</p>
-                            </div>
-                        )}
                     </CardHeader>
                 </Card>
 
                 <Card className="overflow-hidden border-border/60">
-                    <div className="max-h-[60vh] overflow-auto">
+                    <div className="max-h-[70vh] overflow-auto">
                         <Table>
                             <TableHeader className="bg-muted/50 sticky top-0 z-10">
                                 <TableRow>
-                                    <TableHead className="w-[300px]">Resource Title</TableHead>
-                                    <TableHead>Location in Database</TableHead>
+                                    <TableHead className="w-[200px]">Resource Details</TableHead>
+                                    <TableHead className="w-[250px]">New Subject</TableHead>
+                                    <TableHead className="w-[250px]">New Chapter</TableHead>
                                     <TableHead className="text-right">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {orphanedResources.map(res => (
-                                    <TableRow key={res.id} className="hover:bg-accent/5">
-                                        <TableCell className="font-medium">{res.title}</TableCell>
-                                        <TableCell>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                <Badge variant="outline" className="bg-background">Class {res.class}</Badge>
-                                                <Badge variant="secondary">{res.subject}</Badge>
-                                                <Badge variant="destructive" className="italic bg-destructive/10 border-destructive/20">{res.chapter}</Badge>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button size="sm" asChild variant="outline" className="hover:bg-primary hover:text-primary-foreground">
-                                                <Link href={`/admin/edit-content/${res.id}?from=fix-tool`}>
-                                                    <Pencil className="w-3.5 h-3.5 mr-1.5" />
-                                                    Fix
-                                                </Link>
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                {orphanedResources.map(res => {
+                                    const classKey = String(res.class);
+                                    const subjects = Object.keys(syllabus[classKey] || {});
+                                    const selectedSubject = pendingChanges[res.id]?.subject || "";
+                                    const chapters = getChaptersForSubject(classKey, selectedSubject);
+
+                                    return (
+                                        <TableRow key={res.id} className="hover:bg-accent/5">
+                                            <TableCell>
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="font-bold text-xs line-clamp-1">{res.title}</span>
+                                                    <div className="flex gap-1">
+                                                        <Badge variant="outline" className="text-[9px] py-0">Cl {res.class}</Badge>
+                                                        <Badge variant="destructive" className="text-[9px] py-0 italic opacity-70">{res.chapter}</Badge>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Select 
+                                                    value={selectedSubject} 
+                                                    onValueChange={(val) => setPendingChanges(prev => ({ 
+                                                        ...prev, 
+                                                        [res.id]: { subject: val, chapter: "" } 
+                                                    }))}
+                                                >
+                                                    <SelectTrigger className="h-8 text-xs">
+                                                        <SelectValue placeholder="Select Subject" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Select 
+                                                    disabled={!selectedSubject}
+                                                    value={pendingChanges[res.id]?.chapter || ""} 
+                                                    onValueChange={(val) => setPendingChanges(prev => ({ 
+                                                        ...prev, 
+                                                        [res.id]: { ...prev[res.id], chapter: val } 
+                                                    }))}
+                                                >
+                                                    <SelectTrigger className="h-8 text-xs">
+                                                        <SelectValue placeholder="Select Chapter" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {chapters.map(ch => <SelectItem key={ch} value={ch}>{ch}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="default"
+                                                    className="h-8 w-8 p-0"
+                                                    disabled={updatingId === res.id || !pendingChanges[res.id]?.chapter}
+                                                    onClick={() => handleQuickUpdate(res.id)}
+                                                >
+                                                    {updatingId === res.id ? (
+                                                        <Loader className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <Save className="h-4 w-4" />
+                                                    )}
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
                                 {orphanedResources.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={3} className="text-center py-20">
+                                        <TableCell colSpan={4} className="text-center py-20">
                                             <div className="flex flex-col items-center gap-3">
-                                                <div className="p-4 bg-green-50 rounded-full border border-green-100">
-                                                    <CheckCircle2 className="w-12 h-12 text-green-500" />
-                                                </div>
-                                                <h3 className="text-xl font-bold text-foreground">Clean Sweep!</h3>
-                                                <p className="text-muted-foreground max-w-md mx-auto">
-                                                    All your teaching materials are correctly linked to the chapters in the current syllabus.
-                                                </p>
+                                                <CheckCircle2 className="w-12 h-12 text-green-500" />
+                                                <h3 className="text-xl font-bold">All items fixed!</h3>
                                                 <Button asChild variant="outline" className="mt-2">
                                                     <Link href="/admin/dashboard">Go to Dashboard</Link>
                                                 </Button>
@@ -271,4 +264,3 @@ export default function FixContentPage() {
         </div>
     );
 }
-

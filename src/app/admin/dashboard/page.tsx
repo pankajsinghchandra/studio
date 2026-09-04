@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/app/providers';
@@ -271,7 +272,7 @@ export default function AdminDashboard() {
               {sortedAndFilteredResources.map((resource: Resource & { id: string }) => (
                 <Card key={resource.id} className="bg-card flex flex-col hover:-translate-y-1 active:scale-95 transition-all">
                   <CardHeader>
-                    <CardTitle>{resource.title}</CardTitle>
+                    <CardTitle className="line-clamp-2">{resource.title}</CardTitle>
                     <CardDescription>{getResourceTypeLabel(resource.type)} - Class {resource.class}, {resource.subject}</CardDescription>
                   </CardHeader>
                   <CardContent className="flex-grow">

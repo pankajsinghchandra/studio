@@ -1,16 +1,14 @@
+
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Resource } from '@/lib/types';
-import { summarizeSearchResults } from '@/ai/flows/summarize-search-results';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Bot } from 'lucide-react';
 
 interface SearchResult extends Resource {
   path: string;
@@ -20,48 +18,38 @@ function SearchPageComponent() {
   const searchParams = useSearchParams();
   const queryParam = searchParams.get('q') || '';
   const [results, setResults] = useState<SearchResult[]>([]);
-  const [summary, setSummary] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
-  const [isSummarizing, setIsSummarizing] = useState(false);
 
   useEffect(() => {
     if (queryParam) {
       setIsLoading(true);
-      setSummary('');
 
       const fetchResults = async () => {
-        const resourcesRef = collection(db, 'resources');
-        const q = query(resourcesRef);
-        const querySnapshot = await getDocs(q);
-        
-        const allResources = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Resource));
-        
-        const lowerCaseQuery = queryParam.toLowerCase();
-        
-        const filtered = allResources.filter(resource => 
-            resource.title.toLowerCase().includes(lowerCaseQuery) ||
-            resource.subject.toLowerCase().includes(lowerCaseQuery) ||
-            resource.chapter.toLowerCase().includes(lowerCaseQuery)
-        ).map(resource => ({
-            ...resource,
-            path: `/student/dashboard/${resource.class}/${resource.subject}/${resource.chapter}`
-        }));
-        
-        setResults(filtered);
-        setIsLoading(false);
-
-        if (filtered.length > 3) {
-          setIsSummarizing(true);
-          const searchContentForAI = filtered.map(
-            r => `[Class ${r.class} > ${r.subject}] ${r.chapter}: ${r.title}`
-          );
-
-          summarizeSearchResults({ query: queryParam, results: searchContentForAI })
-            .then(output => {
-              setSummary(output.summary);
-            })
-            .catch(console.error)
-            .finally(() => setIsSummarizing(false));
+        try {
+          const resourcesRef = collection(db, 'resources');
+          const q = query(resourcesRef);
+          const querySnapshot = await getDocs(q);
+          
+          const allResources = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Resource));
+          
+          const lowerCaseQuery = queryParam.toLowerCase();
+          
+          // NORMAL SEARCH LOGIC: No AI used here to save quota
+          const filtered = allResources.filter(resource => 
+              resource.title.toLowerCase().includes(lowerCaseQuery) ||
+              resource.subject.toLowerCase().includes(lowerCaseQuery) ||
+              resource.chapter.toLowerCase().includes(lowerCaseQuery) ||
+              resource.class.toLowerCase().includes(lowerCaseQuery)
+          ).map(resource => ({
+              ...resource,
+              path: `/student/dashboard/${resource.class}/${encodeURIComponent(resource.subject)}/${encodeURIComponent(resource.chapter)}`
+          }));
+          
+          setResults(filtered);
+        } catch (error) {
+          console.error("Search error: ", error);
+        } finally {
+          setIsLoading(false);
         }
       };
 
@@ -72,64 +60,57 @@ function SearchPageComponent() {
     }
   }, [queryParam]);
 
+  const getResourceTypeLabel = (type: string) => {
+    if (type === 'mind-map-json') return 'Mind Map';
+    if (type === 'translated-chapter') return 'Translated Chapter';
+    if (type === 'song') return 'Song';
+    if (type === 'lesson-plan-text') return 'Lesson Plan';
+    return type.replace(/-/g, ' ');
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="font-headline text-4xl font-bold mb-2">Search Results</h1>
+      <h1 className="font-headline text-4xl font-bold mb-2 text-foreground">Search Results</h1>
       <p className="text-muted-foreground mb-8">
         {isLoading ? 'Searching...' : `Found ${results.length} results for "${queryParam}"`}
       </p>
 
-      {(isSummarizing || summary) && (
-        <Alert className="mb-8 bg-accent/30 border-accent">
-          <Bot className="h-5 w-5 text-primary" />
-          <AlertTitle className="font-headline text-lg text-primary">AI Summary</AlertTitle>
-          <AlertDescription className="text-accent-foreground">
-            {isSummarizing ? (
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-[80%]" />
-              </div>
-            ) : (
-              summary
-            )}
-          </AlertDescription>
-        </Alert>
-      )}
-
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2">
-            {Array.from({length: 4}).map((_, i) => (
-                <Card key={i}>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {Array.from({length: 6}).map((_, i) => (
+                <Card key={i} className="animate-pulse">
                     <CardHeader>
                         <Skeleton className="h-5 w-3/4 mb-2"/>
                         <Skeleton className="h-4 w-1/2"/>
                     </CardHeader>
                     <CardContent>
-                        <Skeleton className="h-4 w-full"/>
+                        <Skeleton className="h-4 w-1/3"/>
                     </CardContent>
                 </Card>
             ))}
         </div>
       ) : results.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {results.map(result => (
             <Link href={result.path} key={result.id}>
-              <Card className="hover:border-primary/80 hover:bg-card/80 transition-colors h-full">
+              <Card className="hover:border-primary/80 hover:bg-accent/5 transition-all duration-300 hover:shadow-lg active:scale-[0.98] h-full group">
                 <CardHeader>
-                  <CardTitle className="font-headline">{result.title}</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Class {result.class} &gt; {result.subject} &gt; {result.chapter}
-                  </p>
+                  <CardTitle className="font-headline text-xl group-hover:text-primary transition-colors line-clamp-2">{result.title}</CardTitle>
+                  <div className="text-sm text-muted-foreground">
+                    Class {result.class} &bull; {result.subject} &bull; {result.chapter}
+                  </div>
                 </CardHeader>
                 <CardContent>
-                   <p className="text-sm text-foreground/80 line-clamp-2">Type: {result.type.replace(/-/g, ' ')}</p>
+                   <span className="text-[10px] font-bold px-3 py-1 bg-primary/10 text-primary rounded-full uppercase tracking-wider">
+                      {getResourceTypeLabel(result.type)}
+                   </span>
                 </CardContent>
               </Card>
             </Link>
           ))}
         </div>
       ) : (
-        !isLoading && <div className="text-center py-16">
+        !isLoading && <div className="text-center py-20 bg-muted/20 rounded-2xl border border-dashed">
             <p className="text-lg text-muted-foreground">No resources found matching your search.</p>
         </div>
       )}
@@ -139,7 +120,7 @@ function SearchPageComponent() {
 
 export default function SearchPage() {
     return (
-      <Suspense fallback={<div className="container mx-auto px-4 py-8"><h1 className="font-headline text-4xl font-bold mb-2">Searching...</h1></div>}>
+      <Suspense fallback={<div className="container mx-auto px-4 py-8 text-center"><h1 className="font-headline text-4xl font-bold mb-2">Searching...</h1></div>}>
         <SearchPageComponent />
       </Suspense>
     );

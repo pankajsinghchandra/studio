@@ -1,6 +1,7 @@
+
 [build]
   command = "npm run build"
   publish = ".next"
 
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
+# For Next.js 15, Netlify handles deployment automatically. 
+# We specify the publish directory to ensure consistent behavior.

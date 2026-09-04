@@ -106,7 +106,6 @@ export default function UserActivityPage() {
                 }
             }
             
-            // Only apply ordering if we don't have conflicting where clauses (Firestore requirement)
             if (selectedUser === 'all' && selectedTime === 'all') {
                 q = query(q, orderBy('timestamp', 'desc'));
             }
@@ -139,8 +138,7 @@ export default function UserActivityPage() {
         if (!authLoading && user && userDetails?.email === ADMIN_EMAIL) {
             fetchActivities();
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedUser, selectedTime, page, authLoading, user, userDetails]);
+    }, [selectedUser, selectedTime, page, authLoading, user, userDetails, fetchActivities]);
 
     const handleNextPage = () => {
         if (!isLastPage) setPage(p => p + 1);
@@ -287,7 +285,7 @@ export default function UserActivityPage() {
                                         <div className="flex flex-wrap gap-1">
                                             <Badge variant="outline" className="text-[9px] py-0 px-1 h-4">Cl {activity.resourceClass}</Badge>
                                             <Badge variant="secondary" className="text-[9px] py-0 px-1 h-4">{activity.resourceSubject}</Badge>
-                                            <Badge variant="outline" className="text-[9px] py-0 px-1 h-4 border italic">{activity.resourceChapter}</Badge>
+                                            <Badge variant="outline" className="text-[9px] py-0 px-1 h-4 italic">{activity.resourceChapter}</Badge>
                                         </div>
                                     </TableCell>
                                     <TableCell>

@@ -4,12 +4,12 @@
 import { useAuth } from '@/app/providers';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
-import { collection, getDocs, deleteDoc, doc, query } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import Link from 'next/link';
-import { Trash2, LayoutGrid, List, Eye, Download, Loader, ArrowLeft, Pencil } from 'lucide-react';
+import { Trash2, LayoutGrid, List, Eye, Download, Loader, ArrowLeft, Pencil, Calendar, FileStack } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import LoadingOverlay from '@/components/loading-overlay';
@@ -19,8 +19,9 @@ import { syllabus } from '@/lib/syllabus';
 import type { Resource } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import MindMap from '@/components/mind-map';
+import { format } from 'date-fns';
 
 export default function AdminDashboard() {
   const { user, loading, userDetails } = useAuth();
@@ -114,18 +115,19 @@ export default function AdminDashboard() {
 
   const sortedAndFilteredResources = useMemo(() => {
     let filtered = allResources;
-    if (selectedClass) filtered = filtered.filter(r => r.class === selectedClass);
+    if (selectedClass) filtered = filtered.filter(r => String(r.class) === selectedClass);
     if (selectedSubject) filtered = filtered.filter(r => r.subject === selectedSubject);
     if (selectedChapter) filtered = filtered.filter(r => r.chapter === selectedChapter);
     if (selectedType) filtered = filtered.filter(r => r.type === selectedType);
 
     return [...filtered].sort((a, b) => {
+        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date();
+        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date();
+        
         switch (sortOrder) {
-            case 'newest': return (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0);
-            case 'oldest': return (a.createdAt?.toDate() || 0) - (b.createdAt?.toDate() || 0);
+            case 'newest': return dateB.getTime() - dateA.getTime();
+            case 'oldest': return dateA.getTime() - dateB.getTime();
             case 'subject': return a.subject.localeCompare(b.subject) || a.chapter.localeCompare(b.chapter);
-            case 'type': return a.type.localeCompare(b.type) || a.subject.localeCompare(b.subject);
-            case 'chapter': return a.class.localeCompare(b.class) || a.subject.localeCompare(b.subject) || a.chapter.localeCompare(b.chapter) || a.title.localeCompare(b.title);
             default: return 0;
         }
     });
@@ -192,11 +194,34 @@ export default function AdminDashboard() {
     return type.replace(/-/g, ' ');
   };
 
+  const formatDateLabel = (createdAt: any) => {
+      if (!createdAt) return format(new Date(), 'dd MMM yyyy');
+      try {
+          const date = createdAt.toDate ? createdAt.toDate() : new Date(createdAt);
+          return format(date, 'dd MMM yyyy');
+      } catch (e) {
+          return format(new Date(), 'dd MMM yyyy');
+      }
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       {(isDeleting || isLoadingData) && <LoadingOverlay isLoading={true} />}
-      <header className="flex justify-between items-center mb-8">
-        <h1 className="font-headline text-4xl font-bold text-foreground">Manage Content</h1>
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+            <h1 className="font-headline text-4xl font-bold text-foreground">Manage Content</h1>
+            <div className="flex items-center gap-3 mt-2">
+                <Badge variant="secondary" className="flex items-center gap-1.5 px-3 py-1">
+                    <FileStack className="w-3.5 h-3.5" />
+                    Total Content: {allResources.length}
+                </Badge>
+                {sortedAndFilteredResources.length !== allResources.length && (
+                     <Badge variant="outline" className="flex items-center gap-1.5 px-3 py-1">
+                        Filtered: {sortedAndFilteredResources.length}
+                    </Badge>
+                )}
+            </div>
+        </div>
         <div className="flex items-center gap-2">
             <Button variant="outline" asChild>
                 <Link href="/admin"><ArrowLeft className="mr-2 h-4 w-4" />Back to Dashboard</Link>
@@ -212,41 +237,41 @@ export default function AdminDashboard() {
 
       <section className="mb-8">
         <Card className="bg-card p-4">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <div>
-                    <Label>Class</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="space-y-1.5">
+                    <Label className="text-xs uppercase font-bold text-muted-foreground">Class</Label>
                     <Select value={selectedClass || 'all'} onValueChange={v => { setSelectedClass(v === 'all' ? '' : v); setSelectedSubject(''); setSelectedChapter(''); }}>
-                        <SelectTrigger><SelectValue placeholder="Filter by Class" /></SelectTrigger>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="All Classes" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Classes</SelectItem>
                             {classes.map(c => <SelectItem key={c} value={c}>Class {c}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
-                <div>
-                    <Label>Subject</Label>
+                <div className="space-y-1.5">
+                    <Label className="text-xs uppercase font-bold text-muted-foreground">Subject</Label>
                     <Select value={selectedSubject || 'all'} onValueChange={v => { setSelectedSubject(v === 'all' ? '' : v); setSelectedChapter(''); }} disabled={!selectedClass}>
-                        <SelectTrigger><SelectValue placeholder="Filter by Subject" /></SelectTrigger>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="All Subjects" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Subjects</SelectItem>
                             {subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
-                <div>
-                    <Label>Chapter</Label>
+                <div className="space-y-1.5">
+                    <Label className="text-xs uppercase font-bold text-muted-foreground">Chapter</Label>
                     <Select value={selectedChapter || 'all'} onValueChange={v => setSelectedChapter(v === 'all' ? '' : v)} disabled={!selectedSubject}>
-                        <SelectTrigger><SelectValue placeholder="Filter by Chapter" /></SelectTrigger>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="All Chapters" /></SelectTrigger>
                         <SelectContent>
                              <SelectItem value="all">All Chapters</SelectItem>
                              {chapters.map(ch => <SelectItem key={ch} value={ch}>{ch}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
-                 <div>
-                    <Label>Resource Type</Label>
+                 <div className="space-y-1.5">
+                    <Label className="text-xs uppercase font-bold text-muted-foreground">Resource Type</Label>
                     <Select value={selectedType || 'all'} onValueChange={v => setSelectedType(v === 'all' ? '' : v)}>
-                        <SelectTrigger><SelectValue placeholder="Filter by Type" /></SelectTrigger>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="All Types" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Types</SelectItem>
                             <SelectItem value="lesson-plan-text">Lesson Plan (Text)</SelectItem>
@@ -259,16 +284,14 @@ export default function AdminDashboard() {
                         </SelectContent>
                     </Select>
                 </div>
-                <div>
-                  <Label>Sort by</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs uppercase font-bold text-muted-foreground">Sort by</Label>
                    <Select value={sortOrder} onValueChange={setSortOrder}>
-                        <SelectTrigger className="w-full"><SelectValue placeholder="Sort by" /></SelectTrigger>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="Sort by" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="newest">Newest First</SelectItem>
                             <SelectItem value="oldest">Oldest First</SelectItem>
                             <SelectItem value="subject">Subject</SelectItem>
-                            <SelectItem value="type">Type</SelectItem>
-                            <SelectItem value="chapter">Chapter</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -280,32 +303,41 @@ export default function AdminDashboard() {
         {viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {sortedAndFilteredResources.map((resource: Resource & { id: string }) => (
-                <Card key={resource.id} className="bg-card flex flex-col hover:-translate-y-1 active:scale-95 transition-all">
-                  <CardHeader>
-                    <CardTitle className="line-clamp-2">{resource.title}</CardTitle>
-                    <CardDescription>{getResourceTypeLabel(resource.type)} - Class {resource.class}, {resource.subject}</CardDescription>
+                <Card key={resource.id} className="bg-card flex flex-col hover:-translate-y-1 active:scale-95 transition-all shadow-md">
+                  <CardHeader className="pb-3">
+                    <div className="flex justify-between items-start gap-2">
+                        <CardTitle className="line-clamp-2 text-lg font-headline">{resource.title}</CardTitle>
+                        <Badge variant="outline" className="shrink-0 text-[10px] uppercase">{getResourceTypeLabel(resource.type)}</Badge>
+                    </div>
+                    <CardDescription className="flex flex-col gap-1 mt-2">
+                        <span className="text-xs font-semibold text-primary">Class {resource.class} • {resource.subject}</span>
+                        <span className="text-[11px] flex items-center text-muted-foreground">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            Added on: {formatDateLabel(resource.createdAt)}
+                        </span>
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="flex-grow">
+                  <CardContent className="flex-grow pb-3">
                      <div className="flex flex-wrap gap-2">
                         {!isTextBased(resource.type) ? (
                             <a href={resource.url} target="_blank" rel="noopener noreferrer">
-                                <Button variant="default" size="sm"><Eye className="mr-2 h-4 w-4" /> View Resource</Button>
+                                <Button variant="secondary" size="sm" className="h-8"><Eye className="mr-2 h-3.5 w-3.5" /> View</Button>
                             </a>
                         ) : (
                             <>
-                                <Button variant="default" size="sm" onClick={() => setSelectedResource(resource)}><Eye className="mr-2 h-4 w-4" /> View</Button>
-                                <Button variant="outline" size="sm" asChild><Link href={`/admin/edit-content/${resource.id}`}><Pencil className="mr-2 h-4 w-4" /> Edit</Link></Button>
-                                <Button variant="outline" size="sm" onClick={() => handleDownload(resource)}><Download className="mr-2 h-4 w-4" /> Download</Button>
+                                <Button variant="secondary" size="sm" className="h-8" onClick={() => setSelectedResource(resource)}><Eye className="mr-2 h-3.5 w-3.5" /> View</Button>
+                                <Button variant="outline" size="sm" className="h-8" asChild><Link href={`/admin/edit-content/${resource.id}`}><Pencil className="mr-2 h-3.5 w-3.5" /> Edit</Link></Button>
+                                <Button variant="outline" size="sm" className="h-8" onClick={() => handleDownload(resource)}><Download className="mr-2 h-3.5 w-3.5" /> Download</Button>
                             </>
                         )}
                      </div>
                   </CardContent>
-                  <CardFooter>
+                  <CardFooter className="pt-0 pb-4">
                     <AlertDialog>
-                      <AlertDialogTrigger asChild><Button variant="destructive" size="sm"><Trash2 className="mr-2 h-4 w-4" /> Delete</Button></AlertDialogTrigger>
+                      <AlertDialogTrigger asChild><Button variant="ghost" size="sm" className="text-destructive h-8 w-full border-t border-border rounded-none mt-2"><Trash2 className="mr-2 h-3.5 w-3.5" /> Delete</Button></AlertDialogTrigger>
                       <AlertDialogContent>
-                        <AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
-                        <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(resource.id)}>Continue</AlertDialogAction></AlertDialogFooter>
+                        <AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the resource.</AlertDialogDescription></AlertDialogHeader>
+                        <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(resource.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete Permanently</AlertDialogAction></AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
                   </CardFooter>
@@ -313,37 +345,47 @@ export default function AdminDashboard() {
               ))}
             </div>
         ) : (
-          <Card>
+          <Card className="overflow-hidden border-border/60">
             <Table>
-                <TableHeader>
+                <TableHeader className="bg-muted/50">
                     <TableRow>
-                        <TableHead>Title</TableHead>
-                        <TableHead>Subject</TableHead>
-                        <TableHead>Chapter</TableHead>
+                        <TableHead>Title & Date</TableHead>
+                        <TableHead>Path</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {sortedAndFilteredResources.map((resource: Resource & { id: string }) => (
-                         <TableRow key={resource.id}>
-                            <TableCell className="font-medium">{resource.title}</TableCell>
-                            <TableCell><Badge variant="secondary">{resource.subject}</Badge></TableCell>
-                            <TableCell>{resource.chapter}</TableCell>
-                            <TableCell><Badge variant="outline">{getResourceTypeLabel(resource.type)}</Badge></TableCell>
+                         <TableRow key={resource.id} className="hover:bg-accent/5">
+                            <TableCell className="py-3">
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-sm line-clamp-1">{resource.title}</span>
+                                    <span className="text-[10px] text-muted-foreground flex items-center mt-0.5">
+                                        <Calendar className="w-2.5 h-2.5 mr-1" />
+                                        {formatDateLabel(resource.createdAt)}
+                                    </span>
+                                </div>
+                            </TableCell>
+                            <TableCell>
+                                <div className="flex items-center gap-1.5">
+                                    <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">Cl {resource.class}</Badge>
+                                    <span className="text-xs text-muted-foreground truncate max-w-[120px]">{resource.subject}</span>
+                                </div>
+                            </TableCell>
+                            <TableCell><Badge variant="outline" className="text-[10px] py-0">{getResourceTypeLabel(resource.type)}</Badge></TableCell>
                             <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-2">
+                                <div className="flex items-center justify-end gap-1">
                                      {isTextBased(resource.type) ? (
                                         <>
-                                            <Button variant="ghost" size="sm" onClick={() => setSelectedResource(resource)}>View</Button>
-                                            <Button variant="ghost" size="sm" asChild><Link href={`/admin/edit-content/${resource.id}`}>Edit</Link></Button>
-                                            <Button variant="ghost" size="sm" onClick={() => handleDownload(resource)}>Download</Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedResource(resource)}><Eye className="h-4 w-4" /></Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" asChild><Link href={`/admin/edit-content/${resource.id}`}><Pencil className="h-4 w-4" /></Link></Button>
                                         </>
                                       ) : (
-                                        <a href={resource.url} target="_blank" rel="noopener noreferrer"><Button variant="ghost" size="sm">View</Button></a>
+                                        <a href={resource.url} target="_blank" rel="noopener noreferrer"><Button variant="ghost" size="icon" className="h-8 w-8"><Eye className="h-4 w-4" /></Button></a>
                                       )}
                                     <AlertDialog>
-                                      <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                      <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
                                       <AlertDialogContent>
                                         <AlertDialogHeader><AlertDialogTitle>Delete Resource?</AlertDialogTitle></AlertDialogHeader>
                                         <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(resource.id)}>Delete</AlertDialogAction></AlertDialogFooter>
@@ -357,12 +399,20 @@ export default function AdminDashboard() {
             </Table>
           </Card>
         )}
-        {isLoadingData && <div className="flex justify-center py-8"><Loader className="h-8 w-8 animate-spin text-primary" /></div>}
-        {!isLoadingData && sortedAndFilteredResources.length === 0 && <div className="text-center py-16 text-muted-foreground">No resources found.</div>}
+        {isLoadingData && <div className="flex justify-center py-12"><Loader className="h-8 w-8 animate-spin text-primary" /></div>}
+        {!isLoadingData && sortedAndFilteredResources.length === 0 && (
+            <div className="text-center py-24 bg-muted/20 rounded-2xl border-2 border-dashed">
+                <p className="text-lg text-muted-foreground">No resources found matching your filters.</p>
+                <Button variant="link" onClick={() => { setSelectedClass(''); setSelectedSubject(''); setSelectedChapter(''); setSelectedType(''); }}>Clear all filters</Button>
+            </div>
+        )}
       </section>
       
         <Dialog open={!!selectedResource} onOpenChange={o => !o && setSelectedResource(null)}>
-            <DialogContent className="max-w-4xl w-full h-[80vh] p-0 flex flex-col">
+            <DialogContent className="max-w-4xl w-full h-[85vh] p-0 flex flex-col">
+                <div className="p-3 border-b bg-card flex justify-between items-center shrink-0">
+                    <h3 className="font-bold text-sm truncate px-4">{selectedResource?.title}</h3>
+                </div>
                 <div className="flex-1 overflow-auto">{selectedResource && renderDialogContent()}</div>
             </DialogContent>
         </Dialog>

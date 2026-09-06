@@ -153,7 +153,7 @@ export default function ManageContentPage() {
         type,
         url: isUrlPlan ? resourceUrl : htmlContent,
         authorId: user.uid,
-        createdAt: serverTimestamp(),
+        createdAt: serverTimestamp(), // Dates are now handled automatically
       });
       toast({ title: 'Success!', description: 'Resource added successfully.', duration: 1500 });
       router.push('/admin/dashboard');
@@ -180,7 +180,7 @@ export default function ManageContentPage() {
         <form onSubmit={handleSubmit}>
           <CardHeader>
             <CardTitle className="text-2xl font-headline">New Resource</CardTitle>
-            <CardDescription>Fill in the details to upload a new resource.</CardDescription>
+            <CardDescription>Fill in the details to upload a new resource. Date is tracked automatically.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">

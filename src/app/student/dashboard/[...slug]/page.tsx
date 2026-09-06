@@ -14,12 +14,13 @@ import {
     FileText, Video, ImageIcon, BookOpen, ChevronRight, ExternalLink,
     School, Book, FlaskConical, Languages, Landmark, Calculator, Palette, Dna, Atom, 
     Globe, Scroll, Milestone, Users, Drama, Leaf, Folder, X, Share2, Pencil, Music,
-    ZoomIn, ZoomOut, RotateCcw
+    ZoomIn, ZoomOut, RotateCcw, Layout
 } from 'lucide-react';
 import { syllabus } from '@/lib/syllabus';
 import { Button } from '@/components/ui/button';
 import MindMap, { type MindMapNode as MindMapNodeType } from '@/components/mind-map';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 const subjectIcons: { [key: string]: React.ElementType } = {
     'mathematics': Calculator,
@@ -101,6 +102,7 @@ interface CardData {
     description: string;
     path: string;
     type: 'subject' | 'sub-subject' | 'chapter';
+    resourceCount?: number;
 }
 
 function ZoomableImageViewer({ src, alt, onClose }: { src: string, alt: string, onClose?: () => void }) {
@@ -333,32 +335,41 @@ export default function DynamicPage() {
                         path: `/student/dashboard/${classId}/${encodeURIComponent(subjectName!)}/${encodeURIComponent(sub)}`,
                         type: 'sub-subject'
                     })));
-                } else if (pageType === 'subject') {
-                    const chapters = (subjectData as string[]) || [];
-                    setTitle(subjectName!);
+                } else if (pageType === 'subject' || pageType === 'sub-subject') {
+                    const chapters = pageType === 'subject' 
+                        ? (subjectData as string[]) || []
+                        : (subjectData as any)[subOrChapterName!] || [];
+                    
+                    const contextName = pageType === 'subject' ? subjectName! : subOrChapterName!;
+                    setTitle(contextName);
                     setDescription('Select a chapter to start learning.');
+
+                    // Fetch resource counts for these chapters
+                    const q = query(collection(db, "resources"), 
+                        where("class", "in", [classId, "6", "7", "8"]), // Multi-class sync for Computer
+                        where("subject", "==", subjectName)
+                    );
+                    const querySnapshot = await getDocs(q);
+                    const chapterCounts: Record<string, number> = {};
+                    querySnapshot.docs.forEach(doc => {
+                        const data = doc.data();
+                        const ch = data.chapter;
+                        chapterCounts[ch] = (chapterCounts[ch] || 0) + 1;
+                    });
+
                     setCards(chapters.map(ch => ({
                         id: ch,
                         name: ch,
                         description: 'View resources',
-                        path: `/student/dashboard/${classId}/${encodeURIComponent(subjectName!)}/${encodeURIComponent(ch)}`,
-                        type: 'chapter'
-                    })));
-                } else if (pageType === 'sub-subject') {
-                    const subData = (subjectData as any)[subOrChapterName!];
-                    setTitle(subOrChapterName!);
-                    setDescription('Select a chapter.');
-                    setCards(subData.map((ch: string) => ({
-                        id: ch,
-                        name: ch,
-                        description: 'View resources',
-                        path: `/student/dashboard/${classId}/${encodeURIComponent(subjectName!)}/${encodeURIComponent(subOrChapterName!)}/${encodeURIComponent(ch)}`,
-                        type: 'chapter'
+                        path: pageType === 'subject' 
+                            ? `/student/dashboard/${classId}/${encodeURIComponent(subjectName!)}/${encodeURIComponent(ch)}`
+                            : `/student/dashboard/${classId}/${encodeURIComponent(subjectName!)}/${encodeURIComponent(subOrChapterName!)}/${encodeURIComponent(ch)}`,
+                        type: 'chapter',
+                        resourceCount: chapterCounts[ch] || 0
                     })));
                 } else if (pageType === 'chapter') {
                     const targetChapter = finalChapterName || subOrChapterName;
                     
-                    // Logic to sync Computer resources across class 6, 7, and 8
                     const isComputerCrossClass = subjectName?.toLowerCase().includes('computer') && ['6', '7', '8'].includes(classId);
                     
                     let q;
@@ -536,22 +547,33 @@ export default function DynamicPage() {
                             cards.map((card, index) => (
                                 <Card 
                                     key={card.id} 
-                                    className="bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 h-full cursor-pointer active:scale-95"
+                                    className="group bg-card hover:bg-accent/50 border-2 border-transparent hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 h-full cursor-pointer active:scale-95 flex flex-col justify-between"
                                     onClick={() => handleCardClick(card.path)}
                                 >
                                     <CardHeader className="flex flex-row items-center justify-between p-4">
                                         <div className='flex items-center gap-4'>
                                           {getIcon(card.type === 'sub-subject' ? 'sub-subject' : (card.type === 'chapter' ? 'chapter' : 'subject'), card.name, undefined, index)}
                                           <div>
-                                            <CardTitle className="font-headline text-xl text-foreground">{card.name}</CardTitle>
+                                            <CardTitle className="font-headline text-xl text-foreground group-hover:text-primary transition-colors">{card.name}</CardTitle>
                                             <CardDescription>{card.description}</CardDescription>
                                           </div>
                                         </div>
                                         <ChevronRight className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
                                     </CardHeader>
+                                    
+                                    {card.type === 'chapter' && (
+                                        <div className="px-4 pb-4 mt-auto">
+                                            <div className="flex items-center justify-between">
+                                                <Badge className="bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white border-none shadow-md px-3 py-1 rounded-md text-[10px] font-bold tracking-wide flex items-center gap-1.5 animate-in fade-in slide-in-from-left-2 duration-300">
+                                                    <Layout className="w-3 h-3" />
+                                                    {card.resourceCount || 0} Content Available
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    )}
                                 </Card>
                             ))
-                    ) : <p className="col-span-full text-center text-muted-foreground">No items found.</p>
+                    ) : <p className="col-span-full text-center text-muted-foreground font-medium">No items found in this section.</p>
                 )}
                 {pageType === 'chapter' && (
                     <>
@@ -561,14 +583,17 @@ export default function DynamicPage() {
                                     <div className="flex items-start gap-4">
                                         {getIcon('resource', undefined, resource.type, index)}
                                         <div>
-                                            <CardTitle className="font-headline text-xl text-foreground leading-tight">{resource.title}</CardTitle>
-                                            <CardDescription className="mt-1 capitalize">{getResourceTypeLabel(resource.type)}</CardDescription>
+                                            <CardTitle className="font-headline text-xl text-foreground leading-tight group-hover:text-primary transition-colors">{resource.title}</CardTitle>
+                                            <CardDescription className="mt-1 capitalize flex items-center gap-2">
+                                                <span className="w-2 h-2 rounded-full bg-primary/40" />
+                                                {getResourceTypeLabel(resource.type)}
+                                            </CardDescription>
                                         </div>
                                     </div>
                                 </CardHeader>
                             </Card>
                         ))}
-                         {resources.length === 0 && <p className="col-span-full text-center text-muted-foreground">No resources found for this chapter.</p>}
+                         {resources.length === 0 && <p className="col-span-full text-center text-muted-foreground font-medium py-12 bg-muted/20 rounded-2xl border-2 border-dashed">No resources found for this chapter yet.</p>}
                     </>
                 )}
                 </div>
@@ -577,17 +602,17 @@ export default function DynamicPage() {
                  <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col animate-in fade-in-0">
                     {!isFullImageMode && (
                         <header className="p-2 bg-card/80 backdrop-blur-sm flex-row justify-between items-center z-10 shrink-0 border-b flex">
-                            <h2 className="text-foreground text-lg truncate px-2 font-semibold">{selectedResource.title}</h2>
+                            <h2 className="text-foreground text-lg truncate px-4 font-bold text-primary">{selectedResource.title}</h2>
                             <div className="flex items-center gap-2">
                                 {selectedResource.url && !['lesson-plan-text', 'mind-map-json'].includes(selectedResource.type) && (
-                                    <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground" asChild>
+                                    <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-primary transition-colors" asChild>
                                         <a href={selectedResource.url} target="_blank" rel="noopener noreferrer">
                                             <ExternalLink className="w-5 h-5" />
                                             <span className="sr-only">Open in new tab</span>
                                         </a>
                                     </Button>
                                 )}
-                                <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-foreground" onClick={() => setSelectedResource(null)}>
+                                <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-destructive transition-colors" onClick={() => setSelectedResource(null)}>
                                     <X className="w-5 h-5" />
                                     <span className="sr-only">Close</span>
                                 </Button>
@@ -602,3 +627,4 @@ export default function DynamicPage() {
         </>
     );
 }
+

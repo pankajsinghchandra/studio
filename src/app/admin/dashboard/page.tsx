@@ -9,7 +9,7 @@ import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import Link from 'next/link';
-import { Trash2, LayoutGrid, List, Eye, Download, Loader, ArrowLeft, Pencil, Calendar, FileStack } from 'lucide-react';
+import { Trash2, LayoutGrid, List, Eye, Download, Loader, ArrowLeft, Pencil, Calendar, FileStack, FileText, Video, Music, Share2, ImageIcon, BookOpen } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import LoadingOverlay from '@/components/loading-overlay';
@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import MindMap from '@/components/mind-map';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 export default function AdminDashboard() {
   const { user, loading, userDetails } = useAuth();
@@ -194,6 +195,30 @@ export default function AdminDashboard() {
     return type.replace(/-/g, ' ');
   };
 
+  const getResourceTypeIcon = (type: string) => {
+    switch (type) {
+      case 'video': return <Video className="w-4 h-4" />;
+      case 'song': return <Music className="w-4 h-4" />;
+      case 'lesson-plan-text': return <Pencil className="w-4 h-4" />;
+      case 'mind-map-json': return <Share2 className="w-4 h-4" />;
+      case 'infographic': return <ImageIcon className="w-4 h-4" />;
+      case 'pdf-note':
+      case 'translated-chapter': return <FileText className="w-4 h-4" />;
+      default: return <BookOpen className="w-4 h-4" />;
+    }
+  }
+
+  const getTypeColorClass = (type: string) => {
+    switch (type) {
+      case 'video': return 'border-l-red-500';
+      case 'song': return 'border-l-purple-500';
+      case 'lesson-plan-text': return 'border-l-blue-500';
+      case 'mind-map-json': return 'border-l-orange-500';
+      case 'infographic': return 'border-l-green-500';
+      default: return 'border-l-primary';
+    }
+  }
+
   const formatDateLabel = (createdAt: any) => {
       if (!createdAt) return format(new Date(), 'dd MMM yyyy');
       try {
@@ -211,12 +236,12 @@ export default function AdminDashboard() {
         <div>
             <h1 className="font-headline text-4xl font-bold text-foreground">Manage Content</h1>
             <div className="flex items-center gap-3 mt-2">
-                <Badge variant="secondary" className="flex items-center gap-1.5 px-3 py-1">
+                <Badge variant="secondary" className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary border-primary/20">
                     <FileStack className="w-3.5 h-3.5" />
                     Total Content: {allResources.length}
                 </Badge>
                 {sortedAndFilteredResources.length !== allResources.length && (
-                     <Badge variant="outline" className="flex items-center gap-1.5 px-3 py-1">
+                     <Badge variant="outline" className="flex items-center gap-1.5 px-3 py-1 border-muted-foreground/30">
                         Filtered: {sortedAndFilteredResources.length}
                     </Badge>
                 )}
@@ -236,7 +261,7 @@ export default function AdminDashboard() {
       </header>
 
       <section className="mb-8">
-        <Card className="bg-card p-4">
+        <Card className="bg-card p-4 border-muted/60 shadow-sm">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div className="space-y-1.5">
                     <Label className="text-xs uppercase font-bold text-muted-foreground">Class</Label>
@@ -303,38 +328,48 @@ export default function AdminDashboard() {
         {viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {sortedAndFilteredResources.map((resource: Resource & { id: string }) => (
-                <Card key={resource.id} className="bg-card flex flex-col hover:-translate-y-1 active:scale-95 transition-all shadow-md">
-                  <CardHeader className="pb-3">
+                <Card key={resource.id} className={cn(
+                  "group flex flex-col bg-card hover:bg-accent/5 transition-all duration-300 shadow-sm hover:shadow-xl border-l-4",
+                  getTypeColorClass(resource.type)
+                )}>
+                  <CardHeader className="pb-3 bg-muted/5 group-hover:bg-muted/10 transition-colors">
                     <div className="flex justify-between items-start gap-2">
-                        <CardTitle className="line-clamp-2 text-lg font-headline">{resource.title}</CardTitle>
-                        <Badge variant="outline" className="shrink-0 text-[10px] uppercase">{getResourceTypeLabel(resource.type)}</Badge>
+                        <CardTitle className="line-clamp-2 text-lg font-headline font-bold leading-tight group-hover:text-primary transition-colors">{resource.title}</CardTitle>
+                        <Badge variant="outline" className="shrink-0 text-[9px] uppercase font-bold bg-background flex items-center gap-1">
+                          {getResourceTypeIcon(resource.type)}
+                          {getResourceTypeLabel(resource.type)}
+                        </Badge>
                     </div>
                     <CardDescription className="flex flex-col gap-1 mt-2">
-                        <span className="text-xs font-semibold text-primary">Class {resource.class} • {resource.subject}</span>
-                        <span className="text-[11px] flex items-center text-muted-foreground">
+                        <span className="text-xs font-bold text-primary/80">Class {resource.class} • {resource.subject}</span>
+                        <span className="text-[11px] flex items-center text-muted-foreground/80">
                             <Calendar className="w-3 h-3 mr-1" />
-                            Added on: {formatDateLabel(resource.createdAt)}
+                            Added: {formatDateLabel(resource.createdAt)}
                         </span>
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="flex-grow pb-3">
+                  <CardContent className="flex-grow pt-4 pb-4 px-6">
                      <div className="flex flex-wrap gap-2">
                         {!isTextBased(resource.type) ? (
                             <a href={resource.url} target="_blank" rel="noopener noreferrer">
-                                <Button variant="secondary" size="sm" className="h-8"><Eye className="mr-2 h-3.5 w-3.5" /> View</Button>
+                                <Button variant="secondary" size="sm" className="h-8 shadow-sm"><Eye className="mr-2 h-3.5 w-3.5" /> View</Button>
                             </a>
                         ) : (
                             <>
-                                <Button variant="secondary" size="sm" className="h-8" onClick={() => setSelectedResource(resource)}><Eye className="mr-2 h-3.5 w-3.5" /> View</Button>
-                                <Button variant="outline" size="sm" className="h-8" asChild><Link href={`/admin/edit-content/${resource.id}`}><Pencil className="mr-2 h-3.5 w-3.5" /> Edit</Link></Button>
-                                <Button variant="outline" size="sm" className="h-8" onClick={() => handleDownload(resource)}><Download className="mr-2 h-3.5 w-3.5" /> Download</Button>
+                                <Button variant="secondary" size="sm" className="h-8 shadow-sm" onClick={() => setSelectedResource(resource)}><Eye className="mr-2 h-3.5 w-3.5" /> View</Button>
+                                <Button variant="outline" size="sm" className="h-8 border-primary/20 hover:border-primary/50" asChild><Link href={`/admin/edit-content/${resource.id}`}><Pencil className="mr-2 h-3.5 w-3.5" /> Edit</Link></Button>
+                                <Button variant="outline" size="sm" className="h-8 border-primary/20" onClick={() => handleDownload(resource)}><Download className="mr-2 h-3.5 w-3.5" /> Download</Button>
                             </>
                         )}
                      </div>
                   </CardContent>
-                  <CardFooter className="pt-0 pb-4">
+                  <CardFooter className="pt-0 pb-4 px-6">
                     <AlertDialog>
-                      <AlertDialogTrigger asChild><Button variant="ghost" size="sm" className="text-destructive h-8 w-full border-t border-border rounded-none mt-2"><Trash2 className="mr-2 h-3.5 w-3.5" /> Delete</Button></AlertDialogTrigger>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 h-9 w-full border-t border-border/60 rounded-none mt-2 font-semibold">
+                          <Trash2 className="mr-2 h-4 w-4" /> Delete Resource
+                        </Button>
+                      </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the resource.</AlertDialogDescription></AlertDialogHeader>
                         <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(resource.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete Permanently</AlertDialogAction></AlertDialogFooter>
@@ -345,14 +380,14 @@ export default function AdminDashboard() {
               ))}
             </div>
         ) : (
-          <Card className="overflow-hidden border-border/60">
+          <Card className="overflow-hidden border-border/60 shadow-md">
             <Table>
                 <TableHeader className="bg-muted/50">
                     <TableRow>
-                        <TableHead>Title & Date</TableHead>
-                        <TableHead>Path</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead className="font-bold">Title & Date</TableHead>
+                        <TableHead className="font-bold">Path</TableHead>
+                        <TableHead className="font-bold">Type</TableHead>
+                        <TableHead className="text-right font-bold">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -369,23 +404,23 @@ export default function AdminDashboard() {
                             </TableCell>
                             <TableCell>
                                 <div className="flex items-center gap-1.5">
-                                    <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">Cl {resource.class}</Badge>
-                                    <span className="text-xs text-muted-foreground truncate max-w-[120px]">{resource.subject}</span>
+                                    <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-primary/5 text-primary border-primary/10">Cl {resource.class}</Badge>
+                                    <span className="text-xs text-muted-foreground truncate max-w-[120px] font-medium">{resource.subject}</span>
                                 </div>
                             </TableCell>
-                            <TableCell><Badge variant="outline" className="text-[10px] py-0">{getResourceTypeLabel(resource.type)}</Badge></TableCell>
+                            <TableCell><Badge variant="outline" className="text-[10px] py-0 border-muted-foreground/20">{getResourceTypeLabel(resource.type)}</Badge></TableCell>
                             <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-1">
                                      {isTextBased(resource.type) ? (
                                         <>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedResource(resource)}><Eye className="h-4 w-4" /></Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8" asChild><Link href={`/admin/edit-content/${resource.id}`}><Pencil className="h-4 w-4" /></Link></Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-primary" onClick={() => setSelectedResource(resource)}><Eye className="h-4 w-4" /></Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-primary" asChild><Link href={`/admin/edit-content/${resource.id}`}><Pencil className="h-4 w-4" /></Link></Button>
                                         </>
                                       ) : (
-                                        <a href={resource.url} target="_blank" rel="noopener noreferrer"><Button variant="ghost" size="icon" className="h-8 w-8"><Eye className="h-4 w-4" /></Button></a>
+                                        <a href={resource.url} target="_blank" rel="noopener noreferrer"><Button variant="ghost" size="icon" className="h-8 w-8 hover:text-primary"><Eye className="h-4 w-4" /></Button></a>
                                       )}
                                     <AlertDialog>
-                                      <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                      <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
                                       <AlertDialogContent>
                                         <AlertDialogHeader><AlertDialogTitle>Delete Resource?</AlertDialogTitle></AlertDialogHeader>
                                         <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(resource.id)}>Delete</AlertDialogAction></AlertDialogFooter>
@@ -401,21 +436,22 @@ export default function AdminDashboard() {
         )}
         {isLoadingData && <div className="flex justify-center py-12"><Loader className="h-8 w-8 animate-spin text-primary" /></div>}
         {!isLoadingData && sortedAndFilteredResources.length === 0 && (
-            <div className="text-center py-24 bg-muted/20 rounded-2xl border-2 border-dashed">
-                <p className="text-lg text-muted-foreground">No resources found matching your filters.</p>
+            <div className="text-center py-24 bg-muted/10 rounded-2xl border-2 border-dashed border-muted">
+                <p className="text-lg text-muted-foreground font-medium">No resources found matching your filters.</p>
                 <Button variant="link" onClick={() => { setSelectedClass(''); setSelectedSubject(''); setSelectedChapter(''); setSelectedType(''); }}>Clear all filters</Button>
             </div>
         )}
       </section>
       
         <Dialog open={!!selectedResource} onOpenChange={o => !o && setSelectedResource(null)}>
-            <DialogContent className="max-w-4xl w-full h-[85vh] p-0 flex flex-col">
-                <div className="p-3 border-b bg-card flex justify-between items-center shrink-0">
-                    <h3 className="font-bold text-sm truncate px-4">{selectedResource?.title}</h3>
+            <DialogContent className="max-w-4xl w-full h-[85vh] p-0 flex flex-col border-none shadow-2xl">
+                <div className="p-3 border-b bg-card flex justify-between items-center shrink-0 rounded-t-lg">
+                    <h3 className="font-bold text-sm truncate px-4 text-primary">{selectedResource?.title}</h3>
                 </div>
-                <div className="flex-1 overflow-auto">{selectedResource && renderDialogContent()}</div>
+                <div className="flex-1 overflow-auto bg-background">{selectedResource && renderDialogContent()}</div>
             </DialogContent>
         </Dialog>
     </div>
   );
 }
+

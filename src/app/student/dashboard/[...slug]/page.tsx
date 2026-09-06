@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -336,9 +335,9 @@ export default function DynamicPage() {
                         type: 'sub-subject'
                     })));
                 } else if (pageType === 'subject' || pageType === 'sub-subject') {
-                    const chapters = pageType === 'subject' 
+                    const chapters = (pageType === 'subject' 
                         ? (subjectData as string[]) || []
-                        : (subjectData as any)[subOrChapterName!] || [];
+                        : (subjectData as any)[subOrChapterName!] || []) as string[];
                     
                     const contextName = pageType === 'subject' ? subjectName! : subOrChapterName!;
                     setTitle(contextName);
@@ -365,7 +364,7 @@ export default function DynamicPage() {
                         chapterCounts[ch] = (chapterCounts[ch] || 0) + 1;
                     });
 
-                    setCards(chapters.map(ch => ({
+                    setCards(chapters.map((ch: string) => ({
                         id: ch,
                         name: ch,
                         description: 'View resources',

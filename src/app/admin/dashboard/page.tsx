@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useAuth } from '@/app/providers';
@@ -395,7 +394,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {paginatedResources.map((resource: Resource & { id: string }) => (
                 <Card key={resource.id} className={cn(
-                  "group flex flex-col bg-card hover:bg-accent/5 transition-all duration-300 shadow-sm hover:shadow-xl border-l-4",
+                  "group flex flex-col bg-card hover:bg-accent/50 transition-all duration-300 shadow-sm hover:shadow-xl border-l-4",
                   getTypeColorClass(resource.type)
                 )}>
                   <CardHeader className="pb-3 bg-muted/5 group-hover:bg-muted/10 transition-colors">

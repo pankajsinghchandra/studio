@@ -9,7 +9,7 @@ import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import Link from 'next/link';
-import { Trash2, LayoutGrid, List, Eye, Download, Loader, ArrowLeft, Pencil, Calendar, FileStack, FileText, Video, Music, Share2, ImageIcon, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Trash2, LayoutGrid, List, Eye, Download, Loader, ArrowLeft, Pencil, Calendar, FileStack, FileText, Video, Music, Share2, ImageIcon, BookOpen, ChevronLeft, ChevronRight, Settings2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import LoadingOverlay from '@/components/loading-overlay';
@@ -126,8 +126,8 @@ export default function AdminDashboard() {
     if (selectedType) filtered = filtered.filter(r => r.type === selectedType);
 
     const sorted = [...filtered].sort((a, b) => {
-        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date();
-        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date();
+        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : (a.createdAt ? new Date(a.createdAt) : new Date());
+        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : (b.createdAt ? new Date(b.createdAt) : new Date());
         
         switch (sortOrder) {
             case 'newest': return dateB.getTime() - dateA.getTime();
@@ -252,116 +252,145 @@ export default function AdminDashboard() {
       }
   }
 
+  const startIndex = (currentPage - 1) * parseInt(pageSize === 'all' ? '0' : pageSize) + 1;
+  const endIndex = pageSize === 'all' ? filteredResources.length : Math.min(currentPage * parseInt(pageSize), filteredResources.length);
+
   return (
     <div className="container mx-auto px-4 py-8">
       {(isDeleting || isLoadingData) && <LoadingOverlay isLoading={true} />}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-        <div>
-            <h1 className="font-headline text-4xl font-bold text-foreground">Manage Content</h1>
-            <div className="flex items-center gap-3 mt-2">
-                <Badge variant="secondary" className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary border-primary/20">
-                    <FileStack className="w-3.5 h-3.5" />
-                    Total Content: {allResources.length}
-                </Badge>
-                {filteredResources.length !== allResources.length && (
-                     <Badge variant="outline" className="flex items-center gap-1.5 px-3 py-1 border-muted-foreground/30">
-                        Filtered: {filteredResources.length}
+      
+      {/* HEADER SECTION */}
+      <header className="flex flex-col gap-6 mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+            <div className="space-y-1">
+                <h1 className="font-headline text-4xl font-bold text-foreground">Manage Content</h1>
+                <div className="flex flex-wrap items-center gap-3">
+                    <Badge variant="secondary" className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary border-primary/20 font-bold">
+                        <FileStack className="w-3.5 h-3.5" />
+                        Total: {allResources.length}
                     </Badge>
-                )}
+                    {filteredResources.length > 0 && (
+                        <p className="text-xs font-medium text-muted-foreground bg-muted/30 px-3 py-1 rounded-full border border-border/40">
+                            Showing <span className="text-foreground font-bold">{startIndex}–{endIndex}</span> of <span className="text-foreground font-bold">{filteredResources.length}</span> results
+                        </p>
+                    )}
+                </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 bg-muted/20 p-1 rounded-lg border border-border/40">
+                <div className="flex items-center gap-1 mr-2 px-2">
+                    <Settings2 className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-[10px] font-bold uppercase text-muted-foreground">View Settings</span>
+                </div>
+                
+                <Select value={pageSize} onValueChange={setPageSize}>
+                    <SelectTrigger className="h-8 w-[110px] text-xs bg-background">
+                        <SelectValue placeholder="Per page" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="25">25 per page</SelectItem>
+                        <SelectItem value="50">50 per page</SelectItem>
+                        <SelectItem value="100">100 per page</SelectItem>
+                        <SelectItem value="500">500 per page</SelectItem>
+                        <SelectItem value="all">Show All</SelectItem>
+                    </SelectContent>
+                </Select>
+
+                <div className="h-6 w-px bg-border mx-1" />
+
+                <div className="flex bg-background rounded-md border p-0.5">
+                    <Button 
+                        variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
+                        size="icon" 
+                        className="h-7 w-7"
+                        onClick={() => setViewMode('grid')}
+                    >
+                        <LayoutGrid className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button 
+                        variant={viewMode === 'list' ? 'secondary' : 'ghost'} 
+                        size="icon" 
+                        className="h-7 w-7"
+                        onClick={() => setViewMode('list')}
+                    >
+                        <List className="h-3.5 w-3.5" />
+                    </Button>
+                </div>
+
+                <div className="h-6 w-px bg-border mx-1" />
+
+                <Button variant="ghost" size="sm" className="h-8 text-xs font-bold" asChild>
+                    <Link href="/admin"><ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Dashboard</Link>
+                </Button>
             </div>
         </div>
-        <div className="flex items-center gap-2">
-            <Button variant="outline" asChild>
-                <Link href="/admin"><ArrowLeft className="mr-2 h-4 w-4" />Back to Dashboard</Link>
-            </Button>
-            <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('grid')}>
-                <LayoutGrid className="h-5 w-5" />
-            </Button>
-            <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')}>
-                <List className="h-5 w-5" />
-            </Button>
-        </div>
-      </header>
 
-      <section className="mb-8">
-        <Card className="bg-card p-4 border-muted/60 shadow-sm">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                <div className="space-y-1.5">
-                    <Label className="text-xs uppercase font-bold text-muted-foreground">Class</Label>
+        {/* FILTERS BAR */}
+        <Card className="bg-card shadow-sm border-muted/60">
+            <div className="p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                <div className="space-y-1">
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Class</Label>
                     <Select value={selectedClass || 'all'} onValueChange={v => { setSelectedClass(v === 'all' ? '' : v); setSelectedSubject(''); setSelectedChapter(''); }}>
-                        <SelectTrigger className="h-9"><SelectValue placeholder="All Classes" /></SelectTrigger>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="All Classes" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Classes</SelectItem>
                             {classes.map(c => <SelectItem key={c} value={c}>Class {c}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="space-y-1.5">
-                    <Label className="text-xs uppercase font-bold text-muted-foreground">Subject</Label>
+                <div className="space-y-1">
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Subject</Label>
                     <Select value={selectedSubject || 'all'} onValueChange={v => { setSelectedSubject(v === 'all' ? '' : v); setSelectedChapter(''); }} disabled={!selectedClass}>
-                        <SelectTrigger className="h-9"><SelectValue placeholder="All Subjects" /></SelectTrigger>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="All Subjects" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Subjects</SelectItem>
                             {subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="space-y-1.5">
-                    <Label className="text-xs uppercase font-bold text-muted-foreground">Chapter</Label>
+                <div className="space-y-1">
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Chapter</Label>
                     <Select value={selectedChapter || 'all'} onValueChange={v => setSelectedChapter(v === 'all' ? '' : v)} disabled={!selectedSubject}>
-                        <SelectTrigger className="h-9"><SelectValue placeholder="All Chapters" /></SelectTrigger>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="All Chapters" /></SelectTrigger>
                         <SelectContent>
                              <SelectItem value="all">All Chapters</SelectItem>
                              {chapters.map(ch => <SelectItem key={ch} value={ch}>{ch}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
-                 <div className="space-y-1.5">
-                    <Label className="text-xs uppercase font-bold text-muted-foreground">Resource Type</Label>
+                <div className="space-y-1">
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Type</Label>
                     <Select value={selectedType || 'all'} onValueChange={v => setSelectedType(v === 'all' ? '' : v)}>
-                        <SelectTrigger className="h-9"><SelectValue placeholder="All Types" /></SelectTrigger>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="All Types" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Types</SelectItem>
-                            <SelectItem value="lesson-plan-text">Lesson Plan (Text)</SelectItem>
+                            <SelectItem value="lesson-plan-text">Lesson Plan</SelectItem>
                             <SelectItem value="video">Video</SelectItem>
-                            <SelectItem value="infographic">Infographic (Image)</SelectItem>
-                            <SelectItem value="mind-map-json">Mind Map (JSON)</SelectItem>
+                            <SelectItem value="infographic">Infographic</SelectItem>
+                            <SelectItem value="mind-map-json">Mind Map</SelectItem>
                             <SelectItem value="pdf-note">PDF Note</SelectItem>
-                            <SelectItem value="translated-chapter">Translated Chapter (PDF)</SelectItem>
+                            <SelectItem value="translated-chapter">Translated</SelectItem>
                             <SelectItem value="song">Song</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs uppercase font-bold text-muted-foreground">Sort by</Label>
-                   <Select value={sortOrder} onValueChange={setSortOrder}>
-                        <SelectTrigger className="h-9"><SelectValue placeholder="Sort by" /></SelectTrigger>
+                <div className="space-y-1 col-span-2 lg:col-span-1">
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Sort</Label>
+                    <Select value={sortOrder} onValueChange={setSortOrder}>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Sort by" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="newest">Newest First</SelectItem>
                             <SelectItem value="oldest">Oldest First</SelectItem>
-                            <SelectItem value="subject">Subject</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="space-y-1.5">
-                    <Label className="text-xs uppercase font-bold text-muted-foreground">Per Page</Label>
-                    <Select value={pageSize} onValueChange={setPageSize}>
-                        <SelectTrigger className="h-9"><SelectValue placeholder="Items per page" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="25">25 per page</SelectItem>
-                            <SelectItem value="50">50 per page</SelectItem>
-                            <SelectItem value="100">100 per page</SelectItem>
-                            <SelectItem value="500">500 per page</SelectItem>
-                            <SelectItem value="1000">1000 per page</SelectItem>
-                            <SelectItem value="all">Show All</SelectItem>
+                            <SelectItem value="subject">By Subject</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
             </div>
         </Card>
-      </section>
+      </header>
 
-      <section className="mb-8">
+      {/* CONTENT SECTION */}
+      <section className="mb-12">
         {viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {paginatedResources.map((resource: Resource & { id: string }) => (
@@ -472,25 +501,22 @@ export default function AdminDashboard() {
           </Card>
         )}
 
-        {/* Pagination Controls */}
+        {/* BOTTOM PAGINATION CONTROLS */}
         {pageSize !== 'all' && filteredResources.length > parseInt(pageSize) && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 px-2">
-                <p className="text-sm text-muted-foreground font-medium">
-                    Showing <span className="text-foreground">{((currentPage - 1) * parseInt(pageSize)) + 1}</span> to <span className="text-foreground">{Math.min(currentPage * parseInt(pageSize), filteredResources.length)}</span> of <span className="text-foreground">{filteredResources.length}</span> resources
-                </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-12 px-2">
                 <div className="flex items-center gap-2">
                     <Button 
                         variant="outline" 
                         size="sm" 
                         onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                         disabled={currentPage === 1}
-                        className="h-8 px-3"
+                        className="h-9 px-4 rounded-full shadow-sm"
                     >
                         <ChevronLeft className="w-4 h-4 mr-1" /> Previous
                     </Button>
-                    <div className="flex items-center gap-1">
+                    
+                    <div className="flex items-center gap-1.5 px-2">
                         {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                            // Logic to show a window of pages
                             let pageNum = i + 1;
                             if (totalPages > 5 && currentPage > 3) {
                                 pageNum = currentPage - 3 + i + 1;
@@ -502,19 +528,26 @@ export default function AdminDashboard() {
                                     variant={currentPage === pageNum ? 'default' : 'ghost'}
                                     size="sm"
                                     onClick={() => setCurrentPage(pageNum)}
-                                    className="h-8 w-8 p-0"
+                                    className={cn(
+                                        "h-8 w-8 p-0 rounded-full font-bold",
+                                        currentPage === pageNum ? "shadow-md" : "text-muted-foreground"
+                                    )}
                                 >
                                     {pageNum}
                                 </Button>
                             );
                         })}
+                        {totalPages > 5 && currentPage < totalPages - 2 && (
+                            <span className="text-muted-foreground px-1">...</span>
+                        )}
                     </div>
+
                     <Button 
                         variant="outline" 
                         size="sm" 
                         onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                         disabled={currentPage === totalPages}
-                        className="h-8 px-3"
+                        className="h-9 px-4 rounded-full shadow-sm"
                     >
                         Next <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
@@ -522,7 +555,7 @@ export default function AdminDashboard() {
             </div>
         )}
 
-        {isLoadingData && <div className="flex justify-center py-12"><Loader className="h-8 w-8 animate-spin text-primary" /></div>}
+        {isLoadingData && <div className="flex justify-center py-24"><Loader className="h-10 w-10 animate-spin text-primary" /></div>}
         {!isLoadingData && filteredResources.length === 0 && (
             <div className="text-center py-24 bg-muted/10 rounded-2xl border-2 border-dashed border-muted">
                 <p className="text-lg text-muted-foreground font-medium">No resources found matching your filters.</p>

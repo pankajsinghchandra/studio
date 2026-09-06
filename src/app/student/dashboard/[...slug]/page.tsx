@@ -345,10 +345,18 @@ export default function DynamicPage() {
                     setDescription('Select a chapter to start learning.');
 
                     // Fetch resource counts for these chapters
-                    const q = query(collection(db, "resources"), 
-                        where("class", "in", [classId, "6", "7", "8"]), // Multi-class sync for Computer
+                    const isComputerCrossClass = subjectName?.toLowerCase().includes('computer') && ['6', '7', '8'].includes(classId);
+                    
+                    let q = query(collection(db, "resources"), 
                         where("subject", "==", subjectName)
                     );
+                    
+                    if (isComputerCrossClass) {
+                        q = query(q, where("class", "in", ["6", "7", "8"]));
+                    } else {
+                        q = query(q, where("class", "==", classId));
+                    }
+
                     const querySnapshot = await getDocs(q);
                     const chapterCounts: Record<string, number> = {};
                     querySnapshot.docs.forEach(doc => {
@@ -627,4 +635,3 @@ export default function DynamicPage() {
         </>
     );
 }
-

@@ -350,16 +350,18 @@ export default function AdminDashboard() {
                   </CardHeader>
                   <CardContent className="flex-grow pt-4 pb-4 px-6">
                      <div className="flex flex-wrap gap-2">
-                        {!isTextBased(resource.type) ? (
+                        {isTextBased(resource.type) ? (
+                            <Button variant="secondary" size="sm" className="h-8 shadow-sm" onClick={() => setSelectedResource(resource)}><Eye className="mr-2 h-3.5 w-3.5" /> View</Button>
+                        ) : (
                             <a href={resource.url} target="_blank" rel="noopener noreferrer">
                                 <Button variant="secondary" size="sm" className="h-8 shadow-sm"><Eye className="mr-2 h-3.5 w-3.5" /> View</Button>
                             </a>
-                        ) : (
-                            <>
-                                <Button variant="secondary" size="sm" className="h-8 shadow-sm" onClick={() => setSelectedResource(resource)}><Eye className="mr-2 h-3.5 w-3.5" /> View</Button>
-                                <Button variant="outline" size="sm" className="h-8 border-primary/20 hover:border-primary/50" asChild><Link href={`/admin/edit-content/${resource.id}`}><Pencil className="mr-2 h-3.5 w-3.5" /> Edit</Link></Button>
-                                <Button variant="outline" size="sm" className="h-8 border-primary/20" onClick={() => handleDownload(resource)}><Download className="mr-2 h-3.5 w-3.5" /> Download</Button>
-                            </>
+                        )}
+                        <Button variant="outline" size="sm" className="h-8 border-primary/20 hover:border-primary/50" asChild>
+                            <Link href={`/admin/edit-content/${resource.id}`}><Pencil className="mr-2 h-3.5 w-3.5" /> Edit</Link>
+                        </Button>
+                        {isTextBased(resource.type) && (
+                            <Button variant="outline" size="sm" className="h-8 border-primary/20" onClick={() => handleDownload(resource)}><Download className="mr-2 h-3.5 w-3.5" /> Download</Button>
                         )}
                      </div>
                   </CardContent>
@@ -412,13 +414,11 @@ export default function AdminDashboard() {
                             <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-1">
                                      {isTextBased(resource.type) ? (
-                                        <>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-primary" onClick={() => setSelectedResource(resource)}><Eye className="h-4 w-4" /></Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-primary" asChild><Link href={`/admin/edit-content/${resource.id}`}><Pencil className="h-4 w-4" /></Link></Button>
-                                        </>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-primary" onClick={() => setSelectedResource(resource)}><Eye className="h-4 w-4" /></Button>
                                       ) : (
                                         <a href={resource.url} target="_blank" rel="noopener noreferrer"><Button variant="ghost" size="icon" className="h-8 w-8 hover:text-primary"><Eye className="h-4 w-4" /></Button></a>
                                       )}
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-primary" asChild><Link href={`/admin/edit-content/${resource.id}`}><Pencil className="h-4 w-4" /></Link></Button>
                                     <AlertDialog>
                                       <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
                                       <AlertDialogContent>
@@ -454,4 +454,3 @@ export default function AdminDashboard() {
     </div>
   );
 }
-

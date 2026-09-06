@@ -4,12 +4,12 @@
 import { useAuth } from '@/app/providers';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
-import { collection, getDocs, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import Link from 'next/link';
-import { Trash2, LayoutGrid, List, Eye, Download, Loader, ArrowLeft, Pencil, Calendar, FileStack, FileText, Video, Music, Share2, ImageIcon, BookOpen } from 'lucide-react';
+import { Trash2, LayoutGrid, List, Eye, Download, Loader, ArrowLeft, Pencil, Calendar, FileStack, FileText, Video, Music, Share2, ImageIcon, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import LoadingOverlay from '@/components/loading-overlay';
@@ -44,6 +44,10 @@ export default function AdminDashboard() {
   const [sortOrder, setSortOrder] = useState('newest');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState('25');
+
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
 
   useEffect(() => {
@@ -114,14 +118,14 @@ export default function AdminDashboard() {
     URL.revokeObjectURL(url);
   };
 
-  const sortedAndFilteredResources = useMemo(() => {
+  const filteredResources = useMemo(() => {
     let filtered = allResources;
     if (selectedClass) filtered = filtered.filter(r => String(r.class) === selectedClass);
     if (selectedSubject) filtered = filtered.filter(r => r.subject === selectedSubject);
     if (selectedChapter) filtered = filtered.filter(r => r.chapter === selectedChapter);
     if (selectedType) filtered = filtered.filter(r => r.type === selectedType);
 
-    return [...filtered].sort((a, b) => {
+    const sorted = [...filtered].sort((a, b) => {
         const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date();
         const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date();
         
@@ -132,7 +136,26 @@ export default function AdminDashboard() {
             default: return 0;
         }
     });
+
+    return sorted;
   }, [selectedClass, selectedSubject, selectedChapter, selectedType, allResources, sortOrder]);
+
+  const paginatedResources = useMemo(() => {
+    if (pageSize === 'all') return filteredResources;
+    const limit = parseInt(pageSize);
+    const startIndex = (currentPage - 1) * limit;
+    return filteredResources.slice(startIndex, startIndex + limit);
+  }, [filteredResources, currentPage, pageSize]);
+
+  const totalPages = useMemo(() => {
+    if (pageSize === 'all') return 1;
+    return Math.ceil(filteredResources.length / parseInt(pageSize));
+  }, [filteredResources, pageSize]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedClass, selectedSubject, selectedChapter, selectedType, sortOrder, pageSize]);
 
   useEffect(() => {
     if (selectedClass) {
@@ -240,9 +263,9 @@ export default function AdminDashboard() {
                     <FileStack className="w-3.5 h-3.5" />
                     Total Content: {allResources.length}
                 </Badge>
-                {sortedAndFilteredResources.length !== allResources.length && (
+                {filteredResources.length !== allResources.length && (
                      <Badge variant="outline" className="flex items-center gap-1.5 px-3 py-1 border-muted-foreground/30">
-                        Filtered: {sortedAndFilteredResources.length}
+                        Filtered: {filteredResources.length}
                     </Badge>
                 )}
             </div>
@@ -262,7 +285,7 @@ export default function AdminDashboard() {
 
       <section className="mb-8">
         <Card className="bg-card p-4 border-muted/60 shadow-sm">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                 <div className="space-y-1.5">
                     <Label className="text-xs uppercase font-bold text-muted-foreground">Class</Label>
                     <Select value={selectedClass || 'all'} onValueChange={v => { setSelectedClass(v === 'all' ? '' : v); setSelectedSubject(''); setSelectedChapter(''); }}>
@@ -320,14 +343,28 @@ export default function AdminDashboard() {
                         </SelectContent>
                     </Select>
                 </div>
+                <div className="space-y-1.5">
+                    <Label className="text-xs uppercase font-bold text-muted-foreground">Per Page</Label>
+                    <Select value={pageSize} onValueChange={setPageSize}>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="Items per page" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="25">25 per page</SelectItem>
+                            <SelectItem value="50">50 per page</SelectItem>
+                            <SelectItem value="100">100 per page</SelectItem>
+                            <SelectItem value="500">500 per page</SelectItem>
+                            <SelectItem value="1000">1000 per page</SelectItem>
+                            <SelectItem value="all">Show All</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
         </Card>
       </section>
 
-      <section>
+      <section className="mb-8">
         {viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sortedAndFilteredResources.map((resource: Resource & { id: string }) => (
+              {paginatedResources.map((resource: Resource & { id: string }) => (
                 <Card key={resource.id} className={cn(
                   "group flex flex-col bg-card hover:bg-accent/5 transition-all duration-300 shadow-sm hover:shadow-xl border-l-4",
                   getTypeColorClass(resource.type)
@@ -393,7 +430,7 @@ export default function AdminDashboard() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {sortedAndFilteredResources.map((resource: Resource & { id: string }) => (
+                    {paginatedResources.map((resource: Resource & { id: string }) => (
                          <TableRow key={resource.id} className="hover:bg-accent/5">
                             <TableCell className="py-3">
                                 <div className="flex flex-col">
@@ -434,8 +471,59 @@ export default function AdminDashboard() {
             </Table>
           </Card>
         )}
+
+        {/* Pagination Controls */}
+        {pageSize !== 'all' && filteredResources.length > parseInt(pageSize) && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 px-2">
+                <p className="text-sm text-muted-foreground font-medium">
+                    Showing <span className="text-foreground">{((currentPage - 1) * parseInt(pageSize)) + 1}</span> to <span className="text-foreground">{Math.min(currentPage * parseInt(pageSize), filteredResources.length)}</span> of <span className="text-foreground">{filteredResources.length}</span> resources
+                </p>
+                <div className="flex items-center gap-2">
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="h-8 px-3"
+                    >
+                        <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+                    </Button>
+                    <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            // Logic to show a window of pages
+                            let pageNum = i + 1;
+                            if (totalPages > 5 && currentPage > 3) {
+                                pageNum = currentPage - 3 + i + 1;
+                                if (pageNum > totalPages) pageNum = totalPages - (4 - i);
+                            }
+                            return (
+                                <Button 
+                                    key={pageNum}
+                                    variant={currentPage === pageNum ? 'default' : 'ghost'}
+                                    size="sm"
+                                    onClick={() => setCurrentPage(pageNum)}
+                                    className="h-8 w-8 p-0"
+                                >
+                                    {pageNum}
+                                </Button>
+                            );
+                        })}
+                    </div>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="h-8 px-3"
+                    >
+                        Next <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                </div>
+            </div>
+        )}
+
         {isLoadingData && <div className="flex justify-center py-12"><Loader className="h-8 w-8 animate-spin text-primary" /></div>}
-        {!isLoadingData && sortedAndFilteredResources.length === 0 && (
+        {!isLoadingData && filteredResources.length === 0 && (
             <div className="text-center py-24 bg-muted/10 rounded-2xl border-2 border-dashed border-muted">
                 <p className="text-lg text-muted-foreground font-medium">No resources found matching your filters.</p>
                 <Button variant="link" onClick={() => { setSelectedClass(''); setSelectedSubject(''); setSelectedChapter(''); setSelectedType(''); }}>Clear all filters</Button>

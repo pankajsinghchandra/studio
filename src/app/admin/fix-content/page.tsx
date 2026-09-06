@@ -55,8 +55,11 @@ export default function FixContentPage() {
 
     const normalizeName = (text: string) => {
         if (!text) return "";
-        // Remove numbers like "1. ", "अध्याय 1: ", "*", and spaces
-        return text.replace(/^[0-9\.\-\s\*]+/, '').replace(/^अध्याय\s\d+:\s*/, '').trim().toLowerCase();
+        // Remove numbers, "Chapter", "अध्याय", "Prose", "Poetry", "*", and common junk
+        return text.replace(/^[0-9\.\-\s\*]+/, '')
+                  .replace(/^(अध्याय|Chapter|Prose|Poetry)\s*\d+[:\s]*/i, '')
+                  .trim()
+                  .toLowerCase();
     };
 
     const orphanedResources = useMemo(() => {
@@ -101,7 +104,7 @@ export default function FixContentPage() {
                 let foundSubject = "";
                 let foundChapter = "";
 
-                // Search through all subjects for an exact chapter name match
+                // SEARCH ALL SUBJECTS IN THE CLASS
                 for (const [subName, subData] of Object.entries(classData)) {
                     if (Array.isArray(subData)) {
                         const match = subData.find(c => normalizeName(c) === targetChapterNorm);
@@ -111,8 +114,8 @@ export default function FixContentPage() {
                             break;
                         }
                     } else {
-                        // Handle nested science
-                        for (const [nestedName, chapters] of Object.entries(subData)) {
+                        // Handle sub-categories (like Science sub-topics)
+                        for (const chapters of Object.values(subData)) {
                             const match = (chapters as string[]).find(c => normalizeName(c) === targetChapterNorm);
                             if (match) {
                                 foundSubject = subName;
@@ -136,10 +139,10 @@ export default function FixContentPage() {
 
             if (fixedCount > 0) {
                 await batch.commit();
-                toast({ title: "Magic Complete!", description: `Successfully repaired ${fixedCount} resources.` });
+                toast({ title: "Repair Success!", description: `Automatically matched and fixed ${fixedCount} resources.` });
                 fetchResources(); // Refresh the list
             } else {
-                toast({ variant: 'default', title: "No Auto-Matches", description: "No exact chapter matches found for the orphans." });
+                toast({ variant: 'default', title: "No Matches Found", description: "Could not find exact chapter matches. Please map manually." });
             }
         } catch (error) {
             console.error(error);

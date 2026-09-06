@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/app/providers';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import type { Resource } from '@/lib/types';
 import { syllabus } from '@/lib/syllabus';
 import LoadingOverlay from '@/components/loading-overlay';
@@ -13,7 +13,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, AlertCircle, Save, CheckCircle2, RefreshCcw, Loader, BookOpen, Bookmark } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Save, CheckCircle2, RefreshCcw, Loader, BookOpen, Bookmark, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -26,8 +26,8 @@ export default function FixContentPage() {
     const [resources, setResources] = useState<Resource[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
+    const [isAutoFixing, setIsAutoFixing] = useState(false);
     
-    // Track local selections for each orphaned resource
     const [pendingChanges, setPendingChanges] = useState<Record<string, { subject: string, chapter: string }>>({});
 
     useEffect(() => {
@@ -55,7 +55,8 @@ export default function FixContentPage() {
 
     const normalizeName = (text: string) => {
         if (!text) return "";
-        return text.replace(/^[0-9\.\-\s]+/, '').trim().toLowerCase();
+        // Remove numbers like "1. ", "अध्याय 1: ", "*", and spaces
+        return text.replace(/^[0-9\.\-\s\*]+/, '').replace(/^अध्याय\s\d+:\s*/, '').trim().toLowerCase();
     };
 
     const orphanedResources = useMemo(() => {
@@ -83,6 +84,71 @@ export default function FixContentPage() {
         });
     }, [resources]);
 
+    const handleMagicRepair = async () => {
+        if (orphanedResources.length === 0) return;
+        
+        setIsAutoFixing(true);
+        let fixedCount = 0;
+        const batch = writeBatch(db);
+
+        try {
+            for (const res of orphanedResources) {
+                const classKey = String(res.class);
+                const classData = syllabus[classKey];
+                if (!classData) continue;
+
+                const targetChapterNorm = normalizeName(res.chapter);
+                let foundSubject = "";
+                let foundChapter = "";
+
+                // Search through all subjects for an exact chapter name match
+                for (const [subName, subData] of Object.entries(classData)) {
+                    if (Array.isArray(subData)) {
+                        const match = subData.find(c => normalizeName(c) === targetChapterNorm);
+                        if (match) {
+                            foundSubject = subName;
+                            foundChapter = match;
+                            break;
+                        }
+                    } else {
+                        // Handle nested science
+                        for (const [nestedName, chapters] of Object.entries(subData)) {
+                            const match = (chapters as string[]).find(c => normalizeName(c) === targetChapterNorm);
+                            if (match) {
+                                foundSubject = subName;
+                                foundChapter = match;
+                                break;
+                            }
+                        }
+                        if (foundSubject) break;
+                    }
+                }
+
+                if (foundSubject && foundChapter) {
+                    const docRef = doc(db, 'resources', res.id);
+                    batch.update(docRef, {
+                        subject: foundSubject,
+                        chapter: foundChapter
+                    });
+                    fixedCount++;
+                }
+            }
+
+            if (fixedCount > 0) {
+                await batch.commit();
+                toast({ title: "Magic Complete!", description: `Successfully repaired ${fixedCount} resources.` });
+                fetchResources(); // Refresh the list
+            } else {
+                toast({ variant: 'default', title: "No Auto-Matches", description: "No exact chapter matches found for the orphans." });
+            }
+        } catch (error) {
+            console.error(error);
+            toast({ variant: 'destructive', title: "Repair Error", description: "Something went wrong during auto-repair." });
+        } finally {
+            setIsAutoFixing(false);
+        }
+    };
+
     const handleQuickUpdate = async (resId: string) => {
         const change = pendingChanges[resId];
         if (!change || !change.subject || !change.chapter) {
@@ -99,7 +165,6 @@ export default function FixContentPage() {
             
             toast({ title: "Success", description: "Resource updated successfully!" });
             
-            // Remove from list locally for better performance
             setResources(prev => prev.filter(r => r.id !== resId));
             setPendingChanges(prev => {
                 const updated = { ...prev };
@@ -138,7 +203,18 @@ export default function FixContentPage() {
                     </h1>
                     <p className="text-muted-foreground mt-1">Showing items that are not mapped to the current syllabus.</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                    {orphanedResources.length > 0 && (
+                        <Button 
+                            variant="default" 
+                            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg text-white font-bold"
+                            onClick={handleMagicRepair}
+                            disabled={isAutoFixing}
+                        >
+                            {isAutoFixing ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                            Magic Auto-Repair All
+                        </Button>
+                    )}
                     <Button variant="outline" onClick={fetchResources}>
                         <RefreshCcw className="mr-2 h-4 w-4" /> Refresh
                     </Button>
@@ -157,14 +233,14 @@ export default function FixContentPage() {
                                 Instructions
                             </CardTitle>
                             <CardDescription>
-                                Current details (Subject/Chapter) are shown in <span className="text-destructive font-bold">Red</span>. Choose the new mapping and click Save.
+                                Current details are in <span className="text-destructive font-bold">Red</span>. Use <strong>Magic Auto-Repair</strong> for one-click fix, or choose manually.
                             </CardDescription>
                         </CardHeader>
                     </Card>
                 )}
 
                 <Card className="overflow-hidden border-border/60">
-                    <div className="max-h-[75vh] overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-primary/20">
+                    <div className="max-h-[75vh] overflow-y-auto overflow-x-auto">
                         <Table>
                             <TableHeader className="bg-muted/80 sticky top-0 z-20 backdrop-blur">
                                 <TableRow>
@@ -273,7 +349,7 @@ export default function FixContentPage() {
                     </div>
                 </Card>
             </div>
+            {isAutoFixing && <LoadingOverlay isLoading={true} />}
         </div>
     );
 }
-
